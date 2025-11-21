@@ -1,0 +1,72 @@
+{
+  "items": [
+    {
+      "item_id": "item_001",
+      "code": "SINAPI_88307",
+      "description": "CONCRETO FCK >= 25MPA, VIRADO EM BETONEIRA DE 400 L - PREPARO",
+      "group": "Structural",
+      "quantity": 15.5,
+      "unit": "m³",
+      "unit_price": 425.50,
+      "total_price": 6595.25
+    },
+    {
+      "item_id": "item_002",
+      "code": "SINAPI_87267",
+      "description": "REVESTIMENTO CERAMICO PARA PAREDES INTERNAS",
+      "group": "Finishing",
+      "quantity": 120.0,
+      "unit": "m²",
+      "unit_price": 62.80,
+      "total_price": 7536.00
+    },
+    {
+      "item_id": "item_003",
+      "code": "SINAPI_88489",
+      "description": "PINTURA ACRILICA STANDARD, DUAS DEMAOS",
+      "group": "Finishing",
+      "quantity": 250.0,
+      "unit": "m²",
+      "unit_price": 18.50,
+      "total_price": 4625.00
+    },
+    {
+      "item_id": "item_004",
+      "code": "CUSTOM_SPECIAL_001",
+      "description": "IMPERMEABILIZACAO ESPECIAL IMPORTADA",
+      "group": "Waterproofing",
+      "quantity": 45.0,
+      "unit": "m²",
+      "unit_price": 125.00,
+      "total_price": 5625.00
+    },
+    {
+      "item_id": "item_005",
+      "code": "LPU_12345",
+      "description": "INSTALACAO HIDRAULICA PVC",
+      "group": "Plumbing",
+      "quantity": 80.0,
+      "unit": "m",
+      "unit_price": 35.00,
+      "total_price": 2800.00
+    },
+    {
+      "item_id": "item_006",
+      "code": "SINAPI_74251",
+      "description": "ALVENARIA DE VEDACAO DE BLOCOS CERAMICOS",
+      "group": "Masonry",
+      "quantity": 95.0,
+      "unit": "m²",
+      "unit_price": 89.50,
+      "total_price": 8502.50
+    }
+  ],
+  "metadata": {
+    "archetype": "Residential",
+    "square_footage": 150.0,
+    "region": "SP",
+    "supplier": "ABC Construtora Ltda",
+    "project_id": "PRJ-2025-001",
+    "submission_date": "2025-11-21T10:00:00Z"
+  }
+}

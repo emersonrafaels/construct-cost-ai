@@ -1,0 +1,49 @@
+"""FastAPI application factory and configuration."""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from loguru import logger
+
+from construct_cost_ai import __version__
+from construct_cost_ai.api.routes import router
+from construct_cost_ai.infra.config import settings
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown events."""
+    # Startup
+    logger.info("Starting Construct Cost AI API")
+    yield
+    # Shutdown
+    logger.info("Shutting down Construct Cost AI API")
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    Returns:
+        Configured FastAPI application
+    """
+    app = FastAPI(
+        title=settings.get("api_title", "Construct Cost AI - Budget Validation Service"),
+        version=settings.get("api_version", __version__),
+        description=(
+            "AI-powered construction cost validation service. "
+            "Validates budget estimates using deterministic rules and AI analysis."
+        ),
+        lifespan=lifespan,
+    )
+
+    # Include routers
+    app.include_router(router)
+
+    logger.info(
+        f"FastAPI app created: {app.title} v{app.version}"
+    )
+
+    return app
+
+
+app = create_app()
