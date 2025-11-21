@@ -2,10 +2,9 @@
 
 from typing import List
 
-from loguru import logger
-
 from construct_cost_ai.domain.models import Budget, Finding, Severity
 from construct_cost_ai.domain.validators.base import BaseDeterministicValidator
+from construct_cost_ai.infra.logging import logger
 
 
 class QuantityDeviationValidator(BaseDeterministicValidator):

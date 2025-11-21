@@ -4,10 +4,13 @@ import time
 from typing import Dict, Optional
 
 import httpx
-from loguru import logger
 
 from construct_cost_ai.domain.models import Budget
-from construct_cost_ai.infra.config import settings
+from construct_cost_ai.infra.config import get_settings
+from construct_cost_ai.infra.logging import logger
+
+# Get settings instance
+settings = get_settings()
 
 
 class StackSpotAIClient:
@@ -28,9 +31,9 @@ class StackSpotAIClient:
             timeout: Request timeout in seconds
             mock_mode: If True, returns mock responses instead of making real API calls
         """
-        self.base_url = base_url or settings.get("stackspot_ai_base_url")
-        self.api_key = api_key or settings.get("stackspot_ai_api_key")
-        self.timeout = timeout or settings.get("stackspot_ai_timeout", 30)
+        self.base_url = base_url or settings.get("stackspot.ai_base_url")
+        self.api_key = api_key or settings.get("stackspot.ai_api_key")
+        self.timeout = timeout or settings.get("stackspot.ai_timeout", 30)
         self.mock_mode = mock_mode
 
         if not self.mock_mode and not self.api_key:

@@ -3,11 +3,14 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from loguru import logger
 
 from construct_cost_ai import __version__
 from construct_cost_ai.api.routes import router
-from construct_cost_ai.infra.config import settings
+from construct_cost_ai.infra.config import get_settings
+from construct_cost_ai.infra.logging import logger
+
+# Get settings instance
+settings = get_settings()
 
 
 @asynccontextmanager
@@ -27,8 +30,8 @@ def create_app() -> FastAPI:
         Configured FastAPI application
     """
     app = FastAPI(
-        title=settings.get("api_title", "Construct Cost AI - Budget Validation Service"),
-        version=settings.get("api_version", __version__),
+        title=settings.get("api.title", "Construct Cost AI - Budget Validation Service"),
+        version=settings.get("api.version", __version__),
         description=(
             "AI-powered construction cost validation service. "
             "Validates budget estimates using deterministic rules and AI analysis."

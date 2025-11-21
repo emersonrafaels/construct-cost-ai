@@ -1,7 +1,6 @@
 """API routes for budget validation."""
 
 from fastapi import APIRouter, HTTPException, status
-from loguru import logger
 
 from construct_cost_ai import __version__
 from construct_cost_ai.api.schemas import (
@@ -17,7 +16,11 @@ from construct_cost_ai.domain.validators.deterministic import (
     UnitPriceThresholdValidator,
 )
 from construct_cost_ai.infra.ai import StackSpotAIClient
-from construct_cost_ai.infra.config import settings
+from construct_cost_ai.infra.config import get_settings
+from construct_cost_ai.infra.logging import logger
+
+# Get settings instance
+settings = get_settings()
 
 router = APIRouter()
 
@@ -31,10 +34,10 @@ def get_orchestrator() -> BudgetValidationOrchestrator:
     # Initialize deterministic validators
     validators = [
         QuantityDeviationValidator(
-            threshold=settings.get("quantity_deviation_threshold", 0.15)
+            threshold=settings.get("validators.quantity_deviation_threshold", 0.15)
         ),
         UnitPriceThresholdValidator(
-            threshold=settings.get("unit_price_deviation_threshold", 0.20)
+            threshold=settings.get("validators.unit_price_deviation_threshold", 0.20)
         ),
         OutOfCatalogValidator(),
     ]

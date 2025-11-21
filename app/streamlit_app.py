@@ -14,7 +14,10 @@ from construct_cost_ai.domain.validators.deterministic import (
     UnitPriceThresholdValidator,
 )
 from construct_cost_ai.infra.ai import StackSpotAIClient
-from construct_cost_ai.infra.config import settings
+from construct_cost_ai.infra.config import get_settings
+
+# Get settings instance
+settings = get_settings()
 
 # Page configuration
 st.set_page_config(
@@ -28,10 +31,10 @@ def get_orchestrator() -> BudgetValidationOrchestrator:
     """Create and configure the validation orchestrator."""
     validators = [
         QuantityDeviationValidator(
-            threshold=settings.get("quantity_deviation_threshold", 0.15)
+            threshold=settings.get("validators.quantity_deviation_threshold", 0.15)
         ),
         UnitPriceThresholdValidator(
-            threshold=settings.get("unit_price_deviation_threshold", 0.20)
+            threshold=settings.get("validators.unit_price_deviation_threshold", 0.20)
         ),
         OutOfCatalogValidator(),
     ]

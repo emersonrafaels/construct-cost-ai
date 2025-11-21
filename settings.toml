@@ -1,30 +1,49 @@
 [default]
+# Application
+app_name = "Construct Cost AI"
+app_version = "0.1.0"
+
 # StackSpot AI Configuration
-stackspot_ai_base_url = "https://api.stackspot.ai/v1"
-stackspot_ai_timeout = 30
+[default.stackspot]
+ai_base_url = "https://api.stackspot.ai/v1"
+ai_timeout = 30
 
 # Logging Configuration
-log_level = "INFO"
-log_format = "json"
-log_file = "logs/construct_cost_ai.log"
-log_rotation = "10 MB"
-log_retention = "30 days"
+[default.logging]
+level = "INFO"
+format = "json"
+rotation = "10 MB"
+retention = "30 days"
 
 # API Configuration
-api_host = "0.0.0.0"
-api_port = 8000
-api_reload = false
-api_title = "Construct Cost AI - Budget Validation Service"
-api_version = "0.1.0"
+[default.api]
+host = "0.0.0.0"
+port = 8000
+reload = false
+title = "Construct Cost AI - Budget Validation Service"
+version = "0.1.0"
 
 # Validators Configuration
+[default.validators]
 quantity_deviation_threshold = 0.15
 unit_price_deviation_threshold = 0.20
 
+# Development Environment
 [development]
-log_level = "DEBUG"
-api_reload = true
+debug = true
 
+[development.logging]
+level = "DEBUG"
+
+[development.api]
+reload = true
+
+# Production Environment
 [production]
-log_level = "WARNING"
-api_reload = false
+debug = false
+
+[production.logging]
+level = "WARNING"
+
+[production.api]
+reload = false

@@ -4,8 +4,6 @@ import time
 from collections import defaultdict
 from typing import Dict, List, Optional
 
-from loguru import logger
-
 from construct_cost_ai.domain.models import (
     Budget,
     Finding,
@@ -15,6 +13,7 @@ from construct_cost_ai.domain.models import (
     ValidationSummary,
 )
 from construct_cost_ai.domain.validators.base import BaseAIAgent, BaseDeterministicValidator
+from construct_cost_ai.infra.logging import logger
 
 
 class BudgetValidationOrchestrator:
