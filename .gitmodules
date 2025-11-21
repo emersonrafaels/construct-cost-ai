@@ -1,0 +1,3 @@
+[submodule "src/utils/agent/stackspot"]
+	path = src/utils/agent/stackspot
+	url = https://github.com/emersonrafaels/stackspot-agent-template.git
