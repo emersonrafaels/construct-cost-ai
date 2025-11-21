@@ -10,8 +10,20 @@ from construct_cost_ai.domain.models import (
     ValidationResult,
     ValidationSummary,
 )
+from construct_cost_ai.domain.validador_lpu import (
+    validar_lpu,
+    carregar_orcamento,
+    carregar_lpu,
+    cruzar_orcamento_lpu,
+    calcular_divergencias,
+    salvar_resultado,
+    ValidadorLPUError,
+    ArquivoNaoEncontradoError,
+    ColunasFaltandoError,
+)
 
 __all__ = [
+    # Models
     "Budget",
     "BudgetItem",
     "BudgetMetadata",
@@ -20,4 +32,15 @@ __all__ = [
     "Severity",
     "ValidationResult",
     "ValidationSummary",
+    # Validador LPU
+    "validar_lpu",
+    "carregar_orcamento",
+    "carregar_lpu",
+    "cruzar_orcamento_lpu",
+    "calcular_divergencias",
+    "salvar_resultado",
+    "ValidadorLPUError",
+    "ArquivoNaoEncontradoError",
+    "ColunasFaltandoError",
 ]
+
