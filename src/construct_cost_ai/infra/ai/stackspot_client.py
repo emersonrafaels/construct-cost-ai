@@ -1,4 +1,17 @@
-"""StackSpot AI client for AI-based budget analysis."""
+"""
+StackSpot AI client for AI-based budget analysis.
+
+Cliente para interação com a API StackSpot AI para análises avançadas de orçamentos.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 import time
 from typing import Dict, Optional

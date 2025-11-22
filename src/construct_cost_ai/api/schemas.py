@@ -1,4 +1,17 @@
-"""API schemas for request and response models."""
+"""
+API schemas for request and response models.
+
+Define os modelos Pydantic para requisições e respostas da API.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 from typing import Dict, List, Optional
 

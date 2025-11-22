@@ -1,4 +1,17 @@
-"""Deterministic validators for budget validation."""
+"""
+Deterministic validators for budget validation.
+
+Implementa validadores baseados em regras para análise de orçamentos.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 from typing import List
 

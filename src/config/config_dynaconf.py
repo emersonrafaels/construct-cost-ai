@@ -1,3 +1,19 @@
+"""
+Configuração do Dynaconf para gerenciamento de settings.
+
+Este módulo configura o Dynaconf para carregar configurações de settings.toml
+e variáveis de ambiente.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
+
 import sys
 from functools import lru_cache
 from pathlib import Path

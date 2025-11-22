@@ -3,6 +3,26 @@
 app_name = "Construct Cost AI"
 app_version = "0.1.0"
 
+# Validador LPU Configuration
+[default.validador_lpu]
+# Tolerância de divergência para status de conciliação (%)
+tolerancia_percentual = 3.0
+
+# Caminhos padrão
+caminho_padrao_orcamento = "data/orcamento_exemplo.xlsx"
+caminho_padrao_lpu = "data/lpu_exemplo.xlsx"
+output_dir = "outputs"
+
+# Nomes dos arquivos de saída
+arquivo_excel_basico = "validacao_lpu.xlsx"
+arquivo_csv = "validacao_lpu.csv"
+arquivo_excel_completo = "relatorio_completo_validacao_lpu.xlsx"
+arquivo_html = "relatorio_validacao_lpu.html"
+
+# Configurações de exportação
+top_n_divergencias = 10
+top_n_divergencias_extended = 20
+
 # StackSpot AI Configuration
 [default.stackspot]
 ai_base_url = "https://api.stackspot.ai/v1"

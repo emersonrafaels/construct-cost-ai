@@ -1,14 +1,24 @@
 """
-Quick Start - Validador LPU
-Exemplo mínimo de uso do validador.
+Quick Start - Validador LPU.
+
+Exemplo mínimo de uso do validador de orçamentos LPU.
 """
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 from pathlib import Path
 import sys
 
 # Adicionar src ao path
 base_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(base_dir / "src"))
+sys.path.insert(0, str(Path(base_dir, "src")))
 
 from construct_cost_ai.domain import validar_lpu
 

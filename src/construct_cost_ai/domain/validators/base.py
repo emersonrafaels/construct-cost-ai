@@ -1,4 +1,17 @@
-"""Base classes and protocols for validators."""
+"""
+Base classes and protocols for validators.
+
+Define as classes abstratas e protocolos para validadores determinísticos e agentes de IA.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 from abc import ABC, abstractmethod
 from typing import List, Protocol

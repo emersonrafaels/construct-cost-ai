@@ -1,4 +1,17 @@
-"""Streamlit frontend for budget validation."""
+"""
+Streamlit frontend for budget validation.
+
+Interface web Streamlit para validação de orçamentos de construção.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 import json
 from datetime import datetime

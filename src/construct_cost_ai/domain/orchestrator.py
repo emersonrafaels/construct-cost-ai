@@ -1,4 +1,17 @@
-"""Budget validation orchestrator."""
+"""
+Budget validation orchestrator.
+
+Orquestra a validação de orçamentos usando validadores determinísticos e agentes de IA.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 import time
 from collections import defaultdict

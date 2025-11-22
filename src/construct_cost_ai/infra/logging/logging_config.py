@@ -1,4 +1,17 @@
-"""Logging configuration using Loguru."""
+"""
+Logging configuration using Loguru.
+
+Configuração centralizada do sistema de logging da aplicação.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
 
 import sys
 from pathlib import Path
