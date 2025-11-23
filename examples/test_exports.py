@@ -36,9 +36,9 @@ def test_exports():
     caminho_lpu = Path(base_dir, "data", "lpu_exemplo.xlsx")
     output_dir = Path(base_dir, "outputs", "test_exports")
     
-    logger.info("=" * 80)
+    logger.debug("=" * 80)
     logger.info("TESTE DE EXPORTAÇÕES - Excel + HTML")
-    logger.info("=" * 80)
+    logger.debug("=" * 80)
     
     # Executar validação
     logger.info("🔄 Executando validação...")
@@ -58,19 +58,19 @@ def test_exports():
     logger.info("🌐 Testando exportação HTML...")
     gerar_relatorio_html(df_resultado, output_dir, "teste_html")
     
-    logger.success("=" * 80)
+    logger.debug("=" * 80)
     logger.success("✅ TESTES CONCLUÍDOS COM SUCESSO!")
-    logger.success("=" * 80)
+    logger.debug("=" * 80)
     
     logger.info(f"📁 Arquivos gerados em: {output_dir.resolve()}")
-    logger.info("Arquivos criados:")
-    logger.info("   ✅ validacao_lpu.xlsx (4 abas)")
-    logger.info("   ✅ validacao_lpu.csv")
-    logger.info("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
-    logger.info("   ✅ relatorio_validacao_lpu.html")
-    logger.info("   ✅ teste_excel_completo.xlsx (teste individual)")
-    logger.info("   ✅ teste_html.html (teste individual)")
-    logger.info("=" * 80)
+    logger.debug("Arquivos criados:")
+    logger.debug("   ✅ validacao_lpu.xlsx (4 abas)")
+    logger.debug("   ✅ validacao_lpu.csv")
+    logger.debug("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
+    logger.debug("   ✅ relatorio_validacao_lpu.html")
+    logger.debug("   ✅ teste_excel_completo.xlsx (teste individual)")
+    logger.debug("   ✅ teste_html.html (teste individual)")
+    logger.debug("=" * 80)
 
 
 if __name__ == "__main__":

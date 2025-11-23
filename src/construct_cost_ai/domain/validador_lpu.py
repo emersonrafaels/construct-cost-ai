@@ -939,10 +939,10 @@ def validar_lpu(
     if output_dir is None:
         output_dir = settings.validador_lpu.output_dir
     
-    logger.info("=" * 80)
+    logger.debug("=" * 80)
     logger.info("VALIDADOR LPU - Conciliação de Orçamento vs Base de Preços")
-    logger.info(f"Tolerância configurada: {settings.validador_lpu.tolerancia_percentual}%")
-    logger.info("=" * 80)
+    logger.debug(f"Tolerância configurada: {settings.validador_lpu.tolerancia_percentual}%")
+    logger.debug("=" * 80)
     
     if verbose:
         print("=" * 80)
@@ -976,7 +976,7 @@ def validar_lpu(
         logger.error(f"Erro ao carregar LPU: {e}")
         raise ValidadorLPUError(f"Erro ao carregar LPU: {e}")
     
-    logger.info("")
+    logger.debug("")
     
     # 2. Cruzar dados
     logger.info("🔗 Cruzando orçamento com LPU...")
@@ -992,7 +992,7 @@ def validar_lpu(
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidadorLPUError(f"Erro ao cruzar dados: {e}")
     
-    logger.info("")
+    logger.debug("")
     
     # 3. Calcular divergências
     logger.info(f"🧮 Calculando divergências (tolerância {settings.validador_lpu.tolerancia_percentual}%)...")
@@ -1034,16 +1034,16 @@ def validar_lpu(
         print()
     
     # Registrar estatísticas no logger
-    logger.info("📊 ESTATÍSTICAS DA VALIDAÇÃO")
+    logger.debug("📊 ESTATÍSTICAS DA VALIDAÇÃO")
     total_itens = len(df_resultado)
     itens_ok = (df_resultado['status_conciliacao'] == 'OK').sum()
     itens_ressarcimento = (df_resultado['status_conciliacao'] == 'Para ressarcimento').sum()
     itens_abaixo = (df_resultado['status_conciliacao'] == 'Abaixo LPU').sum()
     
-    logger.info(f"Total de itens validados: {total_itens}")
-    logger.info(f"✅ OK: {itens_ok} ({itens_ok/total_itens*100:.1f}%)")
-    logger.info(f"⚠️  Para ressarcimento: {itens_ressarcimento} ({itens_ressarcimento/total_itens*100:.1f}%)")
-    logger.info(f"📉 Abaixo LPU: {itens_abaixo} ({itens_abaixo/total_itens*100:.1f}%)")
+    logger.debug(f"Total de itens validados: {total_itens}")
+    logger.debug(f"✅ OK: {itens_ok} ({itens_ok/total_itens*100:.1f}%)")
+    logger.debug(f"⚠️  Para ressarcimento: {itens_ressarcimento} ({itens_ressarcimento/total_itens*100:.1f}%)")
+    logger.debug(f"📉 Abaixo LPU: {itens_abaixo} ({itens_abaixo/total_itens*100:.1f}%)")
     
     valor_total_orcado = df_resultado['valor_total_orcado'].sum()
     dif_total = df_resultado['dif_total'].sum()
@@ -1051,9 +1051,9 @@ def validar_lpu(
         df_resultado['status_conciliacao'] == 'Para ressarcimento'
     ]['dif_total'].sum()
     
-    logger.info(f"💰 Valor total orçado: R$ {valor_total_orcado:,.2f}")
-    logger.info(f"💵 Divergência total: R$ {dif_total:,.2f}")
-    logger.info(f"💸 Potencial ressarcimento: R$ {dif_ressarcimento:,.2f}")
+    logger.debug(f"💰 Valor total orçado: R$ {valor_total_orcado:,.2f}")
+    logger.debug(f"💵 Divergência total: R$ {dif_total:,.2f}")
+    logger.debug(f"💸 Potencial ressarcimento: R$ {dif_ressarcimento:,.2f}")
     
     # 4. Salvar resultados
     logger.info("💾 Salvando resultados...")
@@ -1080,9 +1080,9 @@ def validar_lpu(
         print("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
         print("=" * 80)
     
-    logger.success("=" * 80)
+    logger.debug("=" * 80)
     logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
-    logger.success("=" * 80)
+    logger.debug("=" * 80)
     
     return df_resultado
 
@@ -1096,9 +1096,9 @@ def main():
     output_dir = Path(base_dir, settings.validador_lpu.output_dir)
     
     logger.info("Iniciando validador LPU via main()...")
-    logger.info(f"Orçamento: {caminho_orcamento}")
-    logger.info(f"LPU: {caminho_lpu}")
-    logger.info(f"Output: {output_dir}")
+    logger.debug(f"Orçamento: {caminho_orcamento}")
+    logger.debug(f"LPU: {caminho_lpu}")
+    logger.debug(f"Output: {output_dir}")
     
     try:
         df_resultado = validar_lpu(

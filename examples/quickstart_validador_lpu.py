@@ -32,9 +32,9 @@ df = validar_lpu()
 # ========================================
 # ANÁLISE RÁPIDA
 # ========================================
-logger.info("="*80)
+logger.debug("="*80)
 logger.info("ANÁLISE RÁPIDA")
-logger.info("="*80)
+logger.debug("="*80)
 
 # Resumo por status
 logger.info("📊 Resumo por Status:")

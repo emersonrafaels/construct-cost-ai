@@ -80,38 +80,38 @@ def executar_validacao(
     if output_dir is None:
         output_dir = Path(base_dir, "outputs")
     
-    logger.info("=" * 80)
+    logger.debug("=" * 80)
     logger.info("VALIDADOR LPU - ANÁLISE CONFIGURÁVEL")
-    logger.info("=" * 80)
+    logger.debug("=" * 80)
     
     try:
         # ====================================================================
         # ANÁLISE MODULAR (se solicitada)
         # ====================================================================
         if analise_modular:
-            logger.info("📂 ANÁLISE MODULAR - Passo a Passo")
-            logger.info("-" * 80)
+            logger.debug("📂 ANÁLISE MODULAR - Passo a Passo")
+            logger.debug("-" * 80)
             
             logger.info("[1/4] Carregando orçamento...")
             df_orcamento = carregar_orcamento(caminho_orcamento)
-            logger.info(f"      ✅ {len(df_orcamento)} itens carregados")
-            logger.info(f"      📊 Categorias: {df_orcamento['categoria'].nunique()}")
-            logger.info(f"      📋 UPEs: {df_orcamento['cod_upe'].nunique()}")
-            logger.info(f"      💰 Valor total: R$ {df_orcamento['total_orcado'].sum():,.2f}")
+            logger.debug(f"      ✅ {len(df_orcamento)} itens carregados")
+            logger.debug(f"      📊 Categorias: {df_orcamento['categoria'].nunique()}")
+            logger.debug(f"      📋 UPEs: {df_orcamento['cod_upe'].nunique()}")
+            logger.debug(f"      💰 Valor total: R$ {df_orcamento['total_orcado'].sum():,.2f}")
             
             logger.info("[2/4] Carregando base LPU...")
             df_lpu = carregar_lpu(caminho_lpu)
-            logger.info(f"      ✅ {len(df_lpu)} itens carregados")
-            logger.info(f"      📚 Fontes: {df_lpu['fonte'].nunique()}")
-            logger.info(f"      🏷️  Fontes disponíveis: {', '.join(df_lpu['fonte'].unique())}")
+            logger.debug(f"      ✅ {len(df_lpu)} itens carregados")
+            logger.debug(f"      📚 Fontes: {df_lpu['fonte'].nunique()}")
+            logger.debug(f"      🏷️  Fontes disponíveis: {', '.join(df_lpu['fonte'].unique())}")
             
             logger.info("[3/4] Cruzando dados...")
             df_cruzado = cruzar_orcamento_lpu(df_orcamento, df_lpu)
-            logger.info(f"      ✅ {len(df_cruzado)} itens correspondidos")
+            logger.debug(f"      ✅ {len(df_cruzado)} itens correspondidos")
             
             logger.info("[4/4] Calculando divergências...")
             df_resultado = calcular_divergencias(df_cruzado)
-            logger.info(f"      ✅ Cálculos concluídos")
+            logger.debug(f"      ✅ Cálculos concluídos")
             
             # Salvar resultados
             from construct_cost_ai.domain.validador_lpu import salvar_resultado
@@ -129,18 +129,18 @@ def executar_validacao(
         # ESTATÍSTICAS GERAIS
         # ====================================================================
         if gerar_estatisticas and not verbose:
-            logger.info("📊 ESTATÍSTICAS DA VALIDAÇÃO")
-            logger.info("-" * 80)
+            logger.debug("📊 ESTATÍSTICAS DA VALIDAÇÃO")
+            logger.debug("-" * 80)
             
             total_itens = len(df_resultado)
             itens_ok = (df_resultado['status_conciliacao'] == 'OK').sum()
             itens_ressarcimento = (df_resultado['status_conciliacao'] == 'Para ressarcimento').sum()
             itens_abaixo = (df_resultado['status_conciliacao'] == 'Abaixo LPU').sum()
             
-            logger.info(f"Total de itens: {total_itens}")
-            logger.info(f"  ✅ OK: {itens_ok} ({itens_ok/total_itens*100:.1f}%)")
-            logger.info(f"  ⚠️  Para ressarcimento: {itens_ressarcimento} ({itens_ressarcimento/total_itens*100:.1f}%)")
-            logger.info(f"  📉 Abaixo LPU: {itens_abaixo} ({itens_abaixo/total_itens*100:.1f}%)")
+            logger.debug(f"Total de itens: {total_itens}")
+            logger.debug(f"  ✅ OK: {itens_ok} ({itens_ok/total_itens*100:.1f}%)")
+            logger.debug(f"  ⚠️  Para ressarcimento: {itens_ressarcimento} ({itens_ressarcimento/total_itens*100:.1f}%)")
+            logger.debug(f"  📉 Abaixo LPU: {itens_abaixo} ({itens_abaixo/total_itens*100:.1f}%)")
             
             valor_total = df_resultado['valor_total_orcado'].sum()
             dif_total = df_resultado['dif_total'].sum()
@@ -148,24 +148,24 @@ def executar_validacao(
                 df_resultado['status_conciliacao'] == 'Para ressarcimento'
             ]['dif_total'].sum()
             
-            logger.info(f"💰 Valor total orçado: R$ {valor_total:,.2f}")
-            logger.info(f"💵 Divergência total: R$ {dif_total:,.2f}")
-            logger.info(f"💸 Potencial ressarcimento: R$ {dif_ressarcimento:,.2f}")
+            logger.debug(f"💰 Valor total orçado: R$ {valor_total:,.2f}")
+            logger.debug(f"💵 Divergência total: R$ {dif_total:,.2f}")
+            logger.debug(f"💸 Potencial ressarcimento: R$ {dif_ressarcimento:,.2f}")
         
         # ====================================================================
         # TOP DIVERGÊNCIAS
         # ====================================================================
         if gerar_top_divergencias:
-            logger.info(f"🔴 TOP {top_n} MAIORES DIVERGÊNCIAS (Valor Absoluto)")
-            logger.info("-" * 80)
+            logger.debug(f"🔴 TOP {top_n} MAIORES DIVERGÊNCIAS (Valor Absoluto)")
+            logger.debug("-" * 80)
             top_abs = df_resultado.nlargest(top_n, 'dif_total')[
                 ['cod_item', 'nome', 'unitario_orcado', 'unitario_lpu', 
                  'dif_unitario', 'dif_total', 'status_conciliacao']
             ]
             print(top_abs.to_string(index=False))
             
-            logger.info(f"📈 TOP {top_n} MAIORES DIVERGÊNCIAS (Percentual)")
-            logger.info("-" * 80)
+            logger.debug(f"📈 TOP {top_n} MAIORES DIVERGÊNCIAS (Percentual)")
+            logger.debug("-" * 80)
             df_resultado['perc_dif_abs'] = abs(df_resultado['perc_dif'])
             top_perc = df_resultado.nlargest(top_n, 'perc_dif_abs')[
                 ['cod_item', 'nome', 'unitario_orcado', 'unitario_lpu', 
@@ -177,8 +177,8 @@ def executar_validacao(
         # ANÁLISE POR CATEGORIA
         # ====================================================================
         if gerar_analise_categorias and 'categoria' in df_resultado.columns:
-            logger.info("📊 ANÁLISE POR CATEGORIA")
-            logger.info("-" * 80)
+            logger.debug("📊 ANÁLISE POR CATEGORIA")
+            logger.debug("-" * 80)
             
             resumo_cat = df_resultado.groupby(['categoria', 'status_conciliacao']).agg({
                 'cod_item': 'count',
@@ -188,17 +188,17 @@ def executar_validacao(
             
             print(resumo_cat.to_string(index=False))
             
-            logger.info("💰 Divergência Total por Categoria:")
+            logger.debug("💰 Divergência Total por Categoria:")
             dif_por_cat = df_resultado.groupby('categoria')['dif_total'].sum().sort_values(ascending=False)
             for cat, valor in dif_por_cat.head(10).items():
-                logger.info(f"  {cat}: R$ {valor:,.2f}")
+                logger.debug(f"  {cat}: R$ {valor:,.2f}")
         
         # ====================================================================
         # ANÁLISE POR UPE
         # ====================================================================
         if gerar_analise_upes and 'cod_upe' in df_resultado.columns:
-            logger.info("📋 ANÁLISE POR UPE")
-            logger.info("-" * 80)
+            logger.debug("📋 ANÁLISE POR UPE")
+            logger.debug("-" * 80)
             
             resumo_upe = df_resultado.groupby(['cod_upe', 'status_conciliacao']).agg({
                 'cod_item': 'count',
@@ -228,22 +228,22 @@ def executar_validacao(
             filtros_aplicados.append(f"Valor unitário > R$ {filtro_valor_minimo:,.2f}")
         
         if filtros_aplicados:
-            logger.info("🎯 RESULTADOS FILTRADOS")
-            logger.info("-" * 80)
-            logger.info("Filtros aplicados:")
+            logger.debug("🎯 RESULTADOS FILTRADOS")
+            logger.debug("-" * 80)
+            logger.debug("Filtros aplicados:")
             for filtro in filtros_aplicados:
-                logger.info(f"  • {filtro}")
+                logger.debug(f"  • {filtro}")
             
-            logger.info(f"Itens encontrados: {len(df_filtrado)}")
+            logger.debug(f"Itens encontrados: {len(df_filtrado)}")
             
             if len(df_filtrado) > 0:
-                logger.info("Resumo por status:")
+                logger.debug("Resumo por status:")
                 print(df_filtrado['status_conciliacao'].value_counts())
                 
-                logger.info(f"Divergência total filtrada: R$ {df_filtrado['dif_total'].sum():,.2f}")
+                logger.debug(f"Divergência total filtrada: R$ {df_filtrado['dif_total'].sum():,.2f}")
                 
                 if exibir_preview:
-                    logger.info("Primeiros 10 itens:")
+                    logger.debug("Primeiros 10 itens:")
                     preview_cols = ['cod_item', 'nome', 'unitario_orcado', 'unitario_lpu', 
                                    'perc_dif', 'dif_total', 'status_conciliacao']
                     print(df_filtrado[preview_cols].head(10).to_string(index=False))
@@ -254,28 +254,28 @@ def executar_validacao(
         # PREVIEW GERAL
         # ====================================================================
         elif exibir_preview and not gerar_top_divergencias:
-            logger.info("📋 PREVIEW DOS RESULTADOS (Primeiros 10 itens)")
-            logger.info("-" * 80)
+            logger.debug("📋 PREVIEW DOS RESULTADOS (Primeiros 10 itens)")
+            logger.debug("-" * 80)
             preview_cols = ['cod_item', 'nome', 'unidade', 'qtde',
                            'unitario_orcado', 'unitario_lpu', 'dif_unitario',
                            'perc_dif', 'status_conciliacao']
             print(df_resultado[preview_cols].head(10).to_string(index=False))
         
-        logger.success("=" * 80)
+        logger.debug("=" * 80)
         logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
-        logger.success("=" * 80)
+        logger.debug("=" * 80)
         
         logger.info("📁 ARQUIVOS GERADOS:")
-        logger.info("-" * 80)
-        logger.info("   ✅ validacao_lpu.xlsx           - Exportação básica (4 abas)")
-        logger.info("   ✅ validacao_lpu.csv            - Exportação CSV")
-        logger.info("   ✅ relatorio_completo_validacao_lpu.xlsx - Relatório completo (11+ abas)")
-        logger.info("      └─ Estatísticas gerais, Top divergências, Análises por categoria/UPE")
-        logger.info("   ✅ relatorio_validacao_lpu.html - Relatório HTML interativo")
-        logger.info("      └─ Dashboard visual com gráficos e tabelas formatadas")
-        logger.info("-" * 80)
-        logger.info(f"   📂 Localização: {Path(output_dir).resolve()}")
-        logger.info("=" * 80)
+        logger.debug("-" * 80)
+        logger.debug("   ✅ validacao_lpu.xlsx           - Exportação básica (4 abas)")
+        logger.debug("   ✅ validacao_lpu.csv            - Exportação CSV")
+        logger.debug("   ✅ relatorio_completo_validacao_lpu.xlsx - Relatório completo (11+ abas)")
+        logger.debug("      └─ Estatísticas gerais, Top divergências, Análises por categoria/UPE")
+        logger.debug("   ✅ relatorio_validacao_lpu.html - Relatório HTML interativo")
+        logger.debug("      └─ Dashboard visual com gráficos e tabelas formatadas")
+        logger.debug("-" * 80)
+        logger.debug(f"   📂 Localização: {Path(output_dir).resolve()}")
+        logger.debug("=" * 80)
         
         return df_resultado if not filtros_aplicados else df_filtrado
         
