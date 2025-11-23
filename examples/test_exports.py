@@ -25,6 +25,7 @@ from construct_cost_ai.domain.validador_lpu import (
     gerar_relatorio_html,
     gerar_relatorio_excel_completo,
 )
+from config.config_logger import logger
 
 
 def test_exports():
@@ -35,12 +36,12 @@ def test_exports():
     caminho_lpu = Path(base_dir, "data", "lpu_exemplo.xlsx")
     output_dir = Path(base_dir, "outputs", "test_exports")
     
-    print("\n" + "=" * 80)
-    print("TESTE DE EXPORTAÇÕES - Excel + HTML")
-    print("=" * 80 + "\n")
+    logger.info("=" * 80)
+    logger.info("TESTE DE EXPORTAÇÕES - Excel + HTML")
+    logger.info("=" * 80)
     
     # Executar validação
-    print("🔄 Executando validação...")
+    logger.info("🔄 Executando validação...")
     df_resultado = validar_lpu(
         caminho_orcamento=caminho_orcamento,
         caminho_lpu=caminho_lpu,
@@ -48,28 +49,28 @@ def test_exports():
         verbose=False
     )
     
-    print(f"\n✅ Validação concluída: {len(df_resultado)} itens processados")
+    logger.success(f"✅ Validação concluída: {len(df_resultado)} itens processados")
     
     # Testar exportações individuais
-    print("\n📊 Testando exportação Excel completo...")
+    logger.info("📊 Testando exportação Excel completo...")
     gerar_relatorio_excel_completo(df_resultado, output_dir, "teste_excel_completo")
     
-    print("\n🌐 Testando exportação HTML...")
+    logger.info("🌐 Testando exportação HTML...")
     gerar_relatorio_html(df_resultado, output_dir, "teste_html")
     
-    print("\n" + "=" * 80)
-    print("✅ TESTES CONCLUÍDOS COM SUCESSO!")
-    print("=" * 80)
+    logger.success("=" * 80)
+    logger.success("✅ TESTES CONCLUÍDOS COM SUCESSO!")
+    logger.success("=" * 80)
     
-    print(f"\n📁 Arquivos gerados em: {output_dir.resolve()}")
-    print("\nArquivos criados:")
-    print("   ✅ validacao_lpu.xlsx (4 abas)")
-    print("   ✅ validacao_lpu.csv")
-    print("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
-    print("   ✅ relatorio_validacao_lpu.html")
-    print("   ✅ teste_excel_completo.xlsx (teste individual)")
-    print("   ✅ teste_html.html (teste individual)")
-    print("\n" + "=" * 80 + "\n")
+    logger.info(f"📁 Arquivos gerados em: {output_dir.resolve()}")
+    logger.info("Arquivos criados:")
+    logger.info("   ✅ validacao_lpu.xlsx (4 abas)")
+    logger.info("   ✅ validacao_lpu.csv")
+    logger.info("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
+    logger.info("   ✅ relatorio_validacao_lpu.html")
+    logger.info("   ✅ teste_excel_completo.xlsx (teste individual)")
+    logger.info("   ✅ teste_html.html (teste individual)")
+    logger.info("=" * 80)
 
 
 if __name__ == "__main__":

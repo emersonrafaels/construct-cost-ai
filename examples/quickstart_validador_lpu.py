@@ -21,26 +21,27 @@ base_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from construct_cost_ai.domain import validar_lpu
+from config.config_logger import logger
 
 # ========================================
 # USO BÁSICO (1 linha)
 # ========================================
-print("Executando validação LPU...")
+logger.info("Executando validação LPU...")
 df = validar_lpu()
 
 # ========================================
 # ANÁLISE RÁPIDA
 # ========================================
-print("\n" + "="*80)
-print("ANÁLISE RÁPIDA")
-print("="*80)
+logger.info("="*80)
+logger.info("ANÁLISE RÁPIDA")
+logger.info("="*80)
 
 # Resumo por status
-print("\n📊 Resumo por Status:")
+logger.info("📊 Resumo por Status:")
 print(df['status_conciliacao'].value_counts())
 
 # Top 5 divergências
-print("\n🔴 Top 5 Maiores Divergências:")
+logger.info("🔴 Top 5 Maiores Divergências:")
 print(df.nlargest(5, 'dif_total')[
     ['cod_item', 'nome', 'dif_total', 'status_conciliacao']
 ].to_string(index=False))
