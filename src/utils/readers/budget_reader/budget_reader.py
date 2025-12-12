@@ -326,10 +326,10 @@ def extract_table(
     num_cols = len(columns_found)
 
     # Define o cabeçalho a partir da linha encontrada
-    header = df.iloc[header_row, first_col : first_col + num_cols].tolist()
+    header = df.iloc[header_row, :].tolist()
 
     # Extrai os dados abaixo do cabeçalho
-    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
+    data = df.iloc[header_row + 1 :, :].copy()
 
     # Define o cabeçalho no DataFrame
     data.columns = header
