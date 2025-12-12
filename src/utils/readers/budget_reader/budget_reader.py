@@ -77,84 +77,79 @@ base_dir = Path(__file__).parents[4]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
-from src.utils.data.data_functions import read_data
+from utils.data.data_functions import read_data
 
 # Cabeçalho esperado da tabela
-COLS_EXPECTED = [
-    "Filtro",
+EXPECTED_COLUMNS = [
+    "Filter",
     "ID",
-    "Descrição",
-    "Un.",
-    "Unitário",
-    "Comentário",
-    "Quantidade",
+    "Description",
+    "Unit",
+    "Unit Price",
+    "Comment",
+    "Quantity",
     "Total",
 ]
 
 
-def ler_planilha_tabela_orcamento(caminho_arquivo, nome_aba="LPU"):
+def read_budget_table(file_path, sheet_name="LPU"):
     """
     Lê a planilha (aba LPU) e retorna apenas a tabela de orçamento
     no formato Filtro | ID | Descrição | ... | Total.
     """
     # Lê tudo como planilha "crua", sem header
-    df_raw = read_data(caminho_arquivo, sheet_name=nome_aba, header=None)
+    raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
 
     # Localiza o cabeçalho da tabela
-    r, c = localizar_tabela(df_raw)
-    if r is None:
+    row, col = locate_table(raw_df)
+    if row is None:
         raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
 
     # Extrai só a tabela
-    return extrair_tabela(df_raw, r, c)
+    return extract_table(raw_df, row, col)
 
 
-def localizar_tabela(df, cols_esperadas=COLS_EXPECTED):
+def locate_table(df, expected_columns=EXPECTED_COLUMNS):
     """
     Procura no DataFrame a linha/coluna onde começa o cabeçalho da tabela:
-    Filtro | ID | Descrição | Un. | Unitário | Comentário | Quantidade | Total
+    Filter | ID | Description | Unit | Unit Price | Comment | Quantity | Total
     Retorna (linha, coluna) do início do cabeçalho.
     """
-    cols_exp_norm = [c.lower() for c in cols_esperadas]
-    n = len(cols_esperadas)
+    normalized_expected = [col.lower() for col in expected_columns]
+    num_cols = len(expected_columns)
 
-    for r in range(df.shape[0]):
-        for c in range(df.shape[1] - n + 1):
-            vals = df.iloc[r, c : c + n].tolist()
+    for row in range(df.shape[0]):
+        for col in range(df.shape[1] - num_cols + 1):
+            values = df.iloc[row, col : col + num_cols].tolist()
 
-            norm = []
-            for v in vals:
-                if (isinstance(v, float) and math.isnan(v)) or pd.isna(v):
-                    norm.append("")
-                else:
-                    norm.append(str(v).strip().lower())
+            normalized = [
+                "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
+                for val in values
+            ]
 
-            if norm == cols_exp_norm:
-                return r, c
+            if normalized == normalized_expected:
+                return row, col
 
     return None, None
 
 
-def extrair_tabela(df, header_row, first_col, cols_esperadas=COLS_EXPECTED):
+def extract_table(df, header_row, first_col, expected_columns=EXPECTED_COLUMNS):
     """
     A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
     """
-    n = len(cols_esperadas)
+    num_cols = len(expected_columns)
 
     # Tudo que vem depois do cabeçalho, nas mesmas colunas
-    data = df.iloc[header_row + 1 :, first_col : first_col + n].copy()
+    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
 
     # Define o nome correto das colunas
-    data.columns = cols_esperadas
+    data.columns = expected_columns
 
     # Remove linhas totalmente vazias
     data = data.dropna(how="all")
 
     # Remove linhas sem valor no campo Filtro (em geral são espaços/rodapés)
-    data = data[~data["Filtro"].isna()]
-
-    # Se quiser só as linhas com Filtro == "Sim", descomente:
-    # data = data[data["Filtro"].astype(str).str.strip().str.lower() == "sim"]
+    data = data[~data["Filter"].isna()]
 
     # Ajusta índice
     data = data.reset_index(drop=True)
@@ -162,39 +157,34 @@ def extrair_tabela(df, header_row, first_col, cols_esperadas=COLS_EXPECTED):
     return data
 
 
-def orchestrator_budget_reader(list_files):
-    """Orquestra a execução do budget_reader."""
+def orchestrate_budget_reader(file_list, sheet_name="LPU"):
+    """
+    Orquestra a execução do budget_reader.
+    """
+    all_tables = []
 
-    try:
-        tabela = ler_planilha_tabela_orcamento(caminho, nome_aba="LPU")
-        logger.success(f"Tabela extraída com sucesso do arquivo: {caminho}")
-        logger.info(tabela)
-    except Exception as e:
-        logger.error(f"Erro ao processar o arquivo {caminho}: {e}")
-
-    # Exemplo lendo vários .xlsx de uma pasta e concatenando
-    pasta = Path(".")
-    todas_tabelas = []
-
-    for arq in pasta.glob("*.xlsx"):
+    for file_path in file_list:
         try:
-            df_tab = ler_planilha_tabela_orcamento(arq, nome_aba="LPU")
-            df_tab["arquivo_origem"] = arq.name
-            todas_tabelas.append(df_tab)
-            logger.success(f"Tabela extraída com sucesso do arquivo: {arq.name}")
+            table = read_budget_table(file_path, sheet_name=sheet_name)
+            table["source_file"] = Path(file_path).name
+            all_tables.append(table)
+            logger.success(f"Tabela extraída com sucesso do arquivo: {file_path}")
         except Exception as e:
-            logger.error(f"Erro ao processar {arq.name}: {e}")
+            logger.error(f"Erro ao processar o arquivo {file_path}: {e}")
 
-    if todas_tabelas:
-        df_final = pd.concat(todas_tabelas, ignore_index=True)
+    if all_tables:
+        final_df = pd.concat(all_tables, ignore_index=True)
         logger.success("Tabelas concatenadas com sucesso.")
-        logger.info(df_final)
-    else:
-        logger.warning("Nenhuma tabela foi processada com sucesso.")
+        logger.info(final_df)
+        return final_df
+
+    logger.warning("Nenhuma tabela foi processada com sucesso.")
+    return pd.DataFrame()
 
 
 if __name__ == "__main__":
     # Exemplo com um único arquivo
-    caminho = r"C:\Users\emers\OneDrive\Área de Trabalho\Itaú\CICF\DataCraft\Verificador Inteligente de Obras\codes\construct-cost-ai\data\sample_padrao2_fg.xlsx"
+    file_path = r"C:\Users\emers\OneDrive\Área de Trabalho\Itaú\CICF\DataCraft\Verificador Inteligente de Obras\codes\construct-cost-ai\data\sample_padrao2_fg.xlsx"
+    sheet_name = "LPU"
 
-    orchestrator_budget_reader(caminho)
+    orchestrate_budget_reader([file_path], sheet_name=sheet_name)
