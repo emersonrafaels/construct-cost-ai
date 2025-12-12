@@ -69,7 +69,7 @@ __status__ = "Production"
 import math
 import sys
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, List, Tuple, Dict, Any
 
 import pandas as pd
 from pydantic.dataclasses import dataclass
@@ -81,34 +81,49 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 from config.config_logger import logger
 from utils.data.data_functions import read_data
 
-# Cabeçalho esperado da tabela
+# Constantes centralizadas
+DEFAULT_SHEET_NAME = "LPU"  # Nome padrão da aba a ser lida
 EXPECTED_COLUMNS = [
-    "Filtro",
-    "ID",
-    "Descrição",
-    "Un.",
-    "Unitário",
-    "Comentário",
-    "Quantidade",
-    "Total",
+    "Filtro",  # Coluna que indica se a linha deve ser filtrada
+    "ID",  # Identificador único do item
+    "Descrição",  # Descrição do item
+    "Un.",  # Unidade de medida
+    "Unitário",  # Preço unitário
+    "Comentário",  # Comentários adicionais
+    "Quantidade",  # Quantidade do item
+    "Total",  # Valor total do item
 ]
+ALTERNATIVE_COLUMNS = ["ID", "Un.", "Unitário", "Quantidade"]  # Colunas mínimas alternativas
+COL_FILTRO = "Filtro"  # Nome da coluna usada para filtragem
 
-ALTERNATIVE_COLUMNS = [
-    "ID",
-    "Un.",
-    "Unitário",
-    "Quantidade",
-]
-
-COL_FILTRO = "Filtro"
+# Metadados padrão
+DEFAULT_METADATA_KEYS = {
+    "codigo_upe": "upe",  # Código UPE
+    "numero_agencia": "agência|agencia",  # Número da agência
+    "nome_agencia": "nome da agência|nome da agencia",  # Nome da agência
+    "total": "total",  # Total geral
+    "contrato": "contrato",  # Número do contrato
+    "versao": "versão|versao",  # Versão do documento
+    "tipo": "tipo",  # Tipo do orçamento
+    "quantidade_sinergias": "quantidade sinergias",  # Quantidade de sinergias
+    "dono": "dono",  # Dono do orçamento
+}
 
 @dataclass
 class FileInput:
-    file_path: str
-    sheet_name: Optional[str] = "LPU"
-    
+    """
+    Representa um arquivo de entrada com caminho e nome da aba opcional.
 
-def normalize_values(values):
+    Attributes:
+        file_path (str): Caminho do arquivo.
+        sheet_name (Optional[str]): Nome da aba a ser lida (padrão: "LPU").
+    """
+    file_path: str  # Caminho completo do arquivo
+    sheet_name: Optional[str] = "LPU"  # Nome da aba a ser lida, padrão "LPU"
+
+# Funções auxiliares
+
+def normalize_values(values: list) -> list:
     """
     Normaliza uma lista de valores, removendo espaços, convertendo para letras minúsculas
     e substituindo valores NaN ou vazios por strings vazias.
@@ -119,22 +134,30 @@ def normalize_values(values):
     Returns:
         list: Lista de valores normalizados.
     """
-    normalized = [
+    return [
         "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
-        for val in values
+        for val in values  # Remove espaços, converte para minúsculas e trata NaN
     ]
-    return normalized
 
-
-def locate_table(df: pd.DataFrame, 
-                 expected_columns: list = EXPECTED_COLUMNS, 
-                 alternative_columns: list = ALTERNATIVE_COLUMNS):
+def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Procura no DataFrame a linha/coluna onde começa o cabeçalho da tabela:
-    Filtro | ID | Descrição | Unidade | Preço Unitário | Comentário | Quantidade | Total
-    ou uma alternativa mínima contendo as colunas: ID, Un., Unitário, Quantidade.
-    
-    Retorna (linha, coluna, colunas_encontradas).
+    Realiza o pré-processamento inicial dos dados, incluindo a remoção de linhas totalmente em branco.
+
+    Args:
+        df (pd.DataFrame): DataFrame bruto lido da planilha.
+
+    Returns:
+        pd.DataFrame: DataFrame pré-processado.
+    """
+    return df.dropna(how="all").reset_index(drop=True)  # Remove linhas vazias e reseta o índice
+
+def locate_table(
+    df: pd.DataFrame,
+    expected_columns: list = EXPECTED_COLUMNS,
+    alternative_columns: list = ALTERNATIVE_COLUMNS,
+) -> Tuple[Optional[int], Optional[int], Optional[list]]:
+    """
+    Detecta a posição (linha, coluna) onde o cabeçalho da tabela começa.
 
     Args:
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
@@ -145,39 +168,82 @@ def locate_table(df: pd.DataFrame,
         tuple: Uma tupla (linha, coluna, colunas_encontradas) indicando a posição do cabeçalho e as colunas encontradas,
                ou (None, None, None) se não encontrado.
     """
-    # Normaliza os nomes das colunas esperadas para letras minúsculas
-    normalized_expected = [col.lower() for col in expected_columns]
-    normalized_alternative = [col.lower() for col in alternative_columns]
+    normalized_expected = [col.lower() for col in expected_columns]  # Normaliza colunas esperadas
+    normalized_alternative = [col.lower() for col in alternative_columns]  # Normaliza colunas alternativas
+    num_cols = len(expected_columns)  # Número de colunas esperadas
 
-    # Calcula o número de colunas esperadas
-    num_cols = len(expected_columns)
+    for row in range(df.shape[0]):  # Itera sobre as linhas do DataFrame
+        for col in range(df.shape[1] - num_cols + 1):  # Itera sobre as colunas possíveis
+            values = df.iloc[row, col : col + num_cols].tolist()  # Extrai valores da linha e colunas
+            normalized = normalize_values(values)  # Normaliza os valores extraídos
 
-    # Itera sobre todas as linhas do DataFrame
-    for row in range(df.shape[0]):
-        # Itera sobre todas as colunas possíveis, garantindo espaço suficiente para as colunas esperadas
-        for col in range(df.shape[1] - num_cols + 1):
-            # Extrai os valores do trecho correspondente às colunas esperadas
-            values = df.iloc[row, col : col + num_cols].tolist()
+            if normalized == normalized_expected:  # Verifica se os valores correspondem às colunas esperadas
+                return row, col, expected_columns
+            if all(col in normalized for col in normalized_alternative):  # Verifica colunas alternativas
+                return row, col, alternative_columns
 
-            # Normaliza os valores extraídos usando a nova função
-            normalized = normalize_values(values)
+    return None, None, None  # Retorna None se não encontrar o cabeçalho
 
-            # Verifica se os valores normalizados correspondem às colunas esperadas
-            if normalized == normalized_expected:
-                return row, col, expected_columns  # Retorna a posição e as colunas esperadas
-            # Verifica se os valores contêm todas as colunas alternativas
-            if all(col in normalized for col in normalized_alternative):
-                return row, col, alternative_columns  # Retorna a posição e as colunas alternativas
+def find_metadata_value(
+    row: pd.Series,
+    col_idx: int,
+    metadata_key: str,
+    metadata: Dict[str, Any],
+    df: pd.DataFrame,
+    row_idx: int,
+) -> None:
+    """
+    Busca e atribui um valor de metadado ao dicionário, se ainda não atribuído.
 
-    # Retorna None, None, None se o cabeçalho não for encontrado
-    return None, None, None
+    Args:
+        row (pd.Series): Linha do DataFrame.
+        col_idx (int): Índice da coluna atual.
+        metadata_key (str): Chave do metadado a ser buscado.
+        metadata (dict): Dicionário de metadados.
+        df (pd.DataFrame): DataFrame completo para buscar o valor na linha seguinte.
+        row_idx (int): Índice da linha atual no DataFrame.
+    """
+    if metadata[metadata_key] is None:  # Verifica se o metadado já foi atribuído
+        if row_idx + 1 < len(df):  # Verifica se a próxima linha existe
+            metadata[metadata_key] = df.iloc[row_idx + 1, col_idx]  # Atribui o valor da próxima linha
+        else:
+            metadata[metadata_key] = None  # Define como None se não houver próxima linha
 
+def extract_metadata(
+    df: pd.DataFrame, metadata_keys: dict = DEFAULT_METADATA_KEYS
+) -> Dict[str, Optional[Any]]:
+    """
+    Extrai metadados da tabela de orçamento de forma genérica e dinâmica.
 
-def extract_table(df: pd.DataFrame, 
-                  header_row: int, 
-                  first_col: int, 
-                  columns_found: list, 
-                  col_filter: str = COL_FILTRO):
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados da planilha.
+        metadata_keys (dict): Dicionário com as chaves de metadados e padrões de busca.
+
+    Returns:
+        dict: Dicionário contendo os metadados extraídos.
+    """
+    metadata = {key: None for key in metadata_keys}  # Inicializa o dicionário de metadados
+
+    for row_idx, row in df.iterrows():  # Itera sobre as linhas do DataFrame
+        for col_idx, cell in enumerate(row):  # Itera sobre as células da linha
+            if pd.isna(cell):  # Ignora células vazias
+                continue
+
+            cell_str = str(cell).strip().lower()  # Normaliza o valor da célula
+
+            for key, pattern in metadata_keys.items():  # Verifica padrões de metadados
+                if metadata[key] is None and any(p in cell_str for p in pattern.split("|")):
+                    find_metadata_value(row, col_idx, key, metadata, df, row_idx)  # Busca o valor do metadado
+
+    return metadata  # Retorna o dicionário de metadados
+
+def extract_table(
+    df: pd.DataFrame,
+    header_row: int,
+    first_col: int,
+    columns_found: list,
+    col_filter: str = COL_FILTRO,
+) -> pd.DataFrame:
     """
     A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
 
@@ -191,20 +257,10 @@ def extract_table(df: pd.DataFrame,
     Returns:
         pd.DataFrame: DataFrame contendo apenas a tabela extraída e processada.
     """
-    # Calcula o número de colunas encontradas
-    num_cols = len(columns_found)
-
-    # Extrai os dados a partir da linha seguinte ao cabeçalho e das colunas encontradas
-    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
-
-    # Define os nomes das colunas do DataFrame extraído
-    data.columns = columns_found
-
-    # Chama a nova função para aplicar filtros e pós-processamentos
-    data = post_process_table(data, col_filter=col_filter)
-
-    return data
-
+    num_cols = len(columns_found)  # Número de colunas encontradas
+    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()  # Extrai os dados abaixo do cabeçalho
+    data.columns = columns_found  # Define os nomes das colunas
+    return post_process_table(data, col_filter=col_filter)  # Aplica pós-processamento
 
 def post_process_table(data: pd.DataFrame, col_filter: str = COL_FILTRO) -> pd.DataFrame:
     """
@@ -217,105 +273,61 @@ def post_process_table(data: pd.DataFrame, col_filter: str = COL_FILTRO) -> pd.D
     Returns:
         pd.DataFrame: DataFrame pós-processado com filtros aplicados.
     """
-    # Remove linhas completamente vazias
-    data = data.dropna(how="all")
+    data = data.dropna(how="all")  # Remove linhas completamente vazias
+    if col_filter in data.columns:  # Verifica se a coluna de filtro existe
+        data = data[data[col_filter].str.lower() == "sim"]  # Filtra linhas onde o valor é "sim"
+    return data.reset_index(drop=True)  # Reseta o índice do DataFrame
 
-    # Filtra apenas linhas onde a coluna "Filtro" (ou equivalente) é "Sim"
-    if col_filter in data.columns:
-        data = data[data[col_filter].str.lower() == "sim"]
-
-    # Reseta o índice do DataFrame para uma sequência contínua
-    data = data.reset_index(drop=True)
-
-    return data
-
-
-def extract_metadata(df: pd.DataFrame) -> dict:
+def read_budget_table(
+    file_path: str, sheet_name: str = DEFAULT_SHEET_NAME
+) -> Tuple[pd.DataFrame, Dict[str, Optional[Any]]]:
     """
-    Extrai metadados da tabela de orçamento, como código UPE, número da agência, nome da agência e construtora.
+    Lê a planilha (aba LPU) e retorna apenas a tabela de orçamento.
 
     Args:
-        df (pd.DataFrame): DataFrame contendo os dados da planilha.
+        file_path (str): Caminho do arquivo da planilha.
+        sheet_name (str): Nome da aba a ser lida.
 
     Returns:
-        dict: Dicionário contendo os metadados extraídos.
+        tuple: DataFrame contendo a tabela extraída e dicionário com os metadados.
     """
-    metadata = {
-        "codigo_upe": None,
-        "numero_agencia": None,
-        "nome_agencia": None,
-        "construtora": None,
-    }
-
-    # Procura os metadados nas primeiras linhas do DataFrame
-    for _, row in df.iterrows():
-        row_str = " ".join([str(cell).strip().lower() for cell in row if pd.notna(cell)])
-        if "upe" in row_str:
-            metadata["codigo_upe"] = row_str
-        if "agência" in row_str or "agencia" in row_str:
-            metadata["numero_agencia"] = row_str
-        if "nome da agência" in row_str or "nome da agencia" in row_str:
-            metadata["nome_agencia"] = row_str
-        if "construtora" in row_str:
-            metadata["construtora"] = row_str
-
-    return metadata
-
-
-def read_budget_table(file_path, sheet_name="LPU"):
-    """
-    Lê a planilha (aba LPU) e retorna apenas a tabela de orçamento
-    no formato Filtro | ID | Descrição | ... | Total.
-    """
-    # Lê tudo como planilha "crua", sem header
-    raw_df = read_data(file_path, 
-                       sheet_name=sheet_name, 
-                       header=None)
-
-    # Localiza o cabeçalho da tabela
-    row, col, columns_found = locate_table(raw_df)
+    raw_df = read_data(file_path, sheet_name=sheet_name, header=None)  # Lê a planilha sem cabeçalho
+    raw_df = preprocess_data(raw_df)  # Pré-processa os dados
+    row, col, columns_found = locate_table(raw_df)  # Localiza o cabeçalho da tabela
     if row is None:
         raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
+    metadata = extract_metadata(raw_df)  # Extrai os metadados
+    table = extract_table(raw_df, row, col, columns_found)  # Extrai a tabela
+    return table, metadata  # Retorna a tabela e os metadados
 
-    # Extrai os metadados antes de processar a tabela
-    metadata = extract_metadata(raw_df)
-
-    # Extrai só a tabela
-    table = extract_table(raw_df, row, col, columns_found)
-
-    return table, metadata
-
-
-def orchestrate_budget_reader(*files: FileInput):
+def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
     """
     Orquestra a execução do budget_reader.
 
     Args:
-        *files: Lista de instâncias FileInput contendo o caminho do arquivo e, opcionalmente, o nome da aba.
+        *files (List[FileInput]): Lista de instâncias FileInput contendo o caminho do arquivo e, opcionalmente, o nome da aba.
 
     Returns:
         pd.DataFrame: DataFrame concatenado de todas as tabelas processadas.
     """
-    all_tables = []
+    all_tables = []  # Lista para armazenar todas as tabelas processadas
 
-    for file_input in files:
-        
+    for file_input in files:  # Itera sobre os arquivos de entrada
         logger.info(f"Iniciando processamento do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}")
-        
         try:
-            table = read_budget_table(file_input.file_path, sheet_name=file_input.sheet_name)
-            table["source_file"] = Path(file_input.file_path).name
-            table["sheet_name"] = file_input.sheet_name
-            all_tables.append(table)
+            table, metadata = read_budget_table(file_input.file_path, sheet_name=file_input.sheet_name)  # Lê a tabela
+            table["source_file"] = Path(file_input.file_path).name  # Adiciona o nome do arquivo como coluna
+            table["sheet_name"] = file_input.sheet_name  # Adiciona o nome da aba como coluna
+            all_tables.append(table)  # Adiciona a tabela à lista
             logger.success(f"Tabela extraída com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}")
         except Exception as e:
             logger.error(f"Erro ao processar o arquivo {file_input.file_path}, aba {file_input.sheet_name}: {e}")
 
-    if all_tables:
-        final_df = pd.concat(all_tables, ignore_index=True)
+    if all_tables:  # Verifica se há tabelas processadas
+        final_df = pd.concat(all_tables, ignore_index=True)  # Concatena todas as tabelas
         logger.success("Todas as tabelas foram concatenadas com sucesso.")
-        logger.info(final_df)
+        logger.info(final_df)  # Loga o DataFrame final
         return final_df
 
     logger.warning("Nenhuma tabela foi processada com sucesso.")
-    return pd.DataFrame()
+    return pd.DataFrame()  # Retorna um DataFrame vazio se nenhuma tabela foi processada
