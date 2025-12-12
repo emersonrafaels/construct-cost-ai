@@ -79,38 +79,38 @@ base_dir = Path(__file__).parents[4]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
-from utils.data.data_functions import read_data
+from utils.data.data_functions import read_data, transform_case, filter_columns
 
 # Constantes centralizadas
 DEFAULT_SHEET_NAME = "LPU"  # Nome padrão da aba a ser lida
 EXPECTED_COLUMNS = [
-    "Filtro",  # Coluna que indica se a linha deve ser filtrada
+    "FILTRO",  # Coluna que indica se a linha deve ser filtrada
     "ID",  # Identificador único do item
-    "Descrição",  # Descrição do item
-    "Un.",  # Unidade de medida
-    "Unitário",  # Preço unitário
-    "Comentário",  # Comentários adicionais
-    "Quantidade",  # Quantidade do item
-    "Total",  # Valor total do item
+    "DESCRIÇÃO",  # Descrição do item
+    "UN.",  # Unidade de medida
+    "UNITÁRIO",  # Preço unitário
+    "COMENTÁRIO",  # Comentários adicionais
+    "QUANTIDADE",  # Quantidade do item
+    "TOTAL",  # Valor total do item
 ]
-ALTERNATIVE_COLUMNS = ["Filtro", 
+ALTERNATIVE_COLUMNS = ["FILTRO", 
                        "ID", 
-                       "Un.", 
-                       "Unitário", 
-                       "Quantidade"]  # Colunas mínimas alternativas
-COL_FILTRO = "Filtro"  # Nome da coluna usada para filtragem
+                       "UN.", 
+                       "UNITÁRIO", 
+                       "QUANTIDADE"]  # Colunas mínimas alternativas
+FILTROS = {"FILTRO": ["SIM"]}  # Nome da coluna usada para filtragem
 
 # Metadados padrão
 DEFAULT_METADATA_KEYS = {
-    "codigo_upe": "upe",  # Código UPE
-    "numero_agencia": "agência|agencia",  # Número da agência
-    "nome_agencia": "nome da agência|nome da agencia",  # Nome da agência
-    "total": "total",  # Total geral
-    "contrato": "contrato",  # Número do contrato
-    "versao": "versão|versao",  # Versão do documento
-    "tipo": "tipo",  # Tipo do orçamento
-    "quantidade_sinergias": "quantidade sinergias",  # Quantidade de sinergias
-    "dono": "dono",  # Dono do orçamento
+    "CÓDIGO_UPE": "UPE",  # Código UPE
+    "NUMERO_AGENCIA": "AGÊNCIA|AGENCIA",  # Número da agência
+    "NOME_AGENCIA": "NOME DA AGÊNCIA|NOME DA AGENCIA",  # Nome da agência
+    "TOTAL": "TOTAL",  # Total geral
+    "CONTRATO": "CONTRATO",  # Número do contrato
+    "VERSAO": "VERSÃO|VERSAO",  # Versão do documento
+    "TIPO": "TIPO",  # Tipo do orçamento
+    "QUANTIDADE_SINERGIAS": "QUANTIDADE SINERGIAS",  # Quantidade de sinergias
+    "PROGRAMA_DONO": "DONO",  # Dono do orçamento
 }
 
 @dataclass
@@ -156,7 +156,10 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: DataFrame pré-processado.
     """
     # Remove linhas vazias e reseta o índice
-    return df.dropna(how="all").reset_index(drop=True)
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    # Converte todas as colunas e celulas em uppercase
+    return transform_case(df=df, to_upper=True, columns=True, cells=True)
 
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
 def locate_table(
@@ -176,11 +179,11 @@ def locate_table(
         tuple: Uma tupla (linha, coluna, colunas_encontradas) indicando a posição do cabeçalho e as colunas encontradas,
                ou (None, None, None) se não encontrado.
     """
-    # Normaliza colunas esperadas
-    normalized_expected = [col.lower() for col in expected_columns]
+    # Normaliza colunas esperadas para uppercase
+    normalized_expected = [col.upper() for col in expected_columns]
     
-    # Normaliza colunas alternativas
-    normalized_alternative = [col.lower() for col in alternative_columns]
+    # Normaliza colunas alternativas para uppercase
+    normalized_alternative = [col.upper() for col in alternative_columns]
     
     # Número de colunas esperadas
     num_cols = len(normalized_expected)
@@ -194,8 +197,8 @@ def locate_table(
             # Extrai valores da linha e colunas
             values = df.iloc[row, col : col + num_cols].tolist()
             
-            # Normaliza os valores extraídos
-            normalized = normalize_values(values)
+            # Normaliza os valores extraídos para uppercase
+            normalized = [str(val).upper() if isinstance(val, str) else val for val in values]
 
             # Verifica se os valores correspondem às colunas esperadas
             if normalized == normalized_expected:
@@ -228,19 +231,15 @@ def find_metadata_value(
         df (pd.DataFrame): DataFrame completo para buscar o valor nas linhas subsequentes.
         row_idx (int): Índice da linha atual no DataFrame.
     """
-    
     # Verifica se o metadado já foi atribuído
     if metadata[metadata_key] is None:
-        
         # Itera pelas linhas subsequentes
         for next_row_idx in range(row_idx + 1, len(df)):
-            
             # Obtém o valor da célula na linha subsequente
             value = df.iloc[next_row_idx, col_idx]
             if not pd.isna(value):  # Verifica se o valor não é NaN
-                metadata[metadata_key] = value  # Atribui o valor encontrado
+                metadata[metadata_key] = str(value).upper()  # Atribui o valor encontrado em uppercase
                 break  # Interrompe a busca ao encontrar o valor
-
 
 # Função para extrair metadados dinamicamente do DataFrame
 def extract_metadata(
@@ -265,13 +264,13 @@ def extract_metadata(
             if pd.isna(cell):  # Ignora células vazias
                 continue
 
-            # Normaliza o valor da célula
-            cell_str = str(cell).strip().lower()
+            # Normaliza o valor da célula para uppercase
+            cell_str = str(cell).strip().upper()
 
             # Verifica padrões de metadados
             for key, pattern in metadata_keys.items():
                 # Se o metadado ainda não foi encontrado e o padrão corresponde
-                if metadata[key] is None and any(p in cell_str for p in pattern.split("|")):
+                if metadata[key] is None and any(p.upper() in cell_str for p in pattern.split("|")):
                     # Busca o valor do metadado
                     find_metadata_value(row, col_idx, key, metadata, df, row_idx)
 
@@ -283,7 +282,7 @@ def extract_table(
     header_row: int,
     first_col: int,
     columns_found: list,
-    col_filter: str = COL_FILTRO,
+    col_filter: str = FILTROS,
 ) -> pd.DataFrame:
     """
     A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
@@ -302,34 +301,54 @@ def extract_table(
     # Número de colunas encontradas
     num_cols = len(columns_found)
     
-    # Extrai os dados abaixo do cabeçalho
-    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
+    # Define o cabeçalho a partir da linha encontrada
+    header = df.iloc[header_row, first_col:first_col + num_cols].tolist()
     
-    # Define os nomes das colunas
-    data.columns = columns_found
+    # Extrai os dados abaixo do cabeçalho
+    data = df.iloc[header_row + 1:, first_col:first_col + num_cols].copy()
+    
+    # Define o cabeçalho no DataFrame
+    data.columns = header
     
     # Aplica pós-processamento e filtros
-    return post_process_table(data, col_filter=col_filter)
+    return post_process_table(data, cols_expected=columns_found, col_filter=col_filter)
 
 # Função para aplicar filtros e pós-processamento na tabela extraída
-def post_process_table(data: pd.DataFrame, col_filter: str = COL_FILTRO) -> pd.DataFrame:
+def post_process_table(data: pd.DataFrame, 
+                       cols_expected: list = [], 
+                       col_filter: Dict[str, Any] = FILTROS) -> pd.DataFrame:
     """
     Aplica filtros e pós-processamentos em um DataFrame extraído.
 
     Args:
         data (pd.DataFrame): DataFrame contendo os dados extraídos da tabela.
-        col_filter (str): Nome da coluna usada para filtrar linhas vazias.
+        cols_expected (list): Lista de colunas esperadas no cabeçalho.
+        col_filter (dict): Dicionário onde a chave é o nome da coluna e o valor pode ser uma string ou uma lista de valores filtráveis.
 
     Returns:
         pd.DataFrame: DataFrame pós-processado com filtros aplicados.
     """
-    
-    # Verifica se a coluna de filtro existe
-    if col_filter in data.columns:
-        
-        # Filtra linhas onde o valor é "sim"
-        data = data[data[col_filter].str.lower() == "sim"]
-    return data.reset_index(drop=True)  # Reseta o índice do DataFrame
+    # Filtra as colunas esperadas, mantendo apenas as colunas encontradas
+    if cols_expected:
+        data = filter_columns(df=data, 
+                              columns=cols_expected, 
+                              allow_partial=True)
+
+    # Aplica os filtros definidos no dicionário col_filter
+    for col, filter_values in col_filter.items():
+        if col in data.columns:
+            # Garante que filter_values seja uma lista
+            if isinstance(filter_values, str):
+                filter_values = [filter_values]
+            
+            # Filtra linhas onde o valor está na lista de valores filtráveis
+            data = data[data[col].str.lower().isin([val.lower() for val in filter_values])]
+
+    # Padroniza os dados para uppercase
+    data = data.applymap(lambda x: str(x).upper() if isinstance(x, str) else x)
+
+    # Reseta o índice do DataFrame
+    return data.reset_index(drop=True)
 
 # Função para ler a tabela de orçamento do arquivo e aba especificados
 def read_budget_table(

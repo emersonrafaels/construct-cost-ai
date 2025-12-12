@@ -59,7 +59,7 @@ __email__ = "emersonssmile@gmail.com"
 __status__ = "Production"
 
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -88,7 +88,7 @@ def read_data(file_path: Union[str, Path], sheet_name: Optional[Union[str, int]]
     # Obtendo a extensão do dado recebido
     extension = file_path.suffix.lower()
 
-    # Definindo os leitores disponíveis
+    # Definindo os leitores disponíveis no data functions
     readers = {
         ".csv": lambda path: pd.read_csv(path, header=header),
         ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
@@ -162,6 +162,81 @@ def export_data(
         exporter(data, file_path)
     except Exception as e:
         raise RuntimeError(f"Error exporting to {file_path}: {str(e)}")
+
+
+def transform_case(
+    df: pd.DataFrame, 
+    to_upper: bool = True, 
+    columns: Union[bool, List[str]] = False, 
+    cells: Union[bool, List[Tuple[int, int]]] = False
+) -> pd.DataFrame:
+    """
+    Transforma valores de texto em um DataFrame para uppercase ou lowercase, com opções para todas as colunas ou células específicas.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser transformado.
+        to_upper (bool): Se True, transforma os valores para uppercase. Se False, transforma para lowercase. Default é True.
+        columns (Union[bool, List[str]]): Se True, todas as colunas serão transformadas. Se lista, apenas as colunas especificadas serão transformadas. Default é False.
+        cells (Union[bool, List[Tuple[int, int]]]): Se True, todas as células serão transformadas. Se lista, apenas as células especificadas serão transformadas. Default é False.
+
+    Returns:
+        pd.DataFrame: DataFrame com os valores transformados.
+    """
+    def transform_value(value):
+        if isinstance(value, str):
+            return value.upper() if to_upper else value.lower()
+        return value
+
+    if cells:
+        if cells is True:
+            # Transforma todas as células do DataFrame
+            df = df.applymap(transform_value)
+        else:
+            # Transforma apenas as células especificadas
+            for row, col in cells:
+                if row < len(df) and col < len(df.columns):
+                    df.iat[row, col] = transform_value(df.iat[row, col])
+    elif columns:
+        if columns is True:
+            # Transforma todas as colunas do DataFrame
+            df = df.applymap(transform_value)
+        else:
+            # Transforma apenas as colunas especificadas
+            for col in columns:
+                if col in df.columns:
+                    df[col] = df[col].apply(transform_value)
+    else:
+        # Transforma todo o DataFrame
+        df = df.applymap(transform_value)
+
+    return df
+
+
+def filter_columns(df: pd.DataFrame, columns: list, allow_partial: bool = True) -> pd.DataFrame:
+    """
+    Filtra as colunas de um DataFrame com base em uma lista de colunas fornecida.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser filtrado.
+        columns (list): Lista de colunas a serem mantidas no DataFrame.
+        allow_partial (bool): Se True, mantém apenas as colunas existentes no DataFrame.
+                             Se False, gera um erro se alguma coluna não existir.
+
+    Returns:
+        pd.DataFrame: DataFrame filtrado com as colunas especificadas.
+
+    Raises:
+        ValueError: Se `allow_partial` for False e alguma coluna não existir no DataFrame.
+    """
+    # Verifica as colunas que existem no DataFrame
+    existing_columns = [col for col in columns if col in df.columns]
+
+    if not allow_partial and len(existing_columns) != len(columns):
+        missing_columns = [col for col in columns if col not in df.columns]
+        raise ValueError(f"As seguintes colunas estão ausentes no DataFrame: {missing_columns}")
+
+    # Retorna o DataFrame filtrado com as colunas existentes
+    return df[existing_columns]
 
 
 # Example usage:
