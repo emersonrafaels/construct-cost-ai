@@ -100,32 +100,53 @@ ALTERNATIVE_COLUMNS = [
     "Quantidade",
 ]
 
+COL_FILTRO = "Filtro"
+
 @dataclass
 class FileInput:
     file_path: str
     sheet_name: Optional[str] = "LPU"
     
 
-def locate_table(df, expected_columns=EXPECTED_COLUMNS, 
-                 alternative_columns=ALTERNATIVE_COLUMNS):
+def normalize_values(values):
+    """
+    Normaliza uma lista de valores, removendo espaços, convertendo para letras minúsculas
+    e substituindo valores NaN ou vazios por strings vazias.
+
+    Args:
+        values (list): Lista de valores a serem normalizados.
+
+    Returns:
+        list: Lista de valores normalizados.
+    """
+    normalized = [
+        "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
+        for val in values
+    ]
+    return normalized
+
+
+def locate_table(df: pd.DataFrame, 
+                 expected_columns: list = EXPECTED_COLUMNS, 
+                 alternative_columns: list = ALTERNATIVE_COLUMNS):
     """
     Procura no DataFrame a linha/coluna onde começa o cabeçalho da tabela:
     Filtro | ID | Descrição | Unidade | Preço Unitário | Comentário | Quantidade | Total
     ou uma alternativa mínima contendo as colunas: ID, Un., Unitário, Quantidade.
     
-    Retorna (linha, coluna) do início do cabeçalho.
+    Retorna (linha, coluna, colunas_encontradas).
 
     Args:
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
         expected_columns (list): Lista de colunas esperadas no cabeçalho da tabela.
+        alternative_columns (list): Lista alternativa mínima de colunas aceitas.
 
     Returns:
-        tuple: Uma tupla (linha, coluna) indicando a posição do cabeçalho, ou (None, None) se não encontrado.
+        tuple: Uma tupla (linha, coluna, colunas_encontradas) indicando a posição do cabeçalho e as colunas encontradas,
+               ou (None, None, None) se não encontrado.
     """
     # Normaliza os nomes das colunas esperadas para letras minúsculas
     normalized_expected = [col.lower() for col in expected_columns]
-
-    # Define um conjunto mínimo de colunas que também pode ser aceito como cabeçalho
     normalized_alternative = [col.lower() for col in alternative_columns]
 
     # Calcula o número de colunas esperadas
@@ -138,21 +159,25 @@ def locate_table(df, expected_columns=EXPECTED_COLUMNS,
             # Extrai os valores do trecho correspondente às colunas esperadas
             values = df.iloc[row, col : col + num_cols].tolist()
 
-            # Normaliza os valores extraídos (remove espaços, converte para minúsculas, substitui NaN por vazio)
-            normalized = [
-                "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
-                for val in values
-            ]
+            # Normaliza os valores extraídos usando a nova função
+            normalized = normalize_values(values)
 
             # Verifica se os valores normalizados correspondem às colunas esperadas
-            if normalized == normalized_expected or all(col in normalized for col in normalized_alternative):
-                return row, col  # Retorna a posição do cabeçalho
+            if normalized == normalized_expected:
+                return row, col, expected_columns  # Retorna a posição e as colunas esperadas
+            # Verifica se os valores contêm todas as colunas alternativas
+            if all(col in normalized for col in normalized_alternative):
+                return row, col, alternative_columns  # Retorna a posição e as colunas alternativas
 
-    # Retorna None, None se o cabeçalho não for encontrado
-    return None, None
+    # Retorna None, None, None se o cabeçalho não for encontrado
+    return None, None, None
 
 
-def extract_table(df, header_row, first_col, expected_columns=EXPECTED_COLUMNS):
+def extract_table(df: pd.DataFrame, 
+                  header_row: int, 
+                  first_col: int, 
+                  columns_found: list, 
+                  col_filter: str = COL_FILTRO):
     """
     A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
 
@@ -160,31 +185,81 @@ def extract_table(df, header_row, first_col, expected_columns=EXPECTED_COLUMNS):
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
         header_row (int): Linha onde o cabeçalho da tabela começa.
         first_col (int): Coluna onde o cabeçalho da tabela começa.
-        expected_columns (list): Lista de colunas esperadas na tabela.
+        columns_found (list): Lista de colunas encontradas no cabeçalho.
+        col_filter (str): Nome da coluna usada para filtrar linhas vazias.
 
     Returns:
         pd.DataFrame: DataFrame contendo apenas a tabela extraída e processada.
     """
-    # Calcula o número de colunas esperadas
-    num_cols = len(expected_columns)
+    # Calcula o número de colunas encontradas
+    num_cols = len(columns_found)
 
-    # Extrai os dados a partir da linha seguinte ao cabeçalho e das colunas esperadas
+    # Extrai os dados a partir da linha seguinte ao cabeçalho e das colunas encontradas
     data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
 
     # Define os nomes das colunas do DataFrame extraído
-    data.columns = expected_columns
+    data.columns = columns_found
 
+    # Chama a nova função para aplicar filtros e pós-processamentos
+    data = post_process_table(data, col_filter=col_filter)
+
+    return data
+
+
+def post_process_table(data: pd.DataFrame, col_filter: str = COL_FILTRO) -> pd.DataFrame:
+    """
+    Aplica filtros e pós-processamentos em um DataFrame extraído.
+
+    Args:
+        data (pd.DataFrame): DataFrame contendo os dados extraídos da tabela.
+        col_filter (str): Nome da coluna usada para filtrar linhas vazias.
+
+    Returns:
+        pd.DataFrame: DataFrame pós-processado com filtros aplicados.
+    """
     # Remove linhas completamente vazias
     data = data.dropna(how="all")
 
-    # Remove linhas onde a coluna "Filter" está vazia (geralmente rodapés ou espaços)
-    data = data[~data["Filter"].isna()]
+    # Filtra apenas linhas onde a coluna "Filtro" (ou equivalente) é "Sim"
+    if col_filter in data.columns:
+        data = data[data[col_filter].str.lower() == "sim"]
 
     # Reseta o índice do DataFrame para uma sequência contínua
     data = data.reset_index(drop=True)
 
-    # Retorna o DataFrame processado
     return data
+
+
+def extract_metadata(df: pd.DataFrame) -> dict:
+    """
+    Extrai metadados da tabela de orçamento, como código UPE, número da agência, nome da agência e construtora.
+
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados da planilha.
+
+    Returns:
+        dict: Dicionário contendo os metadados extraídos.
+    """
+    metadata = {
+        "codigo_upe": None,
+        "numero_agencia": None,
+        "nome_agencia": None,
+        "construtora": None,
+    }
+
+    # Procura os metadados nas primeiras linhas do DataFrame
+    for _, row in df.iterrows():
+        row_str = " ".join([str(cell).strip().lower() for cell in row if pd.notna(cell)])
+        if "upe" in row_str:
+            metadata["codigo_upe"] = row_str
+        if "agência" in row_str or "agencia" in row_str:
+            metadata["numero_agencia"] = row_str
+        if "nome da agência" in row_str or "nome da agencia" in row_str:
+            metadata["nome_agencia"] = row_str
+        if "construtora" in row_str:
+            metadata["construtora"] = row_str
+
+    return metadata
 
 
 def read_budget_table(file_path, sheet_name="LPU"):
@@ -198,12 +273,17 @@ def read_budget_table(file_path, sheet_name="LPU"):
                        header=None)
 
     # Localiza o cabeçalho da tabela
-    row, col = locate_table(raw_df)
+    row, col, columns_found = locate_table(raw_df)
     if row is None:
         raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
 
+    # Extrai os metadados antes de processar a tabela
+    metadata = extract_metadata(raw_df)
+
     # Extrai só a tabela
-    return extract_table(raw_df, row, col)
+    table = extract_table(raw_df, row, col, columns_found)
+
+    return table, metadata
 
 
 def orchestrate_budget_reader(*files: FileInput):
