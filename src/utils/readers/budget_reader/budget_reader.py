@@ -79,7 +79,7 @@ base_dir = Path(__file__).parents[4]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
-from utils.data.data_functions import read_data, transform_case, filter_columns
+from utils.data.data_functions import read_data, transform_case, filter_columns, export_data
 
 # Constantes centralizadas
 DEFAULT_SHEET_NAME = "LPU"  # Nome padrão da aba a ser lida
@@ -93,12 +93,15 @@ EXPECTED_COLUMNS = [
     "QUANTIDADE",  # Quantidade do item
     "TOTAL",  # Valor total do item
 ]
-ALTERNATIVE_COLUMNS = ["FILTRO", 
-                       "ID", 
-                       "UN.", 
-                       "UNITÁRIO", 
-                       "QUANTIDADE"]  # Colunas mínimas alternativas
-FILTROS = {"FILTRO": ["SIM"]}  # Nome da coluna usada para filtragem
+
+# Colunas mínimas alternativas
+ALTERNATIVE_COLUMNS = [
+    "FILTRO",
+    "ID",
+    "UN.",
+    "UNITÁRIO",
+    "QUANTIDADE",
+]
 
 # Metadados padrão
 DEFAULT_METADATA_KEYS = {
@@ -113,6 +116,13 @@ DEFAULT_METADATA_KEYS = {
     "PROGRAMA_DONO": "DONO",  # Dono do orçamento
 }
 
+# Filtros no pós processamento
+FILTROS = {"FILTRO": ["SIM"]}  # Nome da coluna usada para filtragem
+
+# Diretório de saída padrão
+DIR_OUTPUTS = "outputs"
+
+
 @dataclass
 class FileInput:
     """
@@ -122,10 +132,13 @@ class FileInput:
         file_path (str): Caminho do arquivo.
         sheet_name (Optional[str]): Nome da aba a ser lida (padrão: "LPU").
     """
+
     file_path: str  # Caminho completo do arquivo
     sheet_name: Optional[str] = "LPU"  # Nome da aba a ser lida, padrão "LPU"
 
+
 # Funções auxiliares
+
 
 # Função para normalizar uma lista de valores, removendo espaços, convertendo para letras minúsculas e tratando valores NaN
 def normalize_values(values: list) -> list:
@@ -140,9 +153,14 @@ def normalize_values(values: list) -> list:
         list: Lista de valores normalizados.
     """
     return [
-        "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
+        (
+            ""
+            if pd.isna(val) or (isinstance(val, float) and math.isnan(val))
+            else str(val).strip().lower()
+        )
         for val in values  # Remove espaços, converte para minúsculas e trata NaN
     ]
+
 
 # Função para pré-processar o DataFrame, removendo linhas completamente em branco e resetando o índice
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -160,6 +178,7 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
     # Converte todas as colunas e celulas em uppercase
     return transform_case(df=df, to_upper=True, columns=True, cells=True)
+
 
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
 def locate_table(
@@ -181,35 +200,36 @@ def locate_table(
     """
     # Normaliza colunas esperadas para uppercase
     normalized_expected = [col.upper() for col in expected_columns]
-    
+
     # Normaliza colunas alternativas para uppercase
     normalized_alternative = [col.upper() for col in alternative_columns]
-    
+
     # Número de colunas esperadas
     num_cols = len(normalized_expected)
 
     # Itera sobre as linhas do DataFrame
     for row in range(df.shape[0]):
-        
+
         # Itera sobre as colunas possíveis
         for col in range(df.shape[1] - num_cols + 1):
-            
+
             # Extrai valores da linha e colunas
             values = df.iloc[row, col : col + num_cols].tolist()
-            
+
             # Normaliza os valores extraídos para uppercase
             normalized = [str(val).upper() if isinstance(val, str) else val for val in values]
 
             # Verifica se os valores correspondem às colunas esperadas
             if normalized == normalized_expected:
                 return row, col, expected_columns
-            
+
             # Verifica colunas alternativas
             if all(col in normalized for col in normalized_alternative):
                 return row, col, alternative_columns
 
     # Retorna None se não encontrar o cabeçalho
     return None, None, None
+
 
 # Função auxiliar para encontrar e atribuir valores de metadados a um dicionário
 def find_metadata_value(
@@ -238,8 +258,11 @@ def find_metadata_value(
             # Obtém o valor da célula na linha subsequente
             value = df.iloc[next_row_idx, col_idx]
             if not pd.isna(value):  # Verifica se o valor não é NaN
-                metadata[metadata_key] = str(value).upper()  # Atribui o valor encontrado em uppercase
+                metadata[metadata_key] = str(
+                    value
+                ).upper()  # Atribui o valor encontrado em uppercase
                 break  # Interrompe a busca ao encontrar o valor
+
 
 # Função para extrair metadados dinamicamente do DataFrame
 def extract_metadata(
@@ -276,6 +299,7 @@ def extract_metadata(
 
     return metadata  # Retorna o dicionário de metadados
 
+
 # Função para extrair a tabela do DataFrame a partir da linha do cabeçalho
 def extract_table(
     df: pd.DataFrame,
@@ -297,26 +321,27 @@ def extract_table(
     Returns:
         pd.DataFrame: DataFrame contendo apenas a tabela extraída e processada.
     """
-    
+
     # Número de colunas encontradas
     num_cols = len(columns_found)
-    
+
     # Define o cabeçalho a partir da linha encontrada
-    header = df.iloc[header_row, first_col:first_col + num_cols].tolist()
-    
+    header = df.iloc[header_row, first_col : first_col + num_cols].tolist()
+
     # Extrai os dados abaixo do cabeçalho
-    data = df.iloc[header_row + 1:, first_col:first_col + num_cols].copy()
-    
+    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
+
     # Define o cabeçalho no DataFrame
     data.columns = header
-    
+
     # Aplica pós-processamento e filtros
     return post_process_table(data, cols_expected=columns_found, col_filter=col_filter)
 
+
 # Função para aplicar filtros e pós-processamento na tabela extraída
-def post_process_table(data: pd.DataFrame, 
-                       cols_expected: list = [], 
-                       col_filter: Dict[str, Any] = FILTROS) -> pd.DataFrame:
+def post_process_table(
+    data: pd.DataFrame, cols_expected: list = [], col_filter: Dict[str, Any] = FILTROS
+) -> pd.DataFrame:
     """
     Aplica filtros e pós-processamentos em um DataFrame extraído.
 
@@ -330,9 +355,7 @@ def post_process_table(data: pd.DataFrame,
     """
     # Filtra as colunas esperadas, mantendo apenas as colunas encontradas
     if cols_expected:
-        data = filter_columns(df=data, 
-                              columns=cols_expected, 
-                              allow_partial=True)
+        data = filter_columns(df=data, columns=cols_expected, allow_partial=True)
 
     # Aplica os filtros definidos no dicionário col_filter
     for col, filter_values in col_filter.items():
@@ -340,15 +363,13 @@ def post_process_table(data: pd.DataFrame,
             # Garante que filter_values seja uma lista
             if isinstance(filter_values, str):
                 filter_values = [filter_values]
-            
+
             # Filtra linhas onde o valor está na lista de valores filtráveis
             data = data[data[col].str.lower().isin([val.lower() for val in filter_values])]
 
-    # Padroniza os dados para uppercase
-    data = data.applymap(lambda x: str(x).upper() if isinstance(x, str) else x)
-
     # Reseta o índice do DataFrame
     return data.reset_index(drop=True)
+
 
 # Função para ler a tabela de orçamento do arquivo e aba especificados
 def read_budget_table(
@@ -366,25 +387,92 @@ def read_budget_table(
     """
     # Lê a planilha sem cabeçalho
     raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
-    
+
     # Pré-processa os dados
     raw_df = preprocess_data(raw_df)
-    
+
     # Localiza o cabeçalho da tabela
     row, col, columns_found = locate_table(raw_df)
-    
+
     # Verifica se o cabeçalho foi encontrado
     if row is None:
         raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
-    
+
     # Extrai os metadados
     metadata = extract_metadata(raw_df)
-    
+
     # Extrai a tabela
     table = extract_table(raw_df, row, col, columns_found)
-    
+
     # Retorna a tabela e os metadados
     return table, metadata
+
+
+# Função para adicionar e salvar resultados processados em um arquivo
+def append_and_save_results(
+    all_tables: List, output_file: str, root_dir: str = "outputs"
+) -> None:
+    """
+    Adiciona os resultados processados a um arquivo existente ou cria um novo arquivo e salva os dados.
+
+    Args:
+        data (pd.DataFrame): DataFrame contendo os dados processados.
+        output_file (str): Nome do arquivo de saída.
+        root_dir (str): Diretório raiz onde o arquivo será salvo. Default é "outputs".
+
+    Returns:
+        None
+    """
+    
+    # Concatena todas as tabelas
+    data_result = pd.concat(all_tables, ignore_index=True)
+    
+    # Loga o sucesso na concatenação
+    logger.success("Todas as tabelas foram concatenadas com sucesso.")
+
+    # Define o caminho completo do arquivo de saída
+    output_path = Path(base_dir, DIR_OUTPUTS, output_file)
+
+    # Cria o diretório de saída, se não existir
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Salva os dados no arquivo de saída
+        export_data(data_result, output_path)
+        logger.success(f"Resultados salvos com sucesso em {output_path}")
+    except Exception as e:
+        logger.error(f"Erro ao salvar os resultados em {output_path}: {e}")
+        
+    return data_result
+
+
+def append_data(list_all_tables, file_input, table, metadata):
+    """
+    Docstring for append_data
+
+    :param table: Description
+    :param metadata: Description
+    """
+
+    # Adiciona o nome do arquivo como coluna
+    table["SOURCE_FILE"] = Path(file_input.file_path).name
+
+    # Adiciona o nome da aba como coluna
+    table["SHEET_NAME"] = file_input.sheet_name
+    
+    # Resetando o index da tabela
+    table.reset_index(drop=True, inplace=True)
+
+    # Adiciona a tabela à lista
+    list_all_tables.append(table)
+
+    # Loga o sucesso na extração da tabela
+    logger.success(
+        f"Tabela extraída com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}"
+    )
+
+    return list_all_tables
+
 
 # Função para orquestrar o processamento de múltiplos arquivos de orçamento
 def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
@@ -402,31 +490,34 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
     # Itera sobre os arquivos de entrada
     for file_input in files:
         # Loga o início do processamento do arquivo
-        logger.info(f"Iniciando processamento do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}")
+        logger.info(
+            f"Iniciando processamento do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}"
+        )
         try:
             # Lê a tabela
-            table, metadata = read_budget_table(file_input.file_path, sheet_name=file_input.sheet_name)
-            # Adiciona o nome do arquivo como coluna
-            table["source_file"] = Path(file_input.file_path).name
-            # Adiciona o nome da aba como coluna
-            table["sheet_name"] = file_input.sheet_name
+            table, metadata = read_budget_table(
+                file_input.file_path, sheet_name=file_input.sheet_name
+            )
+
             # Adiciona a tabela à lista
-            all_tables.append(table)
-            # Loga o sucesso na extração da tabela
-            logger.success(f"Tabela extraída com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}")
+            all_tables = append_data(list_all_tables=all_tables, 
+                                     file_input=file_input, 
+                                     table=table, 
+                                     metadata=metadata)
+
         except Exception as e:
             # Loga o erro ao processar o arquivo
-            logger.error(f"Erro ao processar o arquivo {file_input.file_path}, aba {file_input.sheet_name}: {e}")
+            logger.error(
+                f"Erro ao processar o arquivo {file_input.file_path}, aba {file_input.sheet_name}: {e}"
+            )
 
     # Verifica se há tabelas processadas
     if all_tables:
-        # Concatena todas as tabelas
-        final_df = pd.concat(all_tables, ignore_index=True)
-        # Loga o sucesso na concatenação
-        logger.success("Todas as tabelas foram concatenadas com sucesso.")
-        # Loga o DataFrame final
-        logger.info(final_df)
-        return final_df
+        # Concatena e salva os resultados
+        data_result = append_and_save_results(all_tables, 
+                                              output_file="budget_tables_concatenated.xlsx")
+        
+        return data_result
 
     # Loga o aviso de que nenhuma tabela foi processada
     logger.warning("Nenhuma tabela foi processada com sucesso.")

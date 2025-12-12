@@ -47,7 +47,6 @@ Faz parte da camada utilitária `utils/`.
 
 """
 
-
 __author__ = "Emerson V. Rafael (emervin)"
 __copyright__ = "Verificador Inteligente de Orçamentos de Obras"
 __credits__ = ["Emerson V. Rafael", "Lucas Ken", "Clarissa Simoyama"]
@@ -64,7 +63,11 @@ from typing import Dict, List, Optional, Tuple, Union
 import pandas as pd
 
 
-def read_data(file_path: Union[str, Path], sheet_name: Optional[Union[str, int]] = None, header: Optional[Union[int, List[int]]] = 0) -> pd.DataFrame:
+def read_data(
+    file_path: Union[str, Path],
+    sheet_name: Optional[Union[str, int]] = None,
+    header: Optional[Union[int, List[int]]] = 0,
+) -> pd.DataFrame:
     """
     Reads data from various file formats using the file extension to determine the appropriate method.
 
@@ -165,10 +168,10 @@ def export_data(
 
 
 def transform_case(
-    df: pd.DataFrame, 
-    to_upper: bool = True, 
-    columns: Union[bool, List[str]] = False, 
-    cells: Union[bool, List[Tuple[int, int]]] = False
+    df: pd.DataFrame,
+    to_upper: bool = True,
+    columns: Union[bool, List[str]] = False,
+    cells: Union[bool, List[Tuple[int, int]]] = False,
 ) -> pd.DataFrame:
     """
     Transforma valores de texto em um DataFrame para uppercase ou lowercase, com opções para todas as colunas ou células específicas.
@@ -182,6 +185,7 @@ def transform_case(
     Returns:
         pd.DataFrame: DataFrame com os valores transformados.
     """
+
     def transform_value(value):
         if isinstance(value, str):
             return value.upper() if to_upper else value.lower()
