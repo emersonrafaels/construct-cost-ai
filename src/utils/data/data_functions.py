@@ -96,6 +96,7 @@ def read_data(
         ".csv": lambda path: pd.read_csv(path, header=header),
         ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
         ".xls": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
+        ".xlsm": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),  # Added support for .xlsm files
         ".json": lambda path: pd.read_json(path),
         ".parquet": lambda path: pd.read_parquet(path),
         ".feather": lambda path: pd.read_feather(path),
