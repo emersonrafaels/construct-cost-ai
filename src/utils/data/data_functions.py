@@ -85,8 +85,10 @@ def read_data(file_path: Union[str, Path], sheet_name: Optional[Union[str, int]]
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
 
+    # Obtendo a extensão do dado recebido
     extension = file_path.suffix.lower()
 
+    # Definindo os leitores disponíveis
     readers = {
         ".csv": lambda path: pd.read_csv(path, header=header),
         ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
