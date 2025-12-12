@@ -57,11 +57,11 @@ O módulo faz parte da arquitetura "utils/", permitindo reutilização limpa em:
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
-__copyright__ = "Copyright 2025, Verificador Inteligente de Orçamentos de Obras"
+__copyright__ = "Verificador Inteligente de Orçamentos de Obras"
 __credits__ = ["Emerson V. Rafael", "Lucas Ken", "Clarissa Simoyama"]
 __license__ = "MIT"
 __version__ = "1.0.0"
-__maintainer__ = "Emerson V. Rafael (emervin), Lucas Ken, Clarissa Simoyama"
+__maintainer__ = "Emerson V. Rafael (emervin), Lucas Ken (kushida), Clarissa Simoyama (simoyam)"
 __squad__ = "DataCraft"
 __email__ = "emersonssmile@gmail.com"
 __status__ = "Production"
@@ -69,8 +69,10 @@ __status__ = "Production"
 import math
 import sys
 from pathlib import Path
+from typing import Union, Optional
 
 import pandas as pd
+from pydantic.dataclasses import dataclass
 
 # Adicionar src ao path
 base_dir = Path(__file__).parents[4]
@@ -81,15 +83,108 @@ from utils.data.data_functions import read_data
 
 # Cabeçalho esperado da tabela
 EXPECTED_COLUMNS = [
-    "Filter",
+    "Filtro",
     "ID",
-    "Description",
-    "Unit",
-    "Unit Price",
-    "Comment",
-    "Quantity",
+    "Descrição",
+    "Un.",
+    "Unitário",
+    "Comentário",
+    "Quantidade",
     "Total",
 ]
+
+ALTERNATIVE_COLUMNS = [
+    "ID",
+    "Un.",
+    "Unitário",
+    "Quantidade",
+]
+
+@dataclass
+class FileInput:
+    file_path: str
+    sheet_name: Optional[str] = "LPU"
+    
+
+def locate_table(df, expected_columns=EXPECTED_COLUMNS, 
+                 alternative_columns=ALTERNATIVE_COLUMNS):
+    """
+    Procura no DataFrame a linha/coluna onde começa o cabeçalho da tabela:
+    Filtro | ID | Descrição | Unidade | Preço Unitário | Comentário | Quantidade | Total
+    ou uma alternativa mínima contendo as colunas: ID, Un., Unitário, Quantidade.
+    
+    Retorna (linha, coluna) do início do cabeçalho.
+
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados da planilha.
+        expected_columns (list): Lista de colunas esperadas no cabeçalho da tabela.
+
+    Returns:
+        tuple: Uma tupla (linha, coluna) indicando a posição do cabeçalho, ou (None, None) se não encontrado.
+    """
+    # Normaliza os nomes das colunas esperadas para letras minúsculas
+    normalized_expected = [col.lower() for col in expected_columns]
+
+    # Define um conjunto mínimo de colunas que também pode ser aceito como cabeçalho
+    normalized_alternative = [col.lower() for col in alternative_columns]
+
+    # Calcula o número de colunas esperadas
+    num_cols = len(expected_columns)
+
+    # Itera sobre todas as linhas do DataFrame
+    for row in range(df.shape[0]):
+        # Itera sobre todas as colunas possíveis, garantindo espaço suficiente para as colunas esperadas
+        for col in range(df.shape[1] - num_cols + 1):
+            # Extrai os valores do trecho correspondente às colunas esperadas
+            values = df.iloc[row, col : col + num_cols].tolist()
+
+            # Normaliza os valores extraídos (remove espaços, converte para minúsculas, substitui NaN por vazio)
+            normalized = [
+                "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
+                for val in values
+            ]
+
+            # Verifica se os valores normalizados correspondem às colunas esperadas
+            if normalized == normalized_expected or all(col in normalized for col in normalized_alternative):
+                return row, col  # Retorna a posição do cabeçalho
+
+    # Retorna None, None se o cabeçalho não for encontrado
+    return None, None
+
+
+def extract_table(df, header_row, first_col, expected_columns=EXPECTED_COLUMNS):
+    """
+    A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
+
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados da planilha.
+        header_row (int): Linha onde o cabeçalho da tabela começa.
+        first_col (int): Coluna onde o cabeçalho da tabela começa.
+        expected_columns (list): Lista de colunas esperadas na tabela.
+
+    Returns:
+        pd.DataFrame: DataFrame contendo apenas a tabela extraída e processada.
+    """
+    # Calcula o número de colunas esperadas
+    num_cols = len(expected_columns)
+
+    # Extrai os dados a partir da linha seguinte ao cabeçalho e das colunas esperadas
+    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
+
+    # Define os nomes das colunas do DataFrame extraído
+    data.columns = expected_columns
+
+    # Remove linhas completamente vazias
+    data = data.dropna(how="all")
+
+    # Remove linhas onde a coluna "Filter" está vazia (geralmente rodapés ou espaços)
+    data = data[~data["Filter"].isna()]
+
+    # Reseta o índice do DataFrame para uma sequência contínua
+    data = data.reset_index(drop=True)
+
+    # Retorna o DataFrame processado
+    return data
 
 
 def read_budget_table(file_path, sheet_name="LPU"):
@@ -98,7 +193,9 @@ def read_budget_table(file_path, sheet_name="LPU"):
     no formato Filtro | ID | Descrição | ... | Total.
     """
     # Lê tudo como planilha "crua", sem header
-    raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
+    raw_df = read_data(file_path, 
+                       sheet_name=sheet_name, 
+                       header=None)
 
     # Localiza o cabeçalho da tabela
     row, col = locate_table(raw_df)
@@ -109,82 +206,36 @@ def read_budget_table(file_path, sheet_name="LPU"):
     return extract_table(raw_df, row, col)
 
 
-def locate_table(df, expected_columns=EXPECTED_COLUMNS):
-    """
-    Procura no DataFrame a linha/coluna onde começa o cabeçalho da tabela:
-    Filter | ID | Description | Unit | Unit Price | Comment | Quantity | Total
-    Retorna (linha, coluna) do início do cabeçalho.
-    """
-    normalized_expected = [col.lower() for col in expected_columns]
-    num_cols = len(expected_columns)
-
-    for row in range(df.shape[0]):
-        for col in range(df.shape[1] - num_cols + 1):
-            values = df.iloc[row, col : col + num_cols].tolist()
-
-            normalized = [
-                "" if pd.isna(val) or (isinstance(val, float) and math.isnan(val)) else str(val).strip().lower()
-                for val in values
-            ]
-
-            if normalized == normalized_expected:
-                return row, col
-
-    return None, None
-
-
-def extract_table(df, header_row, first_col, expected_columns=EXPECTED_COLUMNS):
-    """
-    A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
-    """
-    num_cols = len(expected_columns)
-
-    # Tudo que vem depois do cabeçalho, nas mesmas colunas
-    data = df.iloc[header_row + 1 :, first_col : first_col + num_cols].copy()
-
-    # Define o nome correto das colunas
-    data.columns = expected_columns
-
-    # Remove linhas totalmente vazias
-    data = data.dropna(how="all")
-
-    # Remove linhas sem valor no campo Filtro (em geral são espaços/rodapés)
-    data = data[~data["Filter"].isna()]
-
-    # Ajusta índice
-    data = data.reset_index(drop=True)
-
-    return data
-
-
-def orchestrate_budget_reader(file_list, sheet_name="LPU"):
+def orchestrate_budget_reader(*files: FileInput):
     """
     Orquestra a execução do budget_reader.
+
+    Args:
+        *files: Lista de instâncias FileInput contendo o caminho do arquivo e, opcionalmente, o nome da aba.
+
+    Returns:
+        pd.DataFrame: DataFrame concatenado de todas as tabelas processadas.
     """
     all_tables = []
 
-    for file_path in file_list:
+    for file_input in files:
+        
+        logger.info(f"Iniciando processamento do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}")
+        
         try:
-            table = read_budget_table(file_path, sheet_name=sheet_name)
-            table["source_file"] = Path(file_path).name
+            table = read_budget_table(file_input.file_path, sheet_name=file_input.sheet_name)
+            table["source_file"] = Path(file_input.file_path).name
+            table["sheet_name"] = file_input.sheet_name
             all_tables.append(table)
-            logger.success(f"Tabela extraída com sucesso do arquivo: {file_path}")
+            logger.success(f"Tabela extraída com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}")
         except Exception as e:
-            logger.error(f"Erro ao processar o arquivo {file_path}: {e}")
+            logger.error(f"Erro ao processar o arquivo {file_input.file_path}, aba {file_input.sheet_name}: {e}")
 
     if all_tables:
         final_df = pd.concat(all_tables, ignore_index=True)
-        logger.success("Tabelas concatenadas com sucesso.")
+        logger.success("Todas as tabelas foram concatenadas com sucesso.")
         logger.info(final_df)
         return final_df
 
     logger.warning("Nenhuma tabela foi processada com sucesso.")
     return pd.DataFrame()
-
-
-if __name__ == "__main__":
-    # Exemplo com um único arquivo
-    file_path = r"C:\Users\emers\OneDrive\Área de Trabalho\Itaú\CICF\DataCraft\Verificador Inteligente de Obras\codes\construct-cost-ai\data\sample_padrao2_fg.xlsx"
-    sheet_name = "LPU"
-
-    orchestrate_budget_reader([file_path], sheet_name=sheet_name)

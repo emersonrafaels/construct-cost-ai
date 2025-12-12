@@ -1,22 +1,84 @@
+"""
+Módulo: data_io
+----------------
+
+Fornece funções utilitárias padronizadas para leitura e escrita de dados em
+diferentes formatos de dados (excel, csv, parquet, etc) utilizados no ecossistema do Verificador Inteligente de
+Orçamentos de Obras.
+
+Este módulo abstrai a complexidade de múltiplos formatos (CSV, Excel,
+Parquet, JSON, Feather, Pickle), garantindo uma interface consistente para
+todas as etapas do pipeline — desde prototipação local até uso em produção.
+
+🧩 Funcionalidades principais:
+------------------------------
+
+1) read_data(file_path, sheet_name=None, header=0)
+   - Detecta automaticamente o método de leitura a partir da extensão.
+   - Suporta:
+       .csv, .xlsx, .xls, .json, .parquet, .feather, .pkl
+   - Permite leitura de abas específicas em arquivos Excel.
+   - Utilizado por:
+       • Parsing de orçamentos
+       • Testes unitários
+       • Pipelines determinísticos
+
+2) export_data(data, file_path, create_dirs=True)
+   - Exporta DataFrames ou múltiplos DataFrames (multi-sheet Excel).
+   - Cria diretórios automaticamente, quando necessário.
+   - Suporta:
+       .csv, .xlsx, .json, .parquet, .feather, .pkl
+   - Utilizado por:
+       • Geração de relatórios técnicos
+       • Salvamento de artefatos do verificador
+       • Outputs intermediários do pipeline
+
+🎯 Motivação e valor:
+---------------------
+- Unifica a manipulação de dados em todo o projeto.
+- Reduz duplicação de código em parseadores, validadores e testes.
+- Facilita a troca futura de formato sem alterar o restante do pipeline.
+- Padroniza I/O para rodar em ambientes diversos (local, AWS, CI/CD).
+
+
+📁 Localização:
+--------------
+Faz parte da camada utilitária `utils/`.
+
+"""
+
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Verificador Inteligente de Orçamentos de Obras"
+__credits__ = ["Emerson V. Rafael", "Lucas Ken", "Clarissa Simoyama"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael (emervin), Lucas Ken (kushida), Clarissa Simoyama (simoyam)"
+__squad__ = "DataCraft"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Production"
+
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
 
-def read_data(file_path: Union[str, Path]) -> pd.DataFrame:
+def read_data(file_path: Union[str, Path], sheet_name: Optional[Union[str, int]] = None, header: Optional[Union[int, List[int]]] = 0) -> pd.DataFrame:
     """
     Reads data from various file formats using the file extension to determine the appropriate method.
 
     Args:
-        file_path (Union[str, Path]): Path to the file to be read
+        file_path (Union[str, Path]): Path to the file to be read.
+        sheet_name (Optional[Union[str, int]]): Name or index of the sheet to read (for Excel files). Default is None.
+        header (Optional[Union[int, List[int]]]): Row number(s) to use as the column names. Default is 0.
 
     Returns:
-        pd.DataFrame: DataFrame containing the read data
+        pd.DataFrame: DataFrame containing the read data.
 
     Raises:
-        ValueError: If file extension is not supported
-        FileNotFoundError: If file doesn't exist
+        ValueError: If file extension is not supported.
+        FileNotFoundError: If file doesn't exist.
     """
     file_path = Path(file_path)
 
@@ -26,13 +88,13 @@ def read_data(file_path: Union[str, Path]) -> pd.DataFrame:
     extension = file_path.suffix.lower()
 
     readers = {
-        ".csv": pd.read_csv,
-        ".xlsx": pd.read_excel,
-        ".xls": pd.read_excel,
-        ".json": pd.read_json,
-        ".parquet": pd.read_parquet,
-        ".feather": pd.read_feather,
-        ".pkl": pd.read_pickle,
+        ".csv": lambda path: pd.read_csv(path, header=header),
+        ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
+        ".xls": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
+        ".json": lambda path: pd.read_json(path),
+        ".parquet": lambda path: pd.read_parquet(path),
+        ".feather": lambda path: pd.read_feather(path),
+        ".pkl": lambda path: pd.read_pickle(path),
     }
 
     reader = readers.get(extension)
