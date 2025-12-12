@@ -55,9 +55,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(router)
 
-    logger.info(
-        f"FastAPI app created: {app.title} v{app.version}"
-    )
+    logger.info(f"FastAPI app created: {app.title} v{app.version}")
 
     return app
 

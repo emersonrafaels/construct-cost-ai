@@ -52,9 +52,7 @@ class BaseAIAgent(Protocol):
     This defines the interface that AI clients must implement.
     """
 
-    def analyze_budget_context(
-        self, budget: Budget, additional_context: dict = None
-    ) -> dict:
+    def analyze_budget_context(self, budget: Budget, additional_context: dict = None) -> dict:
         """Analyze budget using AI and return insights.
 
         Args:

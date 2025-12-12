@@ -25,7 +25,7 @@ PROJECT_ROOT = Path(__file__).parents[4].resolve()
 @lru_cache()
 def get_settings() -> Dynaconf:
     """Get settings singleton instance.
-    
+
     Returns:
         Dynaconf: Settings instance configured with project files
     """
@@ -40,5 +40,5 @@ def get_settings() -> Dynaconf:
         env_switcher="ENV_FOR_DYNACONF",
         merge_enabled=True,
     )
-    
+
     return settings

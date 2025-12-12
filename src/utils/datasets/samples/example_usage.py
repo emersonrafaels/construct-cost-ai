@@ -14,6 +14,11 @@ from create_sample_dataset_budget import (
     BudgetMetadata,
 )
 from create_sample_dataset_lpu import BankBranchLPUGenerator
+from create_sample_dataset_realistic_budget import (
+    gerar_sample_padrao1,
+    gerar_sample_padrao2_japj,
+    gerar_sample_padrao2_fg,
+)
 
 
 def exemplo_basico():
@@ -99,9 +104,7 @@ def exemplo_analise_comparativa():
 
     # Calcular desvios
     df_merged["desvio_unitario"] = (
-        (df_merged["unitario_orcado"] - df_merged["unitario_lpu"])
-        / df_merged["unitario_lpu"]
-        * 100
+        (df_merged["unitario_orcado"] - df_merged["unitario_lpu"]) / df_merged["unitario_lpu"] * 100
     )
     df_merged["desvio_abs"] = abs(df_merged["desvio_unitario"])
 
@@ -126,11 +129,11 @@ def exemplo_analise_comparativa():
 
     # Análise por fonte
     print("\n📋 Desvio médio por fonte de preço:")
-    desvio_por_fonte = df_merged.groupby("fonte")["desvio_unitario"].agg(
-        ["count", "mean", "std"]
-    )
+    desvio_por_fonte = df_merged.groupby("fonte")["desvio_unitario"].agg(["count", "mean", "std"])
     for fonte, stats in desvio_por_fonte.iterrows():
-        print(f"   {fonte[:40]:<40} | Média: {stats['mean']:+6.2f}% | Itens: {int(stats['count']):>3}")
+        print(
+            f"   {fonte[:40]:<40} | Média: {stats['mean']:+6.2f}% | Itens: {int(stats['count']):>3}"
+        )
 
 
 def exemplo_analise_categorias():
@@ -148,9 +151,11 @@ def exemplo_analise_categorias():
     print("\n📊 Resumo por Categoria:")
     print("-" * 80)
 
-    categoria_stats = df.groupby("categoria").agg(
-        {"cod_item": "count", "total_orcado": "sum"}
-    ).sort_values("total_orcado", ascending=False)
+    categoria_stats = (
+        df.groupby("categoria")
+        .agg({"cod_item": "count", "total_orcado": "sum"})
+        .sort_values("total_orcado", ascending=False)
+    )
 
     total_geral = df["total_orcado"].sum()
 
@@ -169,15 +174,15 @@ def exemplo_exportacao():
     print("EXEMPLO 5: EXPORTAÇÃO DE DADOS")
     print("=" * 80)
 
-    output_dir = Path(__file__).parent / "output"
+    output_dir = Path(Path(__file__).parent, "output")
     output_dir.mkdir(exist_ok=True)
 
     # Gerar e salvar orçamento
     print("\n📄 Gerando arquivos de orçamento...")
     budget_gen = BankBranchBudgetGenerator()
     budget_gen.generate_standard_budget()
-    budget_gen.save_to_csv(str(output_dir / "orcamento_exemplo.csv"))
-    budget_gen.save_to_excel(str(output_dir / "orcamento_exemplo.xlsx"))
+    budget_gen.save_to_csv(str(Path(output_dir, "orcamento_exemplo.csv")))
+    budget_gen.save_to_excel(str(Path(output_dir, "orcamento_exemplo.xlsx")))
 
     # Gerar e salvar LPU
     print("\n📄 Gerando arquivos de LPU...")
@@ -187,6 +192,27 @@ def exemplo_exportacao():
     lpu_gen.save_to_excel(str(output_dir / "lpu_exemplo.xlsx"))
 
     print(f"\n✅ Arquivos salvos em: {output_dir}")
+
+
+def exemplo_geracao_realistic_budget():
+    """Exemplo de geração de budgets realistas."""
+    print("\n\n" + "=" * 80)
+    print("EXEMPLO 6: GERAÇÃO DE BUDGETS REALISTAS")
+    print("=" * 80)
+
+    # Diretório de saída
+    output_dir = Path(Path(__file__).parent, "output")
+    output_dir.mkdir(exist_ok=True)
+
+    # Gerar budgets realistas
+    print("\n📄 Gerando budgets realistas...")
+    data_inputs = output_dir
+
+    arq1 = gerar_sample_padrao1(data_inputs=data_inputs)
+    arq2 = gerar_sample_padrao2_japj(data_inputs=data_inputs)
+    arq3 = gerar_sample_padrao2_fg(data_inputs=data_inputs)
+
+    print(f"\n✅ Arquivos gerados:\n  - {arq1}\n  - {arq2}\n  - {arq3}")
 
 
 def main():
@@ -203,6 +229,7 @@ def main():
     exemplo_analise_comparativa()
     exemplo_analise_categorias()
     exemplo_exportacao()
+    exemplo_geracao_realistic_budget()
 
     print("\n\n" + "=" * 80)
     print("✅ DEMONSTRAÇÃO CONCLUÍDA!")

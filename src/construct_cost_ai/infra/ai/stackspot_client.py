@@ -50,9 +50,7 @@ class StackSpotAIClient:
         self.mock_mode = mock_mode
 
         if not self.mock_mode and not self.api_key:
-            logger.warning(
-                "StackSpot AI API key not configured. Client will operate in mock mode."
-            )
+            logger.warning("StackSpot AI API key not configured. Client will operate in mock mode.")
             self.mock_mode = True
 
         logger.info(
@@ -87,9 +85,7 @@ class StackSpotAIClient:
 
         return result
 
-    def _make_api_call(
-        self, budget: Budget, additional_context: Optional[Dict] = None
-    ) -> Dict:
+    def _make_api_call(self, budget: Budget, additional_context: Optional[Dict] = None) -> Dict:
         """Make actual HTTP request to StackSpot AI API.
 
         Args:
@@ -118,15 +114,11 @@ class StackSpotAIClient:
                 response = client.post(endpoint, json=payload, headers=headers)
                 response.raise_for_status()
 
-                logger.info(
-                    f"StackSpot AI API call successful (status={response.status_code})"
-                )
+                logger.info(f"StackSpot AI API call successful (status={response.status_code})")
                 return response.json()
 
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"StackSpot AI API error: {e.response.status_code} - {e.response.text}"
-            )
+            logger.error(f"StackSpot AI API error: {e.response.status_code} - {e.response.text}")
             # Fallback to mock response on error
             return self._get_mock_response(budget, additional_context)
 
@@ -135,9 +127,7 @@ class StackSpotAIClient:
             # Fallback to mock response on error
             return self._get_mock_response(budget, additional_context)
 
-    def _get_mock_response(
-        self, budget: Budget, additional_context: Optional[Dict] = None
-    ) -> Dict:
+    def _get_mock_response(self, budget: Budget, additional_context: Optional[Dict] = None) -> Dict:
         """Generate mock AI response for testing and development.
 
         Args:
@@ -160,7 +150,9 @@ class StackSpotAIClient:
         ]
 
         # Determine risk level based on simple heuristics
-        avg_price_per_sqm = total_value / metadata.square_footage if metadata.square_footage > 0 else 0
+        avg_price_per_sqm = (
+            total_value / metadata.square_footage if metadata.square_footage > 0 else 0
+        )
 
         if avg_price_per_sqm > 3000:
             risk_assessment = "HIGH"

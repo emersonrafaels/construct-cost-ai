@@ -278,6 +278,4 @@ class OutOfCatalogValidator(BaseDeterministicValidator):
         }
 
         # For demonstration, items not starting with known prefixes are "out of catalog"
-        return code in known_codes or any(
-            code.startswith(prefix) for prefix in ["SINAPI_", "LPU_"]
-        )
+        return code in known_codes or any(code.startswith(prefix) for prefix in ["SINAPI_", "LPU_"])

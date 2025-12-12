@@ -54,9 +54,7 @@ def get_orchestrator() -> BudgetValidationOrchestrator:
 
     ai_client = StackSpotAIClient(mock_mode=True)
 
-    return BudgetValidationOrchestrator(
-        deterministic_validators=validators, ai_agent=ai_client
-    )
+    return BudgetValidationOrchestrator(deterministic_validators=validators, ai_agent=ai_client)
 
 
 def parse_budget_file(uploaded_file) -> list:

@@ -6,7 +6,7 @@ app_version = "0.1.0"
 # Validador LPU Configuration
 [default.validador_lpu]
 # Tolerância de divergência para status de conciliação (%)
-tolerancia_percentual = 3.0
+tolerancia_percentual = 0.0
 
 # Caminhos padrão
 caminho_padrao_orcamento = "data/orcamento_exemplo.xlsx"

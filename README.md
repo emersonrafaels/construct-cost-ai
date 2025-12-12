@@ -160,6 +160,44 @@ python -m construct_cost_ai.cli.main validate examples/sample_budget.json \
 - `--project-id, -p`: Project ID (optional)
 - `--output, -o`: Save results to JSON file
 
+## 🏗️ Geradores de Datasets Realistas
+
+### Geração de Budgets Realistas
+
+O script `create_sample_dataset_realistic_budget.py` permite gerar budgets realistas para diferentes padrões de orçamento utilizados no Itaú Unibanco. Ele suporta os seguintes padrões:
+
+1. **Padrão 1 (sample_padrao1.xlsx)**
+   - Estrutura com abas "Resumo" e "01".
+   - Valores calculados dinamicamente com base em itens e capítulos.
+
+2. **Padrão 2 - JAPJ (sample_padrao2_japj.xlsx)**
+   - Planilha modelo JAPJ com aba "LPU".
+   - Inclui cabeçalho detalhado e itens específicos.
+
+3. **Padrão 2 - FG (sample_padrao2_fg.xlsx)**
+   - Planilha modelo FG com aba "LPU".
+   - Similar ao padrão JAPJ, mas com dados específicos para FG.
+
+### Exemplo de Uso
+
+```python
+from create_sample_dataset_realistic_budget import gerar_sample_padrao1, gerar_sample_padrao2_japj, gerar_sample_padrao2_fg
+from pathlib import Path
+
+# Diretório de saída
+output_dir = Path("output")
+output_dir.mkdir(exist_ok=True)
+
+# Gerar budgets realistas
+data_inputs = output_dir
+
+gerar_sample_padrao1(data_inputs=data_inputs)
+gerar_sample_padrao2_japj(data_inputs=data_inputs)
+gerar_sample_padrao2_fg(data_inputs=data_inputs)
+```
+
+Os arquivos gerados serão salvos no diretório especificado (`output`).
+
 ## 🧪 Testing
 
 Run the test suite:

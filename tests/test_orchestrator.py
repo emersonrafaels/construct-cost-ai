@@ -30,9 +30,7 @@ def test_orchestrator_initialization():
 
 def test_orchestrator_validate_with_no_validators(sample_budget):
     """Test validation with no validators configured."""
-    orchestrator = BudgetValidationOrchestrator(
-        deterministic_validators=[], ai_agent=None
-    )
+    orchestrator = BudgetValidationOrchestrator(deterministic_validators=[], ai_agent=None)
 
     result = orchestrator.validate(sample_budget)
 
@@ -49,9 +47,7 @@ def test_orchestrator_validate_with_validators(sample_budget):
         OutOfCatalogValidator(),
     ]
 
-    orchestrator = BudgetValidationOrchestrator(
-        deterministic_validators=validators, ai_agent=None
-    )
+    orchestrator = BudgetValidationOrchestrator(deterministic_validators=validators, ai_agent=None)
 
     result = orchestrator.validate(sample_budget)
 
@@ -84,9 +80,7 @@ def test_orchestrator_findings_aggregation(sample_budget):
         OutOfCatalogValidator(),
     ]
 
-    orchestrator = BudgetValidationOrchestrator(
-        deterministic_validators=validators, ai_agent=None
-    )
+    orchestrator = BudgetValidationOrchestrator(deterministic_validators=validators, ai_agent=None)
 
     result = orchestrator.validate(sample_budget)
 

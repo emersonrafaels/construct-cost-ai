@@ -73,9 +73,7 @@ def test_validator_with_different_thresholds():
                 total_price=9000.0,
             )
         ],
-        metadata=BudgetMetadata(
-            archetype="Residential", square_footage=100.0, region="SP"
-        ),
+        metadata=BudgetMetadata(archetype="Residential", square_footage=100.0, region="SP"),
     )
 
     findings_low = validator_low.validate(budget)

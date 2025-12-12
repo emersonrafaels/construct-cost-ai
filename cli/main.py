@@ -44,9 +44,7 @@ def get_orchestrator() -> BudgetValidationOrchestrator:
 
     ai_client = StackSpotAIClient(mock_mode=True)
 
-    return BudgetValidationOrchestrator(
-        deterministic_validators=validators, ai_agent=ai_client
-    )
+    return BudgetValidationOrchestrator(deterministic_validators=validators, ai_agent=ai_client)
 
 
 def load_budget_from_file(file_path: Path) -> list:
@@ -125,7 +123,9 @@ def validate(
     try:
         orchestrator = get_orchestrator()
         result = orchestrator.validate(budget)
-        console.print(f"[green]✓ Validation complete in {result.summary.execution_time_ms:.2f}ms[/green]")
+        console.print(
+            f"[green]✓ Validation complete in {result.summary.execution_time_ms:.2f}ms[/green]"
+        )
     except Exception as e:
         console.print(f"[red]Validation error: {e}[/red]")
         raise typer.Exit(1)
@@ -144,7 +144,9 @@ def validate(
     # Risk level with color
     risk_colors = {"LOW": "green", "MEDIUM": "yellow", "HIGH": "orange", "CRITICAL": "red"}
     risk_color = risk_colors.get(result.summary.risk_level.value, "white")
-    summary_table.add_row("Risk Level", f"[{risk_color}]{result.summary.risk_level.value}[/{risk_color}]")
+    summary_table.add_row(
+        "Risk Level", f"[{risk_color}]{result.summary.risk_level.value}[/{risk_color}]"
+    )
 
     console.print(summary_table)
 

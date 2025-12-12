@@ -49,7 +49,7 @@ class BudgetItem(BaseModel):
     unit: str = Field(..., description="Unit of measurement")
     unit_price: float = Field(..., ge=0, description="Unit price")
     total_price: float = Field(..., ge=0, description="Total price (quantity * unit_price)")
-    
+
     @field_validator("total_price")
     @classmethod
     def validate_total_price(cls, v: float, info) -> float:
@@ -91,9 +91,7 @@ class Finding(BaseModel):
     message: str = Field(..., description="Human-readable message")
     item_id: Optional[str] = Field(None, description="Reference to budget item (if applicable)")
     group: Optional[str] = Field(None, description="Service group (if applicable)")
-    details: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional contextual data"
-    )
+    details: Dict[str, Any] = Field(default_factory=dict, description="Additional contextual data")
     validator: str = Field(..., description="Name of the validator that generated this finding")
 
 
