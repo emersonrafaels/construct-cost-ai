@@ -128,13 +128,13 @@ DEFAULT_METADATA_KEYS = {
         "pattern": "NOME AGÊNCIA",
         "method": "iterate",
         "max_rows": None,
-        "specific_cell": (2, 3),  # Buscar na célula específica (linha 2, coluna 3)
+        "specific_cell": None,
     },
     "CONSTRUTORA": {
         "pattern": "CONSTRUTORA",
         "method": "specific_cell",
         "max_rows": None,
-        "specific_cell": (0, 0),  # Buscar na célula específica (linha 0, coluna 0)
+        "specific_cell": (1, 0),  # Buscar na célula específica (linha 0, coluna 0)
     },
     "TIPO": {
         "pattern": "TIPO",
@@ -331,7 +331,7 @@ def extract_metadata(
 
     Args:
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
-        metadata_keys (dict): Dicionário com as chaves de metadados e padrões de busca.
+        metadata_keys (dict): Dicionário com as chaves de metadados e suas configurações.
 
     Returns:
         dict: Dicionário contendo os metadados extraídos.
@@ -341,21 +341,37 @@ def extract_metadata(
 
     # Itera sobre as linhas do DataFrame
     for row_idx, row in df.iterrows():
-        for col_idx, cell in enumerate(row):  # Itera sobre as células da linha
-            if pd.isna(cell):  # Ignora células vazias
+        for col_idx, cell in enumerate(row):
+            # Ignora células vazias
+            if pd.isna(cell):
                 continue
 
             # Normaliza o valor da célula para uppercase
             cell_str = str(cell).strip().upper()
 
             # Verifica padrões de metadados
-            for key, pattern in metadata_keys.items():
-                # Se o metadado ainda não foi encontrado e o padrão corresponde
-                if metadata[key] is None and any(p.upper() in cell_str for p in pattern.split("|")):
-                    # Busca o valor do metadado
-                    find_metadata_value(row, col_idx, key, metadata, df, row_idx)
+            for key, config in metadata_keys.items():
+                # Obtém o padrão e método de busca
+                pattern = config["pattern"]
+                method = config.get("method", "iterate")
 
-    return metadata  # Retorna o dicionário de metadados
+                # Verifica se o padrão está na célula atual ou se o método é "specific_cell"
+                if metadata[key] is None and (
+                    pattern.upper() in cell_str or method == "specific_cell"
+                ):
+                    # Busca o valor do metadado com base na configuração
+                    find_metadata_value(
+                        row=row,
+                        col_idx=col_idx,
+                        metadata_key=key,
+                        metadata=metadata,
+                        df=df,
+                        row_idx=row_idx,
+                        specific_cell=config.get("specific_cell"),
+                        max_rows_to_iterate=config.get("max_rows"),
+                    )
+
+    return metadata
 
 
 # Função para extrair a tabela do DataFrame a partir da linha do cabeçalho
@@ -468,25 +484,29 @@ def read_budget_table(
 
 # Função para adicionar e salvar resultados processados em um arquivo
 def append_and_save_results(
-    all_tables: List, output_file: str, root_dir: str = "outputs"
+    all_tables: List[pd.DataFrame],
+    all_metadatas: List[Dict[str, Any]],
+    output_file: str,
 ) -> None:
     """
-    Adiciona os resultados processados a um arquivo existente ou cria um novo arquivo e salva os dados.
+    Adiciona os resultados processados (tabelas e metadados) a um arquivo Excel existente ou cria um novo arquivo e salva os dados.
 
     Args:
-        data (pd.DataFrame): DataFrame contendo os dados processados.
+        all_tables (List[pd.DataFrame]): Lista de DataFrames contendo as tabelas processadas.
+        all_metadatas (List[Dict[str, Any]]): Lista de dicionários contendo os metadados processados.
         output_file (str): Nome do arquivo de saída.
-        root_dir (str): Diretório raiz onde o arquivo será salvo. Default é "outputs".
 
     Returns:
         None
     """
-    
     # Concatena todas as tabelas
     data_result = pd.concat(all_tables, ignore_index=True)
-    
+
+    # Concatena todos os metadados em um DataFrame
+    metadata_result = pd.DataFrame(all_metadatas)
+
     # Loga o sucesso na concatenação
-    logger.success("Todas as tabelas foram concatenadas com sucesso.")
+    logger.success("Todas as tabelas e metadados foram concatenados com sucesso.")
 
     # Define o caminho completo do arquivo de saída
     output_path = Path(base_dir, DIR_OUTPUTS, output_file)
@@ -495,41 +515,53 @@ def append_and_save_results(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        # Salva os dados no arquivo de saída
-        export_data(data_result, output_path)
+        # Salva os dados no arquivo de saída em abas separadas usando export_data
+        export_data({"Tables": data_result, "Metadata": metadata_result}, output_path)
         logger.success(f"Resultados salvos com sucesso em {output_path}")
     except Exception as e:
         logger.error(f"Erro ao salvar os resultados em {output_path}: {e}")
-        
-    return data_result
 
 
-def append_data(list_all_tables, file_input, table, metadata):
+def append_data(list_all_tables, list_all_metadata, file_input, table, metadata):
     """
-    Docstring for append_data
+    Adiciona informações de arquivo e aba à tabela extraída e aos metadados, e os adiciona às respectivas listas.
 
-    :param table: Description
-    :param metadata: Description
+    Args:
+        list_all_tables (List): Lista para armazenar todas as tabelas processadas.
+        list_all_metadata (List): Lista para armazenar todos os metadados processados.
+        file_input (FileInput): Instância FileInput contendo o caminho do arquivo e o nome da aba.
+        table (pd.DataFrame): DataFrame contendo a tabela extraída.
+        metadata (Dict): Dicionário contendo os metadados extraídos.
+
+    Returns:
+        Tuple[List, List]: Listas atualizadas com a nova tabela e os novos metadados adicionados.
     """
+    # Adiciona o nome do arquivo e o nome da aba aos metadados
+    metadata_with_source = metadata.copy()
+    metadata_with_source["SOURCE_FILE"] = Path(file_input.file_path).name
+    metadata_with_source["SHEET_NAME"] = file_input.sheet_name
 
-    # Adiciona o nome do arquivo como coluna
+    # Adiciona os metadados à lista de metadados
+    list_all_metadata.append(metadata_with_source)
+
+    # Adiciona o nome do arquivo como coluna na tabela
     table["SOURCE_FILE"] = Path(file_input.file_path).name
 
-    # Adiciona o nome da aba como coluna
+    # Adiciona o nome da aba como coluna na tabela
     table["SHEET_NAME"] = file_input.sheet_name
-    
+
     # Resetando o index da tabela
     table.reset_index(drop=True, inplace=True)
 
-    # Adiciona a tabela à lista
+    # Adiciona a tabela à lista de tabelas
     list_all_tables.append(table)
 
-    # Loga o sucesso na extração da tabela
+    # Loga o sucesso na extração da tabela e dos metadados
     logger.success(
-        f"Tabela extraída com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}"
+        f"Tabela e metadados extraídos com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}"
     )
 
-    return list_all_tables
+    return list_all_tables, list_all_metadata
 
 
 # Função para orquestrar o processamento de múltiplos arquivos de orçamento
@@ -544,6 +576,7 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
         pd.DataFrame: DataFrame concatenado de todas as tabelas processadas.
     """
     all_tables = []  # Lista para armazenar todas as tabelas processadas
+    all_metadata = []  # Lista para armazenar todos os metadados processados
 
     # Itera sobre os arquivos de entrada
     for file_input in files:
@@ -558,10 +591,11 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
             )
 
             # Adiciona a tabela à lista
-            all_tables = append_data(list_all_tables=all_tables, 
-                                     file_input=file_input, 
-                                     table=table, 
-                                     metadata=metadata)
+            all_tables, all_metadata = append_data(list_all_tables=all_tables, 
+                                                   list_all_metadata=all_metadata,
+                                                   file_input=file_input, 
+                                                   table=table, 
+                                                   metadata=metadata)
 
         except Exception as e:
             # Loga o erro ao processar o arquivo
@@ -572,7 +606,8 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
     # Verifica se há tabelas processadas
     if all_tables:
         # Concatena e salva os resultados
-        data_result = append_and_save_results(all_tables, 
+        data_result = append_and_save_results(all_tables=all_tables, 
+                                              all_metadatas=all_metadata,
                                               output_file="budget_tables_concatenated.xlsx")
         
         return data_result

@@ -144,12 +144,7 @@ def export_data(
             df.to_excel(path, **kwargs)
             if isinstance(df, pd.DataFrame)
             else (
-                pd.ExcelWriter(path, engine="openpyxl").__enter__().close()
-                if all(isinstance(d, pd.DataFrame) for d in df.values())
-                and all(
-                    sheet.to_excel(path, sheet_name=name, **kwargs) for name, sheet in df.items()
-                )
-                else None
+                _export_multiple_sheets(df, path, **kwargs)
             )
         ),
         ".json": lambda df, path: df.to_json(path, **kwargs),
@@ -167,6 +162,19 @@ def export_data(
     except Exception as e:
         raise RuntimeError(f"Error exporting to {file_path}: {str(e)}")
 
+def _export_multiple_sheets(data: Dict[str, pd.DataFrame], path: Union[str, Path], **kwargs):
+    """
+    Helper function to export multiple sheets to an Excel file.
+
+    Args:
+        data: Dictionary of DataFrames to export.
+        path: Path to the Excel file.
+        **kwargs: Additional arguments for pandas to_excel.
+    """
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        for sheet_name, sheet_data in data.items():
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, **kwargs)
+        
 
 def transform_case(
     df: pd.DataFrame,
