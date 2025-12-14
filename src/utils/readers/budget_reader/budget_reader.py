@@ -103,17 +103,57 @@ ALTERNATIVE_COLUMNS = [
     "QUANTIDADE",
 ]
 
-# Metadados padrão
+"""
+pattern: # Padrão a ser buscado
+method: # Método: "iterate", "limited_iterate", ou "specific_cell"
+max_rows: # Número máximo de linhas para iterar (apenas para "limited_iterate")
+specific_cell: # Coordenadas da célula específica (linha, coluna) para "specific_cell"
+"""
+
+# Metadados padrão ajustados
 DEFAULT_METADATA_KEYS = {
-    "CÓDIGO_UPE": "UPE",  # Código UPE
-    "NUMERO_AGENCIA": "AGÊNCIA|AGENCIA",  # Número da agência
-    "NOME_AGENCIA": "NOME DA AGÊNCIA|NOME DA AGENCIA",  # Nome da agência
-    "TOTAL": "TOTAL",  # Total geral
-    "CONTRATO": "CONTRATO",  # Número do contrato
-    "VERSAO": "VERSÃO|VERSAO",  # Versão do documento
-    "TIPO": "TIPO",  # Tipo do orçamento
-    "QUANTIDADE_SINERGIAS": "QUANTIDADE SINERGIAS",  # Quantidade de sinergias
-    "PROGRAMA_DONO": "DONO",  # Dono do orçamento
+    "CÓDIGO_UPE": {
+        "pattern": "UPE", 
+        "method": "iterate",
+        "max_rows": None,  
+        "specific_cell": None,
+    },
+    "NUMERO_AGENCIA": {
+        "pattern": "AGÊNCIA",
+        "method": "iterate",
+        "max_rows": None, 
+        "specific_cell": None,
+    },
+    "NOME_AGENCIA": {
+        "pattern": "NOME AGÊNCIA",
+        "method": "iterate",
+        "max_rows": None,
+        "specific_cell": (2, 3),  # Buscar na célula específica (linha 2, coluna 3)
+    },
+    "CONSTRUTORA": {
+        "pattern": "CONSTRUTORA",
+        "method": "specific_cell",
+        "max_rows": None,
+        "specific_cell": (0, 0),  # Buscar na célula específica (linha 0, coluna 0)
+    },
+    "TIPO": {
+        "pattern": "TIPO",
+        "method": "iterate",
+        "max_rows": None,
+        "specific_cell": None,
+    },
+    "QUANTIDADE_SINERGIAS": {
+        "pattern": "QUANTIDADE SINERGIAS",
+        "method": "iterate",
+        "max_rows": None,
+        "specific_cell": None,
+    },
+    "PROGRAMA_DONO": {
+        "pattern": "DONO",
+        "method": "iterate",
+        "max_rows": None,
+        "specific_cell": None
+    },
 }
 
 # Filtros no pós processamento
@@ -239,9 +279,12 @@ def find_metadata_value(
     metadata: Dict[str, Any],
     df: pd.DataFrame,
     row_idx: int,
+    specific_cell: Optional[Tuple[int, int]] = None,
+    max_rows_to_iterate: Optional[int] = None,
 ) -> None:
     """
-    Busca e atribui um valor de metadado ao dicionário, descendo pelas linhas até encontrar o valor.
+    Busca e atribui um valor de metadado ao dicionário, descendo pelas linhas até encontrar o valor
+    ou buscando uma célula específica.
 
     Args:
         row (pd.Series): Linha do DataFrame.
@@ -250,18 +293,33 @@ def find_metadata_value(
         metadata (dict): Dicionário de metadados.
         df (pd.DataFrame): DataFrame completo para buscar o valor nas linhas subsequentes.
         row_idx (int): Índice da linha atual no DataFrame.
+        specific_cell (Optional[Tuple[int, int]]): Coordenadas (linha, coluna) de uma célula específica a ser buscada.
+        max_rows_to_iterate (Optional[int]): Número máximo de linhas para iterar ao buscar o valor.
     """
     # Verifica se o metadado já foi atribuído
-    if metadata[metadata_key] is None:
-        # Itera pelas linhas subsequentes
-        for next_row_idx in range(row_idx + 1, len(df)):
-            # Obtém o valor da célula na linha subsequente
-            value = df.iloc[next_row_idx, col_idx]
-            if not pd.isna(value):  # Verifica se o valor não é NaN
-                metadata[metadata_key] = str(
-                    value
-                ).upper()  # Atribui o valor encontrado em uppercase
-                break  # Interrompe a busca ao encontrar o valor
+    if metadata[metadata_key] is not None:
+        return
+
+    if specific_cell:
+        # Busca o valor na célula específica
+        specific_row, specific_col = specific_cell
+        if 0 <= specific_row < len(df) and 0 <= specific_col < len(df.columns):
+            value = df.iloc[specific_row, specific_col]
+            if not pd.isna(value):
+                metadata[metadata_key] = str(value).upper()
+        return
+
+    # Itera pelas linhas subsequentes
+    rows_to_iterate = range(row_idx + 1, len(df))
+    if max_rows_to_iterate is not None:
+        rows_to_iterate = range(row_idx + 1, min(row_idx + 1 + max_rows_to_iterate, len(df)))
+
+    for next_row_idx in rows_to_iterate:
+        # Obtém o valor da célula na linha subsequente
+        value = df.iloc[next_row_idx, col_idx]
+        if not pd.isna(value):  # Verifica se o valor não é NaN
+            metadata[metadata_key] = str(value).upper()  # Atribui o valor encontrado em uppercase
+            break
 
 
 # Função para extrair metadados dinamicamente do DataFrame
