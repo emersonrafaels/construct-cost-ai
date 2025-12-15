@@ -33,6 +33,9 @@ if __name__ == "__main__":
     # Exemplo com múltiplos arquivos e nomes de abas opcionais
     orchestrate_budget_reader(
         FileInput(
+            file_path=r"C:\Users\emers\OneDrive\Área de Trabalho\Itaú\CICF\DataCraft\Verificador Inteligente de Obras\codes\construct-cost-ai\data\sample_padrao1.xlsx",
+        ),
+        FileInput(
             file_path=r"C:\Users\emers\OneDrive\Área de Trabalho\Itaú\CICF\DataCraft\Verificador Inteligente de Obras\codes\construct-cost-ai\data\sample_padrao2_fg.xlsx",
             sheet_name="LPU",
         ),

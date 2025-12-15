@@ -96,7 +96,9 @@ def read_data(
         ".csv": lambda path: pd.read_csv(path, header=header),
         ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
         ".xls": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
-        ".xlsm": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),  # Added support for .xlsm files
+        ".xlsm": lambda path: pd.read_excel(
+            path, sheet_name=sheet_name, header=header
+        ),  # Added support for .xlsm files
         ".json": lambda path: pd.read_json(path),
         ".parquet": lambda path: pd.read_parquet(path),
         ".feather": lambda path: pd.read_feather(path),
@@ -143,9 +145,7 @@ def export_data(
         ".xlsx": lambda df, path: (
             df.to_excel(path, **kwargs)
             if isinstance(df, pd.DataFrame)
-            else (
-                _export_multiple_sheets(df, path, **kwargs)
-            )
+            else (_export_multiple_sheets(df, path, **kwargs))
         ),
         ".json": lambda df, path: df.to_json(path, **kwargs),
         ".parquet": lambda df, path: df.to_parquet(path, **kwargs),
@@ -162,6 +162,7 @@ def export_data(
     except Exception as e:
         raise RuntimeError(f"Error exporting to {file_path}: {str(e)}")
 
+
 def _export_multiple_sheets(data: Dict[str, pd.DataFrame], path: Union[str, Path], **kwargs):
     """
     Helper function to export multiple sheets to an Excel file.
@@ -174,7 +175,7 @@ def _export_multiple_sheets(data: Dict[str, pd.DataFrame], path: Union[str, Path
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         for sheet_name, sheet_data in data.items():
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, **kwargs)
-        
+
 
 def transform_case(
     df: pd.DataFrame,

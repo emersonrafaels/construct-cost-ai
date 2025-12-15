@@ -72,6 +72,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
+import numpy as np
 from pydantic.dataclasses import dataclass
 
 # Adicionar src ao path
@@ -82,26 +83,44 @@ from config.config_logger import logger
 from utils.data.data_functions import read_data, transform_case, filter_columns, export_data
 
 # Constantes centralizadas
-DEFAULT_SHEET_NAME = "LPU"  # Nome padrão da aba a ser lida
-EXPECTED_COLUMNS = [
-    "FILTRO",  # Coluna que indica se a linha deve ser filtrada
-    "ID",  # Identificador único do item
-    "DESCRIÇÃO",  # Descrição do item
-    "UN.",  # Unidade de medida
-    "UNITÁRIO",  # Preço unitário
-    "COMENTÁRIO",  # Comentários adicionais
-    "QUANTIDADE",  # Quantidade do item
-    "TOTAL",  # Valor total do item
-]
+DEFAULT_SHEET_NAME = None  # Retornará todas as abas
+SHEET_NAMES_TRY = ["LPU", "01"]
+EXPECTED_COLUMNS = {
+    "default01": [
+        "FILTRO",  # Coluna que indica se a linha deve ser filtrada
+        "ID",  # Identificador único do item
+        "DESCRIÇÃO",  # Nome do item
+        "UN.",  # Unidade de medida
+        "UNITÁRIO",  # Preço unitário
+        "COMENTÁRIO",  # Comentários adicionais
+        "QUANTIDADE",  # Quantidade do item
+        "TOTAL",  # Valor total do item
+    ],
+    "default02": [
+        "ITEM",  # ID da categoria
+        "DESCRIÇÃO",  # Nome do item
+        "UN",  # Unidade de medida
+        "QUANT.",  # Quantidade do item
+        "PREÇO UNITÁRIO",  # Preço Unitário
+        np.nan,  # Coluna vazia
+        "PREÇO TOTAL",  # Valor total do item
+    ],
+}
 
 # Colunas mínimas alternativas
-ALTERNATIVE_COLUMNS = [
-    "FILTRO",
-    "ID",
-    "UN.",
-    "UNITÁRIO",
-    "QUANTIDADE",
-]
+ALTERNATIVE_COLUMNS = {
+    "default01": [
+        "ID",  # Identificador único do item
+        "DESCRIÇÃO",  # Nome do item
+        "UNITÁRIO",  # Preço unitário
+        "QUANTIDADE",  # Quantidade do item
+    ],
+    "default02": [
+        "DESCRIÇÃO",  # Nome do item
+        "QUANT.",  # Quantidade do item
+        "P.U.",  # Preço Unitário
+    ],
+}
 
 """
 pattern: # Padrão a ser buscado
@@ -113,15 +132,15 @@ specific_cell: # Coordenadas da célula específica (linha, coluna) para "specif
 # Metadados padrão ajustados
 DEFAULT_METADATA_KEYS = {
     "CÓDIGO_UPE": {
-        "pattern": "UPE", 
+        "pattern": "UPE",
         "method": "iterate",
-        "max_rows": None,  
+        "max_rows": None,
         "specific_cell": None,
     },
     "NUMERO_AGENCIA": {
         "pattern": "AGÊNCIA",
         "method": "iterate",
-        "max_rows": None, 
+        "max_rows": None,
         "specific_cell": None,
     },
     "NOME_AGENCIA": {
@@ -152,7 +171,7 @@ DEFAULT_METADATA_KEYS = {
         "pattern": "DONO",
         "method": "iterate",
         "max_rows": None,
-        "specific_cell": None
+        "specific_cell": None,
     },
 }
 
@@ -174,7 +193,7 @@ class FileInput:
     """
 
     file_path: str  # Caminho completo do arquivo
-    sheet_name: Optional[str] = "LPU"  # Nome da aba a ser lida, padrão "LPU"
+    sheet_name: Optional[str] = None  # Nome da aba (padrão: None para todas as abas)
 
 
 # Funções auxiliares
@@ -223,49 +242,54 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
 def locate_table(
     df: pd.DataFrame,
-    expected_columns: list = EXPECTED_COLUMNS,
-    alternative_columns: list = ALTERNATIVE_COLUMNS,
+    expected_columns: dict = EXPECTED_COLUMNS,
+    alternative_columns: dict = ALTERNATIVE_COLUMNS,
 ) -> Tuple[Optional[int], Optional[int], Optional[list]]:
     """
-    Detecta a posição (linha, coluna) onde o cabeçalho da tabela começa.
+    Detecta a posição (linha, coluna) onde o cabeçalho da tabela começa, testando múltiplos padrões de colunas.
 
     Args:
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
-        expected_columns (list): Lista de colunas esperadas no cabeçalho da tabela.
-        alternative_columns (list): Lista alternativa mínima de colunas aceitas.
+        expected_columns (dict): Dicionário com listas de colunas esperadas para diferentes padrões.
+        alternative_columns (dict): Dicionário com listas alternativas mínimas de colunas aceitas para diferentes padrões.
 
     Returns:
         tuple: Uma tupla (linha, coluna, colunas_encontradas) indicando a posição do cabeçalho e as colunas encontradas,
                ou (None, None, None) se não encontrado.
     """
-    # Normaliza colunas esperadas para uppercase
-    normalized_expected = [col.upper() for col in expected_columns]
+    for pattern_key in expected_columns:
+        # Normaliza colunas esperadas e alternativas para uppercase
+        normalized_expected = [
+            str(col).upper() if isinstance(col, str) else col
+            for col in expected_columns[pattern_key]
+        ]
+        normalized_alternative = [
+            str(col).upper() if isinstance(col, str) else col
+            for col in alternative_columns[pattern_key]
+        ]
 
-    # Normaliza colunas alternativas para uppercase
-    normalized_alternative = [col.upper() for col in alternative_columns]
+        # Número de colunas esperadas
+        num_cols = len(normalized_expected)
 
-    # Número de colunas esperadas
-    num_cols = len(normalized_expected)
+        # Itera sobre as linhas do DataFrame
+        for row in range(df.shape[0]):
 
-    # Itera sobre as linhas do DataFrame
-    for row in range(df.shape[0]):
+            # Itera sobre as colunas possíveis
+            for col in range(df.shape[1] - num_cols + 1):
 
-        # Itera sobre as colunas possíveis
-        for col in range(df.shape[1] - num_cols + 1):
+                # Extrai valores da linha e colunas
+                values = df.iloc[row, col : col + num_cols].tolist()
 
-            # Extrai valores da linha e colunas
-            values = df.iloc[row, col : col + num_cols].tolist()
+                # Normaliza os valores extraídos para uppercase
+                normalized = [str(val).upper() if isinstance(val, str) else val for val in values]
 
-            # Normaliza os valores extraídos para uppercase
-            normalized = [str(val).upper() if isinstance(val, str) else val for val in values]
+                # Verifica se os valores correspondem às colunas esperadas
+                if normalized == normalized_expected:
+                    return row, col, expected_columns[pattern_key]
 
-            # Verifica se os valores correspondem às colunas esperadas
-            if normalized == normalized_expected:
-                return row, col, expected_columns
-
-            # Verifica colunas alternativas
-            if all(col in normalized for col in normalized_alternative):
-                return row, col, alternative_columns
+                # Verifica colunas alternativas
+                if all(col in normalized for col in normalized_alternative):
+                    return row, col, alternative_columns[pattern_key]
 
     # Retorna None se não encontrar o cabeçalho
     return None, None, None
@@ -445,6 +469,39 @@ def post_process_table(
     return data.reset_index(drop=True)
 
 
+def read_data_budget(
+    file_path: str, sheet_name: str = DEFAULT_SHEET_NAME, header: Optional[int] = None
+) -> pd.DataFrame:
+    """
+    Lê a planilha e retorna o DataFrame bruto.
+
+    Args:
+        file_path (str): Caminho do arquivo da planilha.
+        sheet_name (str): Nome da aba a ser lida.
+
+    Returns:
+        pd.DataFrame: DataFrame bruto lido da planilha.
+    """
+    # Lê a planilha sem cabeçalho
+    raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
+
+    if sheet_name is None:
+        # Tenta ler abas comuns se nenhuma aba for especificada
+        for sheet in SHEET_NAMES_TRY:
+            try:
+                if sheet in raw_df.keys():
+                    raw_df = raw_df[sheet]
+                    logger.info(f"Aba '{sheet}' encontrada e lida com sucesso.")
+                    break
+            except Exception as e:
+                logger.warning(f"Aba '{sheet}' não encontrada: {e}")
+
+    # Pré-processa os dados
+    raw_df = preprocess_data(raw_df)
+
+    return raw_df
+
+
 # Função para ler a tabela de orçamento do arquivo e aba especificados
 def read_budget_table(
     file_path: str, sheet_name: str = DEFAULT_SHEET_NAME
@@ -460,10 +517,7 @@ def read_budget_table(
         tuple: DataFrame contendo a tabela extraída e dicionário com os metadados.
     """
     # Lê a planilha sem cabeçalho
-    raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
-
-    # Pré-processa os dados
-    raw_df = preprocess_data(raw_df)
+    raw_df = read_data_budget(file_path, sheet_name=sheet_name, header=None)
 
     # Localiza o cabeçalho da tabela
     row, col, columns_found = locate_table(raw_df)
@@ -591,11 +645,13 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
             )
 
             # Adiciona a tabela à lista
-            all_tables, all_metadata = append_data(list_all_tables=all_tables, 
-                                                   list_all_metadata=all_metadata,
-                                                   file_input=file_input, 
-                                                   table=table, 
-                                                   metadata=metadata)
+            all_tables, all_metadata = append_data(
+                list_all_tables=all_tables,
+                list_all_metadata=all_metadata,
+                file_input=file_input,
+                table=table,
+                metadata=metadata,
+            )
 
         except Exception as e:
             # Loga o erro ao processar o arquivo
@@ -606,10 +662,12 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
     # Verifica se há tabelas processadas
     if all_tables:
         # Concatena e salva os resultados
-        data_result = append_and_save_results(all_tables=all_tables, 
-                                              all_metadatas=all_metadata,
-                                              output_file="budget_tables_concatenated.xlsx")
-        
+        data_result = append_and_save_results(
+            all_tables=all_tables,
+            all_metadatas=all_metadata,
+            output_file="budget_tables_concatenated.xlsx",
+        )
+
         return data_result
 
     # Loga o aviso de que nenhuma tabela foi processada
