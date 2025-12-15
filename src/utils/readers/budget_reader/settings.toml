@@ -1,0 +1,59 @@
+# Adicionei comentários explicativos para cada seção e melhorei a organização dos dicionários para maior clareza.
+
+[default]
+# Configurações gerais do sistema
+
+[default.default_sheet]
+# Configurações da aba padrão a ser lida
+name = ""  # Nome da aba padrão (deixe vazio para todas as abas)
+sheet_candidates = ["LPU", "01"]  # Candidatos a nomes de abas
+
+[default.expected_columns.default01]
+# Colunas esperadas para o padrão "default01"
+columns = [
+    "FILTRO",  # Indica se a linha deve ser filtrada
+    "ID",  # Identificador único do item
+    "DESCRIÇÃO",  # Nome do item
+    "UN.",  # Unidade de medida
+    "UNITÁRIO",  # Preço unitário
+    "COMENTÁRIO",  # Comentários adicionais
+    "QUANTIDADE",  # Quantidade do item
+    "TOTAL"  # Valor total do item
+]
+
+[default.expected_columns.default02]
+# Colunas esperadas para o padrão "default02"
+columns = [
+    "ITEM",  # ID da categoria
+    "DESCRIÇÃO",  # Nome do item
+    "UN",  # Unidade de medida
+    "QUANT.",  # Quantidade do item
+    "PREÇO UNITÁRIO",  # Preço unitário
+    "",  # Coluna vazia
+    "PREÇO TOTAL"  # Valor total do item
+]
+
+[default.alternative_columns.default01]
+# Colunas alternativas mínimas para o padrão "default01"
+columns = [
+    "ID",  # Identificador único do item
+    "DESCRIÇÃO",  # Nome do item
+    "UNITÁRIO",  # Preço unitário
+    "QUANTIDADE"  # Quantidade do item
+]
+
+[default.alternative_columns.default02]
+# Colunas alternativas mínimas para o padrão "default02"
+columns = [
+    "DESCRIÇÃO",  # Nome do item
+    "QUANT.",  # Quantidade do item
+    "P.U."  # Preço unitário
+]
+
+[default.filtros]
+# Filtros aplicados no pós-processamento
+filtro = ["SIM"]  # Nome da coluna usada para filtragem
+
+[default.dir_outputs]
+# Diretório de saída padrão
+path = "outputs"  # Caminho para salvar os arquivos de saída

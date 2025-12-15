@@ -74,6 +74,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 from pydantic.dataclasses import dataclass
+from dynaconf import settings
 
 # Adicionar src ao path
 base_dir = Path(__file__).parents[4]
@@ -82,44 +83,18 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 from config.config_logger import logger
 from utils.data.data_functions import read_data, transform_case, filter_columns, export_data
 
-# Constantes centralizadas
-DEFAULT_SHEET_NAME = None  # Retornará todas as abas
-SHEET_NAMES_TRY = ["LPU", "01"]
+# Substituí as constantes centralizadas por chamadas ao Dynaconf
+DEFAULT_SHEET_NAME = settings.get("default.default_sheet.name", None)
+SHEET_NAMES_TRY = settings.get("default.default_sheet.sheet_candidates", ["LPU", "01"])
 EXPECTED_COLUMNS = {
-    "default01": [
-        "FILTRO",  # Coluna que indica se a linha deve ser filtrada
-        "ID",  # Identificador único do item
-        "DESCRIÇÃO",  # Nome do item
-        "UN.",  # Unidade de medida
-        "UNITÁRIO",  # Preço unitário
-        "COMENTÁRIO",  # Comentários adicionais
-        "QUANTIDADE",  # Quantidade do item
-        "TOTAL",  # Valor total do item
-    ],
-    "default02": [
-        "ITEM",  # ID da categoria
-        "DESCRIÇÃO",  # Nome do item
-        "UN",  # Unidade de medida
-        "QUANT.",  # Quantidade do item
-        "PREÇO UNITÁRIO",  # Preço Unitário
-        np.nan,  # Coluna vazia
-        "PREÇO TOTAL",  # Valor total do item
-    ],
+    "default01": settings.get("default.expected_columns.default01.columns", []),
+    "default02": settings.get("default.expected_columns.default02.columns", []),
 }
 
 # Colunas mínimas alternativas
 ALTERNATIVE_COLUMNS = {
-    "default01": [
-        "ID",  # Identificador único do item
-        "DESCRIÇÃO",  # Nome do item
-        "UNITÁRIO",  # Preço unitário
-        "QUANTIDADE",  # Quantidade do item
-    ],
-    "default02": [
-        "DESCRIÇÃO",  # Nome do item
-        "QUANT.",  # Quantidade do item
-        "P.U.",  # Preço Unitário
-    ],
+    "default01": settings.get("default.alternative_columns.default01.columns", []),
+    "default02": settings.get("default.alternative_columns.default02.columns", []),
 }
 
 """
@@ -131,55 +106,103 @@ specific_cell: # Coordenadas da célula específica (linha, coluna) para "specif
 
 # Metadados padrão ajustados
 DEFAULT_METADATA_KEYS = {
-    "CÓDIGO_UPE": {
-        "pattern": "UPE",
-        "method": "iterate",
-        "max_rows": None,
-        "specific_cell": None,
+    "default01": {
+        "CÓDIGO_UPE": {
+            "pattern": "UPE",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "NUMERO_AGENCIA": {
+            "pattern": "AGÊNCIA",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "NOME_AGENCIA": {
+            "pattern": "NOME AGÊNCIA",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "CONSTRUTORA": {
+            "pattern": "CONSTRUTORA",
+            "method": "specific_cell",
+            "max_rows": None,
+            "specific_cell": (1, 0),
+        },
+        "TIPO": {
+            "pattern": "TIPO",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "QUANTIDADE_SINERGIAS": {
+            "pattern": "QUANTIDADE SINERGIAS",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "PROGRAMA_DONO": {
+            "pattern": "DONO",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
     },
-    "NUMERO_AGENCIA": {
-        "pattern": "AGÊNCIA",
-        "method": "iterate",
-        "max_rows": None,
-        "specific_cell": None,
-    },
-    "NOME_AGENCIA": {
-        "pattern": "NOME AGÊNCIA",
-        "method": "iterate",
-        "max_rows": None,
-        "specific_cell": None,
-    },
-    "CONSTRUTORA": {
-        "pattern": "CONSTRUTORA",
-        "method": "specific_cell",
-        "max_rows": None,
-        "specific_cell": (1, 0),  # Buscar na célula específica (linha 0, coluna 0)
-    },
-    "TIPO": {
-        "pattern": "TIPO",
-        "method": "iterate",
-        "max_rows": None,
-        "specific_cell": None,
-    },
-    "QUANTIDADE_SINERGIAS": {
-        "pattern": "QUANTIDADE SINERGIAS",
-        "method": "iterate",
-        "max_rows": None,
-        "specific_cell": None,
-    },
-    "PROGRAMA_DONO": {
-        "pattern": "DONO",
-        "method": "iterate",
-        "max_rows": None,
-        "specific_cell": None,
+    "default02": {
+        "CÓDIGO_UPE": {
+            "pattern": "UPE",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "NUMERO_AGENCIA": {
+            "pattern": "AGÊNCIA",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "NOME_AGENCIA": {
+            "pattern": "NOME AGÊNCIA",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "CONSTRUTORA": {
+            "pattern": "CONSTRUTORA",
+            "method": "specific_cell",
+            "max_rows": None,
+            "specific_cell": (1, 0),
+        },
+        "TIPO": {
+            "pattern": "TIPO",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "QUANTIDADE_SINERGIAS": {
+            "pattern": "QUANTIDADE SINERGIAS",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
+        "PROGRAMA_DONO": {
+            "pattern": "DONO",
+            "method": "iterate",
+            "max_rows": None,
+            "specific_cell": None,
+        },
     },
 }
 
 # Filtros no pós processamento
-FILTROS = {"FILTRO": ["SIM"]}  # Nome da coluna usada para filtragem
+FILTROS = settings.get(
+    "default.filtros.filtro", {"FILTRO": ["SIM"]}
+)  # Nome da coluna usada para filtragem
 
 # Diretório de saída padrão
-DIR_OUTPUTS = "outputs"
+DIR_OUTPUTS = settings.get("default.dir_outputs.path", "outputs")
 
 
 @dataclass
