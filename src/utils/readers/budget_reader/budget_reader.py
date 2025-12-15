@@ -307,18 +307,21 @@ def locate_table(
                 values = df.iloc[row, col : col + num_cols].tolist()
 
                 # Normaliza os valores extraídos para uppercase
-                normalized = [str(val).upper() if isinstance(val, str) else val for val in values]
+                normalized = [
+                    "" if pd.isna(val) else str(val).upper() if isinstance(val, str) else val
+                    for val in values
+                ]
 
                 # Verifica se os valores correspondem às colunas esperadas
                 if normalized == normalized_expected:
-                    return row, col, expected_columns[pattern_key]
+                    return row, col, pattern_key, expected_columns[pattern_key]
 
                 # Verifica colunas alternativas
                 if all(col in normalized for col in normalized_alternative):
-                    return row, col, alternative_columns[pattern_key]
+                    return row, col, pattern_key, alternative_columns[pattern_key]
 
     # Retorna None se não encontrar o cabeçalho
-    return None, None, None
+    return None, None, None, None
 
 
 # Função auxiliar para encontrar e atribuir valores de metadados a um dicionário
@@ -546,7 +549,7 @@ def read_budget_table(
     raw_df = read_data_budget(file_path, sheet_name=sheet_name, header=None)
 
     # Localiza o cabeçalho da tabela
-    row, col, columns_found = locate_table(raw_df)
+    row, col, pattern, columns_found, = locate_table(raw_df)
 
     # Verifica se o cabeçalho foi encontrado
     if row is None:
