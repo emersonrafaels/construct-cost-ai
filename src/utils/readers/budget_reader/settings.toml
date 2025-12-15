@@ -12,7 +12,6 @@ pattern_default = "default01"
 [default.expected_columns.default01]
 # Colunas esperadas para o padrão "default01"
 columns = [
-    "FILTRO",  # Indica se a linha deve ser filtrada
     "ID",  # Identificador único do item
     "DESCRIÇÃO",  # Nome do item
     "UN.",  # Unidade de medida
@@ -50,6 +49,14 @@ columns = [
     "QUANT.",  # Quantidade do item
     "P.U."  # Preço unitário
 ]
+
+[default.default01.result]
+# Rename de colunas para o padrão "default01"
+dict_rename = {"ID" = "ID", "DESCRIÇÃO" = "NOME", "UN." = "UNIDADE", "UNITÁRIO" = "PREÇO LPU", "COMENTÁRIO" = "COMENTÁRIO", "QUANTIDADE" = "QUANTIDADE", "TOTAL" = "VALOR TOTAL"}
+
+[default.default02.result]
+# Rename de colunas para o padrão "default02"
+dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT." = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO LPU", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
 
 [default.filtros]
 # Filtros aplicados no pós-processamento
