@@ -245,6 +245,7 @@ def filter_columns(df: pd.DataFrame, columns: list, allow_partial: bool = True) 
     # Verifica as colunas que existem no DataFrame
     existing_columns = [col for col in columns if col in df.columns]
 
+    # Se não permitir parcial e houver colunas faltantes, gera um erro
     if not allow_partial and len(existing_columns) != len(columns):
         missing_columns = [col for col in columns if col not in df.columns]
         raise ValueError(f"As seguintes colunas estão ausentes no DataFrame: {missing_columns}")

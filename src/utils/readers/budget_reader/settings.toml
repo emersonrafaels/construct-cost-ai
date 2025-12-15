@@ -7,6 +7,7 @@
 # Configurações da aba padrão a ser lida
 name = ""  # Nome da aba padrão (deixe vazio para todas as abas)
 sheet_candidates = ["LPU", "01"]  # Candidatos a nomes de abas
+pattern_default = "default01"
 
 [default.expected_columns.default01]
 # Colunas esperadas para o padrão "default01"
@@ -52,7 +53,7 @@ columns = [
 
 [default.filtros]
 # Filtros aplicados no pós-processamento
-filtro = ["SIM"]  # Nome da coluna usada para filtragem
+dict_filtros = {"QUANTIDADE" = "greater_than:0"}
 
 [default.dir_outputs]
 # Diretório de saída padrão

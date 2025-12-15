@@ -81,6 +81,7 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from utils.readers.budget_reader.config_dynaconf_budget_reader import get_settings
+from utils.readers.budget_reader.config_metadata import get_metadata_keys
 from utils.data.data_functions import read_data, transform_case, filter_columns, export_data
 
 # Obtendo a instância de configurações
@@ -89,6 +90,9 @@ settings = get_settings()
 # Substituí as constantes centralizadas por chamadas ao Dynaconf
 DEFAULT_SHEET_NAME = settings.get("default_sheet.name", None)
 SHEET_NAMES_TRY = settings.get("default_sheet.sheet_candidates", ["LPU", "01"])
+PATTERN_DEFAULT = settings.get("default_sheet.pattern_default", "default01")
+
+# Colunas mínimas esperadas
 EXPECTED_COLUMNS = {
     "default01": settings.get("expected_columns.default01.columns", []),
     "default02": settings.get("expected_columns.default02.columns", []),
@@ -100,108 +104,12 @@ ALTERNATIVE_COLUMNS = {
     "default02": settings.get("alternative_columns.default02.columns", []),
 }
 
-"""
-pattern: # Padrão a ser buscado
-method: # Método: "iterate", "limited_iterate", ou "specific_cell"
-max_rows: # Número máximo de linhas para iterar (apenas para "limited_iterate")
-specific_cell: # Coordenadas da célula específica (linha, coluna) para "specific_cell"
-"""
-
-# Metadados padrão ajustados
-DEFAULT_METADATA_KEYS = {
-    "default01": {
-        "CÓDIGO_UPE": {
-            "pattern": "UPE",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "NUMERO_AGENCIA": {
-            "pattern": "AGÊNCIA",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "NOME_AGENCIA": {
-            "pattern": "NOME AGÊNCIA",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "CONSTRUTORA": {
-            "pattern": "CONSTRUTORA",
-            "method": "specific_cell",
-            "max_rows": None,
-            "specific_cell": (1, 0),
-        },
-        "TIPO": {
-            "pattern": "TIPO",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "QUANTIDADE_SINERGIAS": {
-            "pattern": "QUANTIDADE SINERGIAS",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "PROGRAMA_DONO": {
-            "pattern": "DONO",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-    },
-    "default02": {
-        "CÓDIGO_UPE": {
-            "pattern": "UPE",
-            "method": "UPE",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "NUMERO_AGENCIA": {
-            "pattern": "AGÊNCIA",
-            "method": "specific_cell",
-            "max_rows": None,
-            "specific_cell": (1, 0),
-        },
-        "NOME_AGENCIA": {
-            "pattern": "NOME AGÊNCIA",
-            "method": "specific_cell",
-            "max_rows": None,
-            "specific_cell": (1, 0),
-        },
-        "CONSTRUTORA": {
-            "pattern": "CONSTRUTORA",
-            "method": None,
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "TIPO": {
-            "pattern": "TIPO",
-            "method": "specific_cell",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "QUANTIDADE_SINERGIAS": {
-            "pattern": "QUANTIDADE SINERGIAS",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "PROGRAMA_DONO": {
-            "pattern": "DONO",
-            "method": "soecific_cell",
-            "max_rows": None,
-            "specific_cell": (3,0),
-        },
-    },
-}
+# Obtendo as chaves de metadados padrão
+DEFAULT_METADATA_KEYS = get_metadata_keys()
 
 # Filtros no pós processamento
 FILTROS = settings.get(
-    "filtros.filtro", {"FILTRO": ["SIM"]}
+    "filtros.dict_filtros", {}
 )  # Nome da coluna usada para filtragem
 
 # Diretório de saída padrão
@@ -377,7 +285,9 @@ def find_metadata_value(
 
 # Função para extrair metadados dinamicamente do DataFrame
 def extract_metadata(
-    df: pd.DataFrame, metadata_keys: dict = DEFAULT_METADATA_KEYS
+    df: pd.DataFrame, 
+    metadata_keys: dict = DEFAULT_METADATA_KEYS, 
+    pattern_key: str = "default01"
 ) -> Dict[str, Optional[Any]]:
     """
     Extrai metadados da tabela de orçamento de forma genérica e dinâmica.
@@ -385,12 +295,16 @@ def extract_metadata(
     Args:
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
         metadata_keys (dict): Dicionário com as chaves de metadados e suas configurações.
+        pattern_key (str): Chave do padrão de metadados a ser usado.
 
     Returns:
         dict: Dicionário contendo os metadados extraídos.
     """
+    # Obtém o dicionário de metadados para o padrão especificado
+    selected_metadata_keys = metadata_keys.get(pattern_key, {})
+
     # Inicializa o dicionário de metadados
-    metadata = {key: None for key in metadata_keys}
+    metadata = {key: None for key in selected_metadata_keys}
 
     # Itera sobre as linhas do DataFrame
     for row_idx, row in df.iterrows():
@@ -403,7 +317,7 @@ def extract_metadata(
             cell_str = str(cell).strip().upper()
 
             # Verifica padrões de metadados
-            for key, config in metadata_keys.items():
+            for key, config in selected_metadata_keys.items():
                 # Obtém o padrão e método de busca
                 pattern = config["pattern"]
                 method = config.get("method", "iterate")
@@ -465,7 +379,35 @@ def extract_table(
     return post_process_table(data, cols_expected=columns_found, col_filter=col_filter)
 
 
-# Função para aplicar filtros e pós-processamento na tabela extraída
+# Separei a lógica de filtros em uma função dedicada e tornei-a resiliente para diferentes tipos de filtros.
+def apply_filter(data: pd.DataFrame, col: str, filter_value: Any) -> pd.DataFrame:
+    """
+    Aplica um filtro resiliente a uma coluna do DataFrame.
+
+    Args:
+        data (pd.DataFrame): DataFrame contendo os dados.
+        col (str): Nome da coluna a ser filtrada.
+        filter_value (Any): Valor ou condição de filtro (e.g., "greater_than:0", "less_than:10", "equal:SIM", ["SIM", "sim"]).
+
+    Returns:
+        pd.DataFrame: DataFrame filtrado.
+    """
+    if isinstance(filter_value, str):
+        if "greater_than:" in filter_value:
+            threshold = float(filter_value.split(":")[1])
+            return data[data[col] > threshold]
+        elif "less_than:" in filter_value:
+            threshold = float(filter_value.split(":")[1])
+            return data[data[col] < threshold]
+        elif "equal:" in filter_value:
+            target = filter_value.split(":")[1].lower()
+            return data[data[col].str.lower() == target]
+    elif isinstance(filter_value, list):
+        return data[data[col].str.lower().isin([val.lower() for val in filter_value])]
+
+    return data
+
+
 def post_process_table(
     data: pd.DataFrame, cols_expected: list = [], col_filter: Dict[str, Any] = FILTROS
 ) -> pd.DataFrame:
@@ -485,14 +427,9 @@ def post_process_table(
         data = filter_columns(df=data, columns=cols_expected, allow_partial=True)
 
     # Aplica os filtros definidos no dicionário col_filter
-    for col, filter_values in col_filter.items():
+    for col, filter_value in col_filter.items():
         if col in data.columns:
-            # Garante que filter_values seja uma lista
-            if isinstance(filter_values, str):
-                filter_values = [filter_values]
-
-            # Filtra linhas onde o valor está na lista de valores filtráveis
-            data = data[data[col].str.lower().isin([val.lower() for val in filter_values])]
+            data = apply_filter(data, col, filter_value)
 
     # Reseta o índice do DataFrame
     return data.reset_index(drop=True)
@@ -528,7 +465,7 @@ def read_data_budget(
     # Pré-processa os dados
     raw_df = preprocess_data(raw_df)
 
-    return raw_df
+    return raw_df, sheet
 
 
 # Função para ler a tabela de orçamento do arquivo e aba especificados
@@ -546,7 +483,7 @@ def read_budget_table(
         tuple: DataFrame contendo a tabela extraída e dicionário com os metadados.
     """
     # Lê a planilha sem cabeçalho
-    raw_df = read_data_budget(file_path, sheet_name=sheet_name, header=None)
+    raw_df, sheet_name = read_data_budget(file_path, sheet_name=sheet_name, header=None)
 
     # Localiza o cabeçalho da tabela
     row, col, pattern, columns_found, = locate_table(raw_df)
@@ -556,13 +493,19 @@ def read_budget_table(
         raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
 
     # Extrai os metadados
-    metadata = extract_metadata(raw_df)
+    metadata = extract_metadata(df=raw_df, 
+                                metadata_keys=DEFAULT_METADATA_KEYS,
+                                pattern_key=pattern)
 
     # Extrai a tabela
-    table = extract_table(raw_df, row, col, columns_found)
+    table = extract_table(df=raw_df, 
+                          header_row=row, 
+                          first_col=col, 
+                          columns_found=columns_found, 
+                          col_filter=FILTROS)
 
     # Retorna a tabela e os metadados
-    return table, metadata
+    return table, sheet_name, metadata
 
 
 # Função para adicionar e salvar resultados processados em um arquivo
@@ -669,7 +612,7 @@ def orchestrate_budget_reader(*files: List[FileInput]) -> pd.DataFrame:
         )
         try:
             # Lê a tabela
-            table, metadata = read_budget_table(
+            table, file_input.sheet_name, metadata = read_budget_table(
                 file_input.file_path, sheet_name=file_input.sheet_name
             )
 
