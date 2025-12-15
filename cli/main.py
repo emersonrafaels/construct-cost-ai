@@ -20,7 +20,7 @@ from construct_cost_ai.domain.validators.deterministic import (
 from construct_cost_ai.infra.ai import StackSpotAIClient
 from construct_cost_ai.infra.config import get_settings
 
-# Get settings instance
+# Obtendo a instância de configurações
 settings = get_settings()
 
 app = typer.Typer(

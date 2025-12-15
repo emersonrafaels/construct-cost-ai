@@ -43,5 +43,3 @@ def get_settings() -> Dynaconf:
 if __name__ == "__main__":
     # Test settings loading
     settings = get_settings()
-
-    print(settings)

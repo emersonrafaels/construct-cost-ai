@@ -22,7 +22,7 @@ from construct_cost_ai.domain.models import Budget
 from construct_cost_ai.infra.config import get_settings
 from construct_cost_ai.infra.logging import logger
 
-# Get settings instance
+# Obtendo a instância de configurações
 settings = get_settings()
 
 

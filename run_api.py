@@ -17,7 +17,7 @@ import uvicorn
 
 from construct_cost_ai.infra.config import get_settings
 
-# Get settings instance
+# Obtendo a instância de configurações
 settings = get_settings()
 
 if __name__ == "__main__":

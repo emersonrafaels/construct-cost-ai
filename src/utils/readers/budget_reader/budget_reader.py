@@ -74,27 +74,30 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 from pydantic.dataclasses import dataclass
-from dynaconf import settings
 
 # Adicionar src ao path
 base_dir = Path(__file__).parents[4]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
+from utils.readers.budget_reader.config_dynaconf_budget_reader import get_settings
 from utils.data.data_functions import read_data, transform_case, filter_columns, export_data
 
+# Obtendo a instância de configurações
+settings = get_settings()
+
 # Substituí as constantes centralizadas por chamadas ao Dynaconf
-DEFAULT_SHEET_NAME = settings.get("default.default_sheet.name", None)
-SHEET_NAMES_TRY = settings.get("default.default_sheet.sheet_candidates", ["LPU", "01"])
+DEFAULT_SHEET_NAME = settings.get("default_sheet.name", None)
+SHEET_NAMES_TRY = settings.get("default_sheet.sheet_candidates", ["LPU", "01"])
 EXPECTED_COLUMNS = {
-    "default01": settings.get("default.expected_columns.default01.columns", []),
-    "default02": settings.get("default.expected_columns.default02.columns", []),
+    "default01": settings.get("expected_columns.default01.columns", []),
+    "default02": settings.get("expected_columns.default02.columns", []),
 }
 
 # Colunas mínimas alternativas
 ALTERNATIVE_COLUMNS = {
-    "default01": settings.get("default.alternative_columns.default01.columns", []),
-    "default02": settings.get("default.alternative_columns.default02.columns", []),
+    "default01": settings.get("alternative_columns.default01.columns", []),
+    "default02": settings.get("alternative_columns.default02.columns", []),
 }
 
 """
@@ -153,31 +156,31 @@ DEFAULT_METADATA_KEYS = {
     "default02": {
         "CÓDIGO_UPE": {
             "pattern": "UPE",
-            "method": "iterate",
+            "method": "UPE",
             "max_rows": None,
             "specific_cell": None,
         },
         "NUMERO_AGENCIA": {
             "pattern": "AGÊNCIA",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "NOME_AGENCIA": {
-            "pattern": "NOME AGÊNCIA",
-            "method": "iterate",
-            "max_rows": None,
-            "specific_cell": None,
-        },
-        "CONSTRUTORA": {
-            "pattern": "CONSTRUTORA",
             "method": "specific_cell",
             "max_rows": None,
             "specific_cell": (1, 0),
         },
+        "NOME_AGENCIA": {
+            "pattern": "NOME AGÊNCIA",
+            "method": "specific_cell",
+            "max_rows": None,
+            "specific_cell": (1, 0),
+        },
+        "CONSTRUTORA": {
+            "pattern": "CONSTRUTORA",
+            "method": None,
+            "max_rows": None,
+            "specific_cell": None,
+        },
         "TIPO": {
             "pattern": "TIPO",
-            "method": "iterate",
+            "method": "specific_cell",
             "max_rows": None,
             "specific_cell": None,
         },
@@ -189,20 +192,20 @@ DEFAULT_METADATA_KEYS = {
         },
         "PROGRAMA_DONO": {
             "pattern": "DONO",
-            "method": "iterate",
+            "method": "soecific_cell",
             "max_rows": None,
-            "specific_cell": None,
+            "specific_cell": (3,0),
         },
     },
 }
 
 # Filtros no pós processamento
 FILTROS = settings.get(
-    "default.filtros.filtro", {"FILTRO": ["SIM"]}
+    "filtros.filtro", {"FILTRO": ["SIM"]}
 )  # Nome da coluna usada para filtragem
 
 # Diretório de saída padrão
-DIR_OUTPUTS = settings.get("default.dir_outputs.path", "outputs")
+DIR_OUTPUTS = settings.get("dir_outputs.path", "outputs")
 
 
 @dataclass

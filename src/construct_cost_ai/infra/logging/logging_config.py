@@ -20,7 +20,7 @@ from loguru import logger
 
 from construct_cost_ai.infra.config.config import get_settings
 
-# Get settings instance
+# Obtendo a instância de configurações
 settings = get_settings()
 
 # Get project root directory
