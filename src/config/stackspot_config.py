@@ -3,7 +3,6 @@
 import sys
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 # Adjust import path for data functions
 sys.path.insert(0, str(Path(__file__).parents[2]))

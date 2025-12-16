@@ -1,7 +1,6 @@
 """Rich-based CLI for budget validation."""
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -194,7 +193,7 @@ def validate(
 
     # Display findings by group
     if result.findings_by_group:
-        console.print(f"\n[bold]📦 Findings by Group:[/bold]")
+        console.print("\n[bold]📦 Findings by Group:[/bold]")
         for group, findings in result.findings_by_group.items():
             console.print(f"  {group}: {len(findings)} findings")
 

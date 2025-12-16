@@ -6,7 +6,7 @@ orçamentos com a base de preços LPU com opções configuráveis.
 """
 
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional
 import sys
 
 # Adicionar o diretório src ao path
@@ -123,7 +123,7 @@ def executar_validacao(
 
             print("\n[4/4] Calculando divergências...")
             df_resultado = calcular_divergencias(df_cruzado)
-            print(f"      ✅ Cálculos concluídos\n")
+            print("      ✅ Cálculos concluídos\n")
 
             # Salvar resultados
             from construct_cost_ai.domain.validador_lpu import salvar_resultado
@@ -472,7 +472,7 @@ def exemplo_3_filtros_customizados():
                 print("-" * 80)
                 por_categoria = df_resultado[df_resultado["categoria"] == categoria_exemplo]
                 print(f"Itens encontrados: {len(por_categoria)}")
-                print(f"\nResumo:")
+                print("\nResumo:")
                 print(por_categoria["status_conciliacao"].value_counts())
 
         # Filtro 3: Valores unitários acima de R$ 1000

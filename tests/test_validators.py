@@ -1,7 +1,5 @@
 """Tests for deterministic validators."""
 
-import pytest
-
 from construct_cost_ai.domain.models import Severity
 from construct_cost_ai.domain.validators.deterministic import (
     OutOfCatalogValidator,

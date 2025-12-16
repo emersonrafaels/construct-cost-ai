@@ -16,7 +16,7 @@ __email__ = "emersonssmile@gmail.com"
 __status__ = "Production"
 
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union
 import sys
 import pandas as pd
 
@@ -722,13 +722,13 @@ def gerar_relatorio_html(
             {"<!-- RESUMO POR CATEGORIA -->" if resumo_cat is not None else ""}
             {f'''<div class="section">
                 <h2>Resumo por Categoria</h2>
-                {resumo_cat.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: f'R$ {{x:,.2f}}' if pd.notna(x) else '')}
+                {resumo_cat.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: 'R$ {x:,.2f}' if pd.notna(x) else '')}
             </div>''' if resumo_cat is not None else ""}
             
             {"<!-- RESUMO POR UPE -->" if resumo_upe is not None else ""}
             {f'''<div class="section">
                 <h2>Resumo por UPE</h2>
-                {resumo_upe.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: f'R$ {{x:,.2f}}' if pd.notna(x) else '')}
+                {resumo_upe.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: 'R$ {x:,.2f}' if pd.notna(x) else '')}
             </div>''' if resumo_upe is not None else ""}
         </div>
         

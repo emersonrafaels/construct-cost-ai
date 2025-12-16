@@ -111,7 +111,7 @@ def executar_validacao(
 
             logger.info("[4/4] Calculando divergências...")
             df_resultado = calcular_divergencias(df_cruzado)
-            logger.debug(f"      ✅ Cálculos concluídos")
+            logger.debug("      ✅ Cálculos concluídos")
 
             # Salvar resultados
             from construct_cost_ai.domain.validador_lpu import salvar_resultado

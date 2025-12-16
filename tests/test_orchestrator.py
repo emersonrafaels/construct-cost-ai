@@ -1,8 +1,6 @@
 """Tests for the budget validation orchestrator."""
 
-import pytest
-
-from construct_cost_ai.domain.models import RiskLevel, Severity
+from construct_cost_ai.domain.models import RiskLevel
 from construct_cost_ai.domain.orchestrator import BudgetValidationOrchestrator
 from construct_cost_ai.domain.validators.deterministic import (
     OutOfCatalogValidator,

@@ -13,7 +13,7 @@ __maintainer__ = "Emerson V. Rafael"
 __email__ = "emersonssmile@gmail.com"
 __status__ = "Production"
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,6 @@ from construct_cost_ai.domain.models import (
     BudgetItem,
     BudgetMetadata,
     Finding,
-    RiskLevel,
     ValidationSummary,
 )
 
