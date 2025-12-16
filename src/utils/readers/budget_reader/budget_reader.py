@@ -84,11 +84,11 @@ from utils.readers.budget_reader.config_metadata import get_metadata_keys
 from utils.data.data_functions import (
     read_data,
     transform_case,
-    filter_columns,
     export_data,
     rename_columns,
     select_columns,
 )
+from utils.python_functions import convert_value
 
 # Obtendo a instância de configurações
 settings = get_settings()
@@ -255,6 +255,7 @@ def find_metadata_value(
     row_idx: int,
     specific_cell: Optional[Tuple[int, int]] = None,
     max_rows_to_iterate: Optional[int] = None,
+    expected_type: Union[str, type] = "str",
 ) -> None:
     """
     Busca e atribui um valor de metadado ao dicionário, descendo pelas linhas até encontrar o valor
@@ -269,6 +270,7 @@ def find_metadata_value(
         row_idx (int): Índice da linha atual no DataFrame.
         specific_cell (Optional[Tuple[int, int]]): Coordenadas (linha, coluna) de uma célula específica a ser buscada.
         max_rows_to_iterate (Optional[int]): Número máximo de linhas para iterar ao buscar o valor.
+        expected_type (Union[str, type]): Tipo esperado do valor a ser convertido.
     """
     # Verifica se o metadado já foi atribuído
     if metadata[metadata_key] is not None:
@@ -280,6 +282,11 @@ def find_metadata_value(
         if 0 <= specific_row < len(df) and 0 <= specific_col < len(df.columns):
             value = df.iloc[specific_row, specific_col]
             if not pd.isna(value):
+                
+                # Converte o valor para o tipo esperado
+                if expected_type:
+                    value = convert_value(str(value), expected_type)
+                
                 metadata[metadata_key] = str(value).upper()
         return
 
@@ -292,13 +299,22 @@ def find_metadata_value(
         # Obtém o valor da célula na linha subsequente
         value = df.iloc[next_row_idx, col_idx]
         if not pd.isna(value):  # Verifica se o valor não é NaN
+            
+            # Converte o valor para o tipo esperado
+            if expected_type:
+                value = convert_value(str(value), expected_type)
+            
             metadata[metadata_key] = str(value).upper()  # Atribui o valor encontrado em uppercase
             break
 
 
 # Função para extrair metadados dinamicamente do DataFrame
 def extract_metadata(
-    raw_df: pd.DataFrame, df: pd.DataFrame, metadata_keys: dict = DEFAULT_METADATA_KEYS, pattern_key: str = "default01"
+    raw_df: pd.DataFrame, 
+    df: pd.DataFrame, 
+    sheet_name_selected: str, 
+    metadata_keys: dict = DEFAULT_METADATA_KEYS, 
+    pattern_key: str = "default01"
 ) -> Dict[str, Optional[Any]]:
     """
     Extrai metadados da tabela de orçamento de forma genérica e dinâmica.
@@ -306,6 +322,7 @@ def extract_metadata(
     Args:
         raw_df (pd.DataFrame): DataFrame bruto lido da planilha. Pode conter várias abas.
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
+        sheet_name_selected (str): Nome da aba atual sendo processada.
         metadata_keys (dict): Dicionário com as chaves de metadados e suas configurações.
         pattern_key (str): Chave do padrão de metadados a ser usado.
 
@@ -318,21 +335,28 @@ def extract_metadata(
     # Inicializa o dicionário de metadados
     metadata = {key: None for key in selected_metadata_keys}
 
-    # Itera sobre as linhas do DataFrame
-    for row_idx, row in df.iterrows():
-        for col_idx, cell in enumerate(row):
-            # Ignora células vazias
-            if pd.isna(cell):
-                continue
+    for key, config in selected_metadata_keys.items():
+        # Determina o DataFrame a ser usado com base na aba especificada no padrão
+        sheet_name = config.get("sheet_name", None)
+        if sheet_name in raw_df.keys() and sheet_name != sheet_name_selected:
+            source_df = raw_df[sheet_name]
+        else:
+            source_df = df
 
-            # Normaliza o valor da célula para uppercase
-            cell_str = str(cell).strip().upper()
+        # Itera sobre as linhas do DataFrame selecionado
+        for row_idx, row in source_df.iterrows():
+            for col_idx, cell in enumerate(row):
+                # Ignora células vazias
+                if pd.isna(cell):
+                    continue
 
-            # Verifica padrões de metadados
-            for key, config in selected_metadata_keys.items():
-                # Obtém o padrão e método de busca
+                # Normaliza o valor da célula para uppercase
+                cell_str = str(cell).strip().upper()
+
+                # Obtém o padrão, método de busca e tipo esperado
                 pattern = config["pattern"]
                 method = config.get("method", "iterate")
+                expected_type = config.get("type", "str")
 
                 # Verifica se o padrão está na célula atual ou se o método é "specific_cell"
                 if metadata[key] is None and (
@@ -344,10 +368,11 @@ def extract_metadata(
                         col_idx=col_idx,
                         metadata_key=key,
                         metadata=metadata,
-                        df=df,
+                        df=source_df,
                         row_idx=row_idx,
                         specific_cell=config.get("specific_cell"),
                         max_rows_to_iterate=config.get("max_rows"),
+                        expected_type=expected_type
                     )
 
     return metadata
@@ -558,7 +583,11 @@ def read_budget_table(
         if row:
             # Extrai os metadados
             metadata = extract_metadata(
-                raw_df=raw_df, df=df_selected_sheet, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern
+                raw_df=raw_df, 
+                df=df_selected_sheet, 
+                sheet_name_selected=sheet_name, 
+                metadata_keys=DEFAULT_METADATA_KEYS, 
+                pattern_key=pattern
             )
 
             # Extrai a tabela
