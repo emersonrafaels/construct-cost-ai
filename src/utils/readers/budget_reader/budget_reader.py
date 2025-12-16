@@ -452,7 +452,6 @@ def extract_table(
     return post_process_table(data, col_filter=col_filter)
 
 
-# Separei a lógica de filtros em uma função dedicada e tornei-a resiliente para diferentes tipos de filtros.
 def apply_filter(data: pd.DataFrame, col: str, filter_value: Any) -> pd.DataFrame:
     """
     Aplica um filtro resiliente a uma coluna do DataFrame.
@@ -465,18 +464,30 @@ def apply_filter(data: pd.DataFrame, col: str, filter_value: Any) -> pd.DataFram
     Returns:
         pd.DataFrame: DataFrame filtrado.
     """
-    if isinstance(filter_value, str):
-        if "greater_than:" in filter_value:
-            threshold = float(filter_value.split(":")[1])
-            return data[data[col] > threshold]
-        elif "less_than:" in filter_value:
-            threshold = float(filter_value.split(":")[1])
-            return data[data[col] < threshold]
-        elif "equal:" in filter_value:
-            target = filter_value.split(":")[1].lower()
-            return data[data[col].str.lower() == target]
-    elif isinstance(filter_value, list):
-        return data[data[col].str.lower().isin([val.lower() for val in filter_value])]
+    try:
+        # Verifica se o filtro é uma string com uma condição
+        if isinstance(filter_value, str):
+            if "greater_than:" in filter_value:
+                threshold = float(filter_value.split(":")[1])
+                # Verifica se os valores da coluna podem ser convertidos para numéricos
+                numeric_col = pd.to_numeric(data[col], errors="coerce")
+                return data[numeric_col > threshold]
+            elif "less_than:" in filter_value:
+                threshold = float(filter_value.split(":")[1])
+                # Verifica se os valores da coluna podem ser convertidos para numéricos
+                numeric_col = pd.to_numeric(data[col], errors="coerce")
+                return data[numeric_col < threshold]
+            elif "equal:" in filter_value:
+                target = filter_value.split(":")[1].lower()
+                if pd.api.types.is_string_dtype(data[col]):
+                    return data[data[col].str.lower() == target]
+        # Verifica se o filtro é uma lista de valores
+        elif isinstance(filter_value, list):
+            if pd.api.types.is_string_dtype(data[col]):
+                lower_filter = [val.lower() for val in filter_value]
+                return data[data[col].str.lower().isin(lower_filter)]
+    except Exception as e:
+        print(f"Erro ao aplicar filtro na coluna '{col}': {e}")
 
     return data
 
