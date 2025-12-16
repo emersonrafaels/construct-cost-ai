@@ -5,6 +5,7 @@ max_rows: # Número máximo de linhas para iterar (apenas para "limited_iterate"
 specific_cell: # Coordenadas da célula específica (linha, coluna) para "specific_cell"
 """
 
+
 def get_metadata_keys():
     """Retorna as chaves de metadados padrão para leitura de orçamentos.
 
@@ -81,15 +82,15 @@ def get_metadata_keys():
                 "pattern": "TIPO",
                 "method": "specific_cell",
                 "max_rows": None,
-                "specific_cell": (3,0),
+                "specific_cell": (3, 0),
             },
             "PROGRAMA_DONO": {
                 "pattern": "DONO",
                 "method": "specific_cell",
                 "max_rows": None,
-                "specific_cell": (3,0),
+                "specific_cell": (3, 0),
             },
         },
     }
-    
+
     return DEFAULT_METADATA_KEYS
