@@ -494,7 +494,7 @@ def read_data_budget(
     # Lê a planilha sem cabeçalho
     raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
     
-    if raw_df:
+    if isinstance(raw_df, pd.DataFrame) or isinstance(raw_df, dict):
 
         if sheet_name is None:
             # Tenta ler abas comuns se nenhuma aba for especificada

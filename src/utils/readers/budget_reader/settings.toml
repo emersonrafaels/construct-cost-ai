@@ -46,7 +46,7 @@ columns = [
 # Colunas alternativas mínimas para o padrão "default02"
 columns = [
     "DESCRIÇÃO",  # Nome do item
-    "QUANT.",  # Quantidade do item
+    "QUANT",  # Quantidade do item
     "P.U."  # Preço unitário
 ]
 
