@@ -59,7 +59,6 @@ __status__ = "Production"
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
-import difflib
 
 import pandas as pd
 
@@ -113,7 +112,7 @@ def read_data(
     try:
         return reader(file_path)
     except Exception as e:
-        raise RuntimeError(f"Error reading file {file_path}: {str(e)}")
+        print(f"Error reading file {file_path}: {str(e)}")
 
 
 def export_data(
@@ -205,7 +204,7 @@ def transform_case(
     if cells:
         if cells is True:
             # Transforma todas as células do DataFrame
-            df = df.applymap(transform_value)
+            df = df.map(transform_value)
         else:
             # Transforma apenas as células especificadas
             for row, col in cells:
@@ -214,7 +213,7 @@ def transform_case(
     elif columns:
         if columns is True:
             # Transforma todas as colunas do DataFrame
-            df = df.applymap(transform_value)
+            df = df.map(transform_value)
         else:
             # Transforma apenas as colunas especificadas
             for col in columns:
@@ -222,7 +221,7 @@ def transform_case(
                     df[col] = df[col].apply(transform_value)
     else:
         # Transforma todo o DataFrame
-        df = df.applymap(transform_value)
+        df = df.map(transform_value)
 
     return df
 

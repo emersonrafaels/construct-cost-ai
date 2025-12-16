@@ -493,31 +493,35 @@ def read_data_budget(
     """
     # Lê a planilha sem cabeçalho
     raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
+    
+    if raw_df:
 
-    if sheet_name is None:
-        # Tenta ler abas comuns se nenhuma aba for especificada
-        for sheet in SHEET_NAMES_TRY:
-            try:
-                if sheet in raw_df.keys():
-                    df_selected_sheet = raw_df[sheet]
-                    logger.info(f"Aba '{sheet}' encontrada e lida com sucesso.")
-                    break
-            except Exception as e:
-                logger.warning(f"Aba '{sheet}' não encontrada: {e}")
-    else:
-        """ 
-            A leitura já foi feita exatamente da aba especificada
-            Para manter as variáveis consistentes, fazemos a cópia do raw_df
-            copy() garante que df_selected_sheet é um DataFrame independente (ponteiro separado)
-        """
-        df_selected_sheet = raw_df.copy()
-        sheet = sheet_name
-        logger.info(f"Aba '{sheet_name}' encontrada e lida com sucesso.")
+        if sheet_name is None:
+            # Tenta ler abas comuns se nenhuma aba for especificada
+            for sheet in SHEET_NAMES_TRY:
+                try:
+                    if sheet in raw_df.keys():
+                        df_selected_sheet = raw_df[sheet]
+                        logger.info(f"Aba '{sheet}' encontrada e lida com sucesso.")
+                        break
+                except Exception as e:
+                    logger.warning(f"Aba '{sheet}' não encontrada: {e}")
+        else:
+            """ 
+                A leitura já foi feita exatamente da aba especificada
+                Para manter as variáveis consistentes, fazemos a cópia do raw_df
+                copy() garante que df_selected_sheet é um DataFrame independente (ponteiro separado)
+            """
+            df_selected_sheet = raw_df.copy()
+            sheet = sheet_name
+            logger.info(f"Aba '{sheet_name}' encontrada e lida com sucesso.")
 
-    # Pré-processa os dados
-    df_selected_sheet = preprocess_data(df_selected_sheet)
+        # Pré-processa os dados
+        df_selected_sheet = preprocess_data(df_selected_sheet)
 
-    return raw_df, df_selected_sheet, sheet
+        return raw_df, df_selected_sheet, sheet
+    
+    return None, None, None
 
 
 # Função para ler a tabela de orçamento do arquivo e aba especificados
@@ -538,36 +542,38 @@ def read_budget_table(
     raw_df, df_selected_sheet, sheet_name = read_data_budget(
         file_path=file_path, sheet_name=sheet_name, header=None
     )
+    
+    if isinstance(df_selected_sheet, pd.DataFrame):
 
-    # Localiza o cabeçalho da tabela
-    (
-        row,
-        col,
-        pattern,
-        columns_found,
-    ) = locate_table(df_selected_sheet)
+        # Localiza o cabeçalho da tabela
+        (
+            row,
+            col,
+            pattern,
+            columns_found,
+        ) = locate_table(df_selected_sheet)
 
-    # Verifica se o cabeçalho foi encontrado
-    if row is None:
-        raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
+        # Verifica se o cabeçalho foi encontrado
+        if row:
+            # Extrai os metadados
+            metadata = extract_metadata(
+                df=df_selected_sheet, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern
+            )
 
-    # Extrai os metadados
-    metadata = extract_metadata(
-        df=df_selected_sheet, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern
-    )
+            # Extrai a tabela
+            table = extract_table(
+                df=df_selected_sheet,
+                header_row=row,
+                first_col=col,
+                columns_found=columns_found,
+                col_filter=FILTROS,
+                pattern_key=pattern,
+            )
 
-    # Extrai a tabela
-    table = extract_table(
-        df=df_selected_sheet,
-        header_row=row,
-        first_col=col,
-        columns_found=columns_found,
-        col_filter=FILTROS,
-        pattern_key=pattern,
-    )
-
-    # Retorna a tabela e os metadados
-    return table, sheet_name, metadata
+            # Retorna a tabela e os metadados
+            return table, sheet_name, metadata
+    
+    return None, None, None
 
 
 # Função para adicionar e salvar resultados processados em um arquivo
@@ -597,7 +603,7 @@ def append_and_save_results(
     metadata_result = pd.DataFrame(all_metadatas)
 
     # Loga o sucesso na concatenação
-    logger.success("Todas as tabelas e metadados foram concatenados com sucesso.")
+    logger.info("Todas as tabelas e metadados foram concatenados com sucesso.")
 
     # Define o caminho completo do arquivo de saída
     output_path = Path(base_dir, DIR_OUTPUTS, output_file)
@@ -608,6 +614,10 @@ def append_and_save_results(
     try:
         # Salva os dados no arquivo de saída em abas separadas usando export_data
         export_data({"Tables": data_result, "Metadata": metadata_result}, output_path)
+        
+        print("-"*50)
+        
+        # Loga o sucesso na exportação
         logger.success(f"Resultados salvos com sucesso em {output_path}")
     except Exception as e:
         logger.error(f"Erro ao salvar os resultados em {output_path}: {e}")
@@ -648,7 +658,7 @@ def append_data(list_all_tables, list_all_metadata, file_input, table, metadata)
     list_all_tables.append(table)
 
     # Loga o sucesso na extração da tabela e dos metadados
-    logger.success(
+    logger.info(
         f"Tabela e metadados extraídos com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}"
     )
 
@@ -690,12 +700,18 @@ def get_files_from_directory(
 
 
 # Função para orquestrar o processamento de múltiplos arquivos de orçamento
-def orchestrate_budget_reader(*inputs: Union[FileInput, str]) -> pd.DataFrame:
+def orchestrate_budget_reader(*inputs: Union[FileInput, str], 
+                              extensions: Optional[Union[str, List[str]]] = None,
+                              prefix: Optional[Union[str, List[str]]] = None,
+                              suffix: Optional[Union[str, List[str]]] = None) -> pd.DataFrame:
     """
     Orquestra o processamento de múltiplos arquivos de orçamento ou diretórios.
 
     Args:
         *inputs (Union[FileInput, str]): Lista de FileInput ou diretórios.
+        extensions (Optional[Union[str, List[str]]]): Extensão ou lista de extensões permitidas para arquivos em diretórios.
+        prefix (Optional[Union[str, List[str]]]): Prefixo ou lista de prefixos permitidos para arquivos em diretórios.
+        suffix (Optional[Union[str, List[str]]]): Sufixo ou lista de sufixos permitidos para arquivos em diretórios.
 
     Returns:
         pd.DataFrame: DataFrame consolidado com os dados processados.
@@ -712,26 +728,42 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str]) -> pd.DataFrame:
             sheet_name (Optional[str]): Nome da aba a ser lida.
         """
         
+        print("-"*50)
+        logger.info(f"Iniciando o processamento do arquivo: {file_path}")
+        
         # Lê a tabela de orçamento do arquivo
         table, sheet_name, metadata = read_budget_table(file_path=file_path, sheet_name=sheet_name)
         
-        # Adiciona os resultados às listas
-        append_data(all_tables, all_metadata, FileInput(file_path, sheet_name), table, metadata)
+        if isinstance(table, pd.DataFrame):
         
-        # Loga o sucesso no processamento do arquivo
-        logger.success(f"Processamento concluído para o arquivo: {file_path}")
+            # Adiciona os resultados às listas
+            append_data(all_tables, all_metadata, FileInput(file_path, sheet_name), table, metadata)
+            
+            # Loga o sucesso no processamento do arquivo
+            logger.success(f"Processamento concluído para o arquivo: {file_path}")
+            
+            return True
+            
+        else:
+            # Loga a falha no processamento do arquivo
+            logger.error(f"Falha ao processar o arquivo: {file_path}")
+            
+            return False
 
     for input_item in inputs:
         if isinstance(input_item, FileInput):
             # Processa um único arquivo
-            process_file(file_path=input_item.file_path, sheet_name=input_item.sheet_name)
+            _ = process_file(file_path=input_item.file_path, sheet_name=input_item.sheet_name)
         elif isinstance(input_item, str):
             # Processa todos os arquivos em um diretório
             files = get_files_from_directory(
-                directory=input_item, extension=".xlsx"  # Exemplo: apenas arquivos .xlsx
+                directory=input_item, 
+                extension=extensions if isinstance(extensions, str) else None,
+                prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
+                suffix=tuple(suffix) if isinstance(suffix, list) else suffix
             )
             for file_path in files:
-                process_file(file_path=str(file_path))
+                _ = process_file(file_path=str(file_path))
 
     # Verifica se há tabelas processadas
     if all_tables:
