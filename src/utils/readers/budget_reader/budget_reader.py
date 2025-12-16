@@ -298,12 +298,13 @@ def find_metadata_value(
 
 # Função para extrair metadados dinamicamente do DataFrame
 def extract_metadata(
-    df: pd.DataFrame, metadata_keys: dict = DEFAULT_METADATA_KEYS, pattern_key: str = "default01"
+    raw_df: pd.DataFrame, df: pd.DataFrame, metadata_keys: dict = DEFAULT_METADATA_KEYS, pattern_key: str = "default01"
 ) -> Dict[str, Optional[Any]]:
     """
     Extrai metadados da tabela de orçamento de forma genérica e dinâmica.
 
     Args:
+        raw_df (pd.DataFrame): DataFrame bruto lido da planilha. Pode conter várias abas.
         df (pd.DataFrame): DataFrame contendo os dados da planilha.
         metadata_keys (dict): Dicionário com as chaves de metadados e suas configurações.
         pattern_key (str): Chave do padrão de metadados a ser usado.
@@ -557,7 +558,7 @@ def read_budget_table(
         if row:
             # Extrai os metadados
             metadata = extract_metadata(
-                df=df_selected_sheet, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern
+                raw_df=raw_df, df=df_selected_sheet, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern
             )
 
             # Extrai a tabela
