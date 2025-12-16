@@ -27,7 +27,7 @@ columns = [
     "ITEM",  # ID da categoria
     "DESCRIÇÃO",  # Nome do item
     "UN",  # Unidade de medida
-    "QUANT.",  # Quantidade do item
+    "QUANT",  # Quantidade do item
     "PREÇO UNITÁRIO",  # Preço unitário
     "",  # Coluna vazia
     "PREÇO TOTAL"  # Valor total do item
@@ -56,7 +56,7 @@ dict_rename = {"ID" = "ID", "DESCRIÇÃO" = "NOME", "UN." = "UNIDADE", "UNITÁRI
 
 [default.default02.result]
 # Rename de colunas para o padrão "default02"
-dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT." = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO LPU", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
+dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT" = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO LPU", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
 
 [default.result]
 # Colunas esperadas no final do processo
