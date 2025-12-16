@@ -61,6 +61,7 @@ dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT" 
 [default.result]
 # Colunas esperadas no final do processo
 list_result_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "COMENTÁRIO", "QUANTIDADE", "VALOR TOTAL", "SOURCE_FILE", "SHEET_NAME"]
+file_name_output = "01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx" # Nome do arquivo de saída final
 
 [default.filtros]
 # Filtros aplicados no pós-processamento

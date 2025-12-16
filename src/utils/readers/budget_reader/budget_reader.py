@@ -812,7 +812,7 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str],
         append_and_save_results(
             all_tables=all_tables,
             all_metadatas=all_metadata,
-            output_file="budget_tables_concatenated.xlsx",
+            output_file=settings.get("result.file_name_output", "budget_reader_output.xlsx"),
         )
 
     # Retorna os dados consolidados
