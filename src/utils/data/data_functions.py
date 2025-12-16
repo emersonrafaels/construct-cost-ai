@@ -59,6 +59,7 @@ __status__ = "Production"
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+import difflib
 
 import pandas as pd
 
@@ -251,6 +252,49 @@ def filter_columns(df: pd.DataFrame, columns: list, allow_partial: bool = True) 
         raise ValueError(f"As seguintes colunas estão ausentes no DataFrame: {missing_columns}")
 
     # Retorna o DataFrame filtrado com as colunas existentes
+    return df[existing_columns]
+
+def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.DataFrame:
+    """
+    Renomeia as colunas de um DataFrame de forma resiliente, lidando com colunas NaN e colunas inexistentes.
+
+    Args:
+        df (pd.DataFrame): DataFrame cujas colunas serão renomeadas.
+        rename_dict (Union[dict, Box]): Dicionário ou Box (Dynaconf) contendo o mapeamento de renomeação.
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas renomeadas.
+    """
+    # Converte Box para dict, se necessário
+    if not isinstance(rename_dict, dict):
+        rename_dict = dict(rename_dict)
+
+    # Substitui colunas NaN por strings vazias
+    df.columns = df.columns.fillna("")
+
+    # Filtra o rename_dict para incluir apenas colunas que existem no DataFrame
+    valid_rename_dict = {col: rename_dict[col] for col in rename_dict if col in df.columns}
+
+    # Renomeia as colunas do DataFrame
+    df = df.rename(columns=valid_rename_dict)
+
+    return df
+
+def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
+    """
+    Seleciona colunas de um DataFrame com base em uma lista de colunas alvo, mantendo a ordem fornecida.
+
+    Args:
+        df (pd.DataFrame): DataFrame original.
+        target_columns (list): Lista de nomes de colunas desejadas.
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas correspondentes selecionadas.
+    """
+    # Verifica quais colunas da lista alvo existem no DataFrame
+    existing_columns = [col for col in target_columns if col in df.columns]
+
+    # Retorna o DataFrame com as colunas existentes na ordem fornecida
     return df[existing_columns]
 
 

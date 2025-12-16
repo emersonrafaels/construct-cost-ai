@@ -72,7 +72,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
-import numpy as np
 from pydantic.dataclasses import dataclass
 
 # Adicionar src ao path
@@ -82,7 +81,14 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 from config.config_logger import logger
 from utils.readers.budget_reader.config_dynaconf_budget_reader import get_settings
 from utils.readers.budget_reader.config_metadata import get_metadata_keys
-from utils.data.data_functions import read_data, transform_case, filter_columns, export_data
+from utils.data.data_functions import (
+    read_data,
+    transform_case,
+    filter_columns,
+    export_data,
+    rename_columns,
+    select_columns,
+)
 
 # Obtendo a instância de configurações
 settings = get_settings()
@@ -104,8 +110,17 @@ ALTERNATIVE_COLUMNS = {
     "default02": settings.get("alternative_columns.default02.columns", []),
 }
 
+# Criando o dicionário de renomeação de colunas
+DICT_RENAME = {
+    "default01": settings.get("default01.result", {}),
+    "default02": settings.get("default02.result", {}),
+}
+
 # Obtendo as chaves de metadados padrão
 DEFAULT_METADATA_KEYS = get_metadata_keys()
+
+# Definindo a coluna desejado no resultado
+SELECTED_COLUMNS = settings.get("result.list_result_columns", [])
 
 # Filtros no pós processamento
 FILTROS = settings.get("filtros.dict_filtros", {})  # Nome da coluna usada para filtragem
@@ -337,6 +352,35 @@ def extract_metadata(
     return metadata
 
 
+def rename_and_select_columns(
+    df: pd.DataFrame, pattern_key: str, rename_mappings: dict, selected_columns: list
+) -> pd.DataFrame:
+    """
+    Renomeia as colunas e seleciona apenas as colunas desejadas com base no padrão fornecido.
+
+    Args:
+        df (pd.DataFrame): DataFrame original.
+        pattern_key (str): Chave do padrão a ser usado para renomear e selecionar colunas.
+        rename_mappings (dict): Dicionário contendo os mapeamentos de renomeação para cada padrão.
+
+    Returns:
+        pd.DataFrame: DataFrame com colunas renomeadas e filtradas.
+    """
+    # Obtém o dicionário de renomeação para o padrão fornecido
+    if pattern_key not in rename_mappings:
+        raise ValueError(f"Padrão '{pattern_key}' não encontrado nos mapeamentos de renomeação.")
+
+    rename_dict = rename_mappings[pattern_key].get("dict_rename", {})
+
+    # Renomeia as colunas do DataFrame
+    df = rename_columns(df, rename_dict=rename_dict)
+
+    # Seleciona apenas as colunas desejadas (valores do dicionário de renomeação)
+    df = select_columns(df, target_columns=selected_columns)
+
+    return df
+
+
 # Função para extrair a tabela do DataFrame a partir da linha do cabeçalho
 def extract_table(
     df: pd.DataFrame,
@@ -344,6 +388,7 @@ def extract_table(
     first_col: int,
     columns_found: list,
     col_filter: str = FILTROS,
+    pattern_key: str = PATTERN_DEFAULT,
 ) -> pd.DataFrame:
     """
     A partir da posição do cabeçalho, extrai a tabela até as linhas vazias.
@@ -371,8 +416,14 @@ def extract_table(
     # Define o cabeçalho no DataFrame
     data.columns = header
 
+    # Renomeia o nome das colunas para manter consistência
+    data = rename_and_select_columns(df=data, 
+                                     pattern_key=pattern_key, 
+                                     rename_mappings=DICT_RENAME, 
+                                     selected_columns=SELECTED_COLUMNS)
+
     # Aplica pós-processamento e filtros
-    return post_process_table(data, cols_expected=columns_found, col_filter=col_filter)
+    return post_process_table(data, col_filter=col_filter)
 
 
 # Separei a lógica de filtros em uma função dedicada e tornei-a resiliente para diferentes tipos de filtros.
@@ -405,22 +456,18 @@ def apply_filter(data: pd.DataFrame, col: str, filter_value: Any) -> pd.DataFram
 
 
 def post_process_table(
-    data: pd.DataFrame, cols_expected: list = [], col_filter: Dict[str, Any] = FILTROS
+    data: pd.DataFrame, col_filter: Dict[str, Any] = FILTROS
 ) -> pd.DataFrame:
     """
     Aplica filtros e pós-processamentos em um DataFrame extraído.
 
     Args:
         data (pd.DataFrame): DataFrame contendo os dados extraídos da tabela.
-        cols_expected (list): Lista de colunas esperadas no cabeçalho.
         col_filter (dict): Dicionário onde a chave é o nome da coluna e o valor pode ser uma string ou uma lista de valores filtráveis.
 
     Returns:
         pd.DataFrame: DataFrame pós-processado com filtros aplicados.
     """
-    # Filtra as colunas esperadas, mantendo apenas as colunas encontradas
-    if cols_expected:
-        data = filter_columns(df=data, columns=cols_expected, allow_partial=True)
 
     # Aplica os filtros definidos no dicionário col_filter
     for col, filter_value in col_filter.items():
@@ -452,16 +499,25 @@ def read_data_budget(
         for sheet in SHEET_NAMES_TRY:
             try:
                 if sheet in raw_df.keys():
-                    raw_df = raw_df[sheet]
+                    df_selected_sheet = raw_df[sheet]
                     logger.info(f"Aba '{sheet}' encontrada e lida com sucesso.")
                     break
             except Exception as e:
                 logger.warning(f"Aba '{sheet}' não encontrada: {e}")
+    else:
+        """ 
+            A leitura já foi feita exatamente da aba especificada
+            Para manter as variáveis consistentes, fazemos a cópia do raw_df
+            copy() garante que df_selected_sheet é um DataFrame independente (ponteiro separado)
+        """
+        df_selected_sheet = raw_df.copy()
+        sheet = sheet_name
+        logger.info(f"Aba '{sheet_name}' encontrada e lida com sucesso.")
 
     # Pré-processa os dados
-    raw_df = preprocess_data(raw_df)
+    df_selected_sheet = preprocess_data(df_selected_sheet)
 
-    return raw_df, sheet
+    return raw_df, df_selected_sheet, sheet
 
 
 # Função para ler a tabela de orçamento do arquivo e aba especificados
@@ -479,7 +535,9 @@ def read_budget_table(
         tuple: DataFrame contendo a tabela extraída e dicionário com os metadados.
     """
     # Lê a planilha sem cabeçalho
-    raw_df, sheet_name = read_data_budget(file_path, sheet_name=sheet_name, header=None)
+    raw_df, df_selected_sheet, sheet_name = read_data_budget(
+        file_path=file_path, sheet_name=sheet_name, header=None
+    )
 
     # Localiza o cabeçalho da tabela
     (
@@ -487,18 +545,25 @@ def read_budget_table(
         col,
         pattern,
         columns_found,
-    ) = locate_table(raw_df)
+    ) = locate_table(df_selected_sheet)
 
     # Verifica se o cabeçalho foi encontrado
     if row is None:
         raise ValueError("Cabeçalho da tabela não encontrado na planilha.")
 
     # Extrai os metadados
-    metadata = extract_metadata(df=raw_df, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern)
+    metadata = extract_metadata(
+        df=df_selected_sheet, metadata_keys=DEFAULT_METADATA_KEYS, pattern_key=pattern
+    )
 
     # Extrai a tabela
     table = extract_table(
-        df=raw_df, header_row=row, first_col=col, columns_found=columns_found, col_filter=FILTROS
+        df=df_selected_sheet,
+        header_row=row,
+        first_col=col,
+        columns_found=columns_found,
+        col_filter=FILTROS,
+        pattern_key=pattern,
     )
 
     # Retorna a tabela e os metadados
@@ -524,6 +589,9 @@ def append_and_save_results(
     """
     # Concatena todas as tabelas
     data_result = pd.concat(all_tables, ignore_index=True)
+    
+    # Seleciona apenas as colunas desejadas
+    data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
 
     # Concatena todos os metadados em um DataFrame
     metadata_result = pd.DataFrame(all_metadatas)
@@ -568,10 +636,10 @@ def append_data(list_all_tables, list_all_metadata, file_input, table, metadata)
     list_all_metadata.append(metadata_with_source)
 
     # Adiciona o nome do arquivo como coluna na tabela
-    table["SOURCE_FILE"] = Path(file_input.file_path).name
+    table[settings.get("SOURCE_FILE_COLUMN_NAME", "SOURCE_FILE")] = Path(file_input.file_path).name
 
     # Adiciona o nome da aba como coluna na tabela
-    table["SHEET_NAME"] = file_input.sheet_name
+    table[settings.get("SHEET_NAME_COLUMN_NAME", "SHEET_NAME")] = file_input.sheet_name
 
     # Resetando o index da tabela
     table.reset_index(drop=True, inplace=True)
@@ -620,6 +688,7 @@ def get_files_from_directory(
 
     return list(files)
 
+
 # Função para orquestrar o processamento de múltiplos arquivos de orçamento
 def orchestrate_budget_reader(*inputs: Union[FileInput, str]) -> pd.DataFrame:
     """
@@ -642,8 +711,15 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str]) -> pd.DataFrame:
             file_path (str): Caminho do arquivo.
             sheet_name (Optional[str]): Nome da aba a ser lida.
         """
+        
+        # Lê a tabela de orçamento do arquivo
         table, sheet_name, metadata = read_budget_table(file_path=file_path, sheet_name=sheet_name)
+        
+        # Adiciona os resultados às listas
         append_data(all_tables, all_metadata, FileInput(file_path, sheet_name), table, metadata)
+        
+        # Loga o sucesso no processamento do arquivo
+        logger.success(f"Processamento concluído para o arquivo: {file_path}")
 
     for input_item in inputs:
         if isinstance(input_item, FileInput):

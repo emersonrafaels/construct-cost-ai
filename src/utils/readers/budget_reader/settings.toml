@@ -1,7 +1,7 @@
-# Adicionei comentários explicativos para cada seção e melhorei a organização dos dicionários para maior clareza.
-
 [default]
 # Configurações gerais do sistema
+SOURCE_FILE_COLUMN_NAME = "SOURCE_FILE"
+SHEET_NAME_COLUMN_NAME = "SHEET_NAME"
 
 [default.default_sheet]
 # Configurações da aba padrão a ser lida
@@ -57,6 +57,10 @@ dict_rename = {"ID" = "ID", "DESCRIÇÃO" = "NOME", "UN." = "UNIDADE", "UNITÁRI
 [default.default02.result]
 # Rename de colunas para o padrão "default02"
 dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT." = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO LPU", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
+
+[default.result]
+# Colunas esperadas no final do processo
+list_result_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "COMENTÁRIO", "QUANTIDADE", "VALOR TOTAL", "SOURCE_FILE", "SHEET_NAME"]
 
 [default.filtros]
 # Filtros aplicados no pós-processamento
