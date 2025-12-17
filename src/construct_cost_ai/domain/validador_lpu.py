@@ -1166,7 +1166,7 @@ def validar_lpu(
 def main():
     """Função principal para execução direta do módulo."""
     # Configurar caminhos padrão
-    base_dir = Path(__file__).parent.parent.parent.parent
+    base_dir = Path(__file__).parents[3]
     caminho_orcamento = Path(base_dir, settings.validador_lpu.caminho_padrao_orcamento)
     caminho_lpu = Path(base_dir, settings.validador_lpu.caminho_padrao_lpu)
     output_dir = Path(base_dir, settings.validador_lpu.output_dir)

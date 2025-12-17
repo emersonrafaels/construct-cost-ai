@@ -528,6 +528,10 @@ def read_data_budget(
     Returns:
         pd.DataFrame: DataFrame bruto lido da planilha.
     """
+    
+    # Inicializa o DataFrame da aba selecionada
+    df_selected_sheet = None
+    
     # Lê a planilha sem cabeçalho
     raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
     
@@ -553,10 +557,15 @@ def read_data_budget(
             sheet = sheet_name
             logger.info(f"Aba '{sheet_name}' encontrada e lida com sucesso.")
 
-        # Pré-processa os dados
-        df_selected_sheet = preprocess_data(df_selected_sheet)
 
-        return raw_df, df_selected_sheet, sheet
+        if isinstance(df_selected_sheet, pd.DataFrame):
+            # Pré-processa os dados
+            df_selected_sheet = preprocess_data(df_selected_sheet)
+
+            return raw_df, df_selected_sheet, sheet
+        else:
+            # Não encontrou um dataframe válido para análise
+            return None, None, None
     
     return None, None, None
 
@@ -795,7 +804,7 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str],
         if isinstance(input_item, FileInput):
             # Processa um único arquivo
             _ = process_file(file_path=input_item.file_path, sheet_name=input_item.sheet_name)
-        elif isinstance(input_item, str):
+        elif isinstance(input_item, (str, Path)):
             # Processa todos os arquivos em um diretório
             files = get_files_from_directory(
                 directory=input_item, 
@@ -812,7 +821,8 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str],
         append_and_save_results(
             all_tables=all_tables,
             all_metadatas=all_metadata,
-            output_file=settings.get("result.file_name_output", "budget_reader_output.xlsx"),
+            output_file=settings.get("result.file_name_output", 
+                                     "budget_reader_output.xlsx"),
         )
 
     # Retorna os dados consolidados

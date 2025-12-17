@@ -1,9 +1,10 @@
 [default]
-# Application
-app_name = "Construct Cost AI"
-app_version = "0.1.0"
+# Produto Metadata
+app_name = "Verificador Inteligente de Orçamentos de Obras"
+squad_name = "DataCraft"
+app_version = "0.0.1"
 
-# Validador LPU Configuration
+# Configuração - Validador LPU
 [default.validador_lpu]
 # Tolerância de divergência para status de conciliação (%)
 tolerancia_percentual = 0.0
@@ -26,7 +27,7 @@ top_n_divergencias_extended = 20
 # StackSpot AI Configuration
 [default.stackspot]
 ai_base_url = "https://api.stackspot.ai/v1"
-ai_timeout = 30
+ai_timeout = 30 # seconds
 
 # Logging Configuration
 [default.logging]
@@ -37,11 +38,11 @@ retention = "30 days"
 
 # API Configuration
 [default.api]
+title = "Verificador Inteligente de Orçamentos de Obras - Serviço de Validação"
 host = "0.0.0.0"
 port = 8000
 reload = false
-title = "Construct Cost AI - Budget Validation Service"
-version = "0.1.0"
+version = "0.0.1"
 
 # Validators Configuration
 [default.validators]

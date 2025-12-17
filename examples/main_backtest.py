@@ -26,7 +26,6 @@ from pathlib import Path
 base_dir = Path(__file__).parents[1]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-
 from utils.readers.budget_reader.budget_reader import orchestrate_budget_reader, FileInput
 
 if __name__ == "__main__":
@@ -56,6 +55,6 @@ if __name__ == "__main__":
     # )
 
     # Exemplo com diretório
-    orchestrate_budget_reader(
-        r"C:\Users\emers\OneDrive\Área de Trabalho\Itaú\CICF\DataCraft\Verificador Inteligente de Obras\codes\construct-cost-ai\data\orcamentos"
-    )
+    orchestrate_budget_reader(Path(
+        Path(__file__).parents[1], "data/inputs/orcamentos"
+    ))

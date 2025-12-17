@@ -69,4 +69,4 @@ dict_filtros = {"QUANTIDADE" = "greater_than:0"}
 
 [default.dir_outputs]
 # Diretório de saída padrão
-path = "outputs"  # Caminho para salvar os arquivos de saída
+path = "data/outputs"  # Caminho para salvar os arquivos de saída
