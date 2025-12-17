@@ -72,7 +72,7 @@ def get_metadata_keys():
                 "method": "specific_cell",
                 "max_rows": None,
                 "specific_cell": (4, 11),
-                "type": 'int',
+                "type": "int",
             },
             "NUMERO_AGENCIA": {
                 "sheet_name": "Resumo",

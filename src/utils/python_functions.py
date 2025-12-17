@@ -1,5 +1,6 @@
 from typing import Any
 
+
 def convert_value(value: Any, expected_type: str) -> Any:
     """
     Converte um valor para o tipo esperado, com suporte a tipos básicos.
@@ -20,7 +21,9 @@ def convert_value(value: Any, expected_type: str) -> Any:
     try:
         if expected_type == "bool":  # Verifica se o tipo esperado é booleano
             # Conversão especial para booleanos
-            if isinstance(value, str):  # Se o valor for uma string, normaliza para lowercase e remove espaços
+            if isinstance(
+                value, str
+            ):  # Se o valor for uma string, normaliza para lowercase e remove espaços
                 value = value.strip().lower()
                 if value in ("true", "1", "yes", "sim"):  # Valores que representam True
                     return True
@@ -32,9 +35,13 @@ def convert_value(value: Any, expected_type: str) -> Any:
             return bool(value)  # Converte outros tipos para booleano diretamente
         elif expected_type == "int":  # Verifica se o tipo esperado é inteiro
             # Conversão resiliente para inteiros
-            if isinstance(value, float) and value.is_integer():  # Se for float e inteiro, converte diretamente
+            if (
+                isinstance(value, float) and value.is_integer()
+            ):  # Se for float e inteiro, converte diretamente
                 return int(value)
-            return int(float(value))  # Converte para float primeiro para lidar com strings como "188292.0"
+            return int(
+                float(value)
+            )  # Converte para float primeiro para lidar com strings como "188292.0"
         elif expected_type == "float":  # Verifica se o tipo esperado é float
             return float(value)  # Converte diretamente para float
         elif expected_type == "str":  # Verifica se o tipo esperado é string

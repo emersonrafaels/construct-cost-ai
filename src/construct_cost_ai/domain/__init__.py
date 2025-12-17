@@ -10,7 +10,7 @@ from construct_cost_ai.domain.models import (
     ValidationResult,
     ValidationSummary,
 )
-from construct_cost_ai.domain.validador_lpu import (
+from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     validar_lpu,
     carregar_orcamento,
     carregar_lpu,

@@ -20,7 +20,7 @@ import sys
 base_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from construct_cost_ai.domain.validador_lpu import (
+from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     validar_lpu,
     gerar_relatorio_html,
     gerar_relatorio_excel_completo,

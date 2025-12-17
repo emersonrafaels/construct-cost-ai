@@ -282,11 +282,11 @@ def find_metadata_value(
         if 0 <= specific_row < len(df) and 0 <= specific_col < len(df.columns):
             value = df.iloc[specific_row, specific_col]
             if not pd.isna(value):
-                
+
                 # Converte o valor para o tipo esperado
                 if expected_type:
                     value = convert_value(str(value), expected_type)
-                
+
                 metadata[metadata_key] = str(value).upper()
         return
 
@@ -299,22 +299,22 @@ def find_metadata_value(
         # Obtém o valor da célula na linha subsequente
         value = df.iloc[next_row_idx, col_idx]
         if not pd.isna(value):  # Verifica se o valor não é NaN
-            
+
             # Converte o valor para o tipo esperado
             if expected_type:
                 value = convert_value(str(value), expected_type)
-            
+
             metadata[metadata_key] = str(value).upper()  # Atribui o valor encontrado em uppercase
             break
 
 
 # Função para extrair metadados dinamicamente do DataFrame
 def extract_metadata(
-    raw_df: pd.DataFrame, 
-    df: pd.DataFrame, 
-    sheet_name_selected: str, 
-    metadata_keys: dict = DEFAULT_METADATA_KEYS, 
-    pattern_key: str = "default01"
+    raw_df: pd.DataFrame,
+    df: pd.DataFrame,
+    sheet_name_selected: str,
+    metadata_keys: dict = DEFAULT_METADATA_KEYS,
+    pattern_key: str = "default01",
 ) -> Dict[str, Optional[Any]]:
     """
     Extrai metadados da tabela de orçamento de forma genérica e dinâmica.
@@ -372,7 +372,7 @@ def extract_metadata(
                         row_idx=row_idx,
                         specific_cell=config.get("specific_cell"),
                         max_rows_to_iterate=config.get("max_rows"),
-                        expected_type=expected_type
+                        expected_type=expected_type,
                     )
 
     return metadata
@@ -443,10 +443,12 @@ def extract_table(
     data.columns = header
 
     # Renomeia o nome das colunas para manter consistência
-    data = rename_and_select_columns(df=data, 
-                                     pattern_key=pattern_key, 
-                                     rename_mappings=DICT_RENAME, 
-                                     selected_columns=SELECTED_COLUMNS)
+    data = rename_and_select_columns(
+        df=data,
+        pattern_key=pattern_key,
+        rename_mappings=DICT_RENAME,
+        selected_columns=SELECTED_COLUMNS,
+    )
 
     # Aplica pós-processamento e filtros
     return post_process_table(data, col_filter=col_filter)
@@ -492,9 +494,7 @@ def apply_filter(data: pd.DataFrame, col: str, filter_value: Any) -> pd.DataFram
     return data
 
 
-def post_process_table(
-    data: pd.DataFrame, col_filter: Dict[str, Any] = FILTROS
-) -> pd.DataFrame:
+def post_process_table(data: pd.DataFrame, col_filter: Dict[str, Any] = FILTROS) -> pd.DataFrame:
     """
     Aplica filtros e pós-processamentos em um DataFrame extraído.
 
@@ -528,13 +528,13 @@ def read_data_budget(
     Returns:
         pd.DataFrame: DataFrame bruto lido da planilha.
     """
-    
+
     # Inicializa o DataFrame da aba selecionada
     df_selected_sheet = None
-    
+
     # Lê a planilha sem cabeçalho
     raw_df = read_data(file_path, sheet_name=sheet_name, header=None)
-    
+
     if isinstance(raw_df, pd.DataFrame) or isinstance(raw_df, dict):
 
         if sheet_name is None:
@@ -548,15 +548,14 @@ def read_data_budget(
                 except Exception as e:
                     logger.warning(f"Aba '{sheet}' não encontrada: {e}")
         else:
-            """ 
-                A leitura já foi feita exatamente da aba especificada
-                Para manter as variáveis consistentes, fazemos a cópia do raw_df
-                copy() garante que df_selected_sheet é um DataFrame independente (ponteiro separado)
+            """
+            A leitura já foi feita exatamente da aba especificada
+            Para manter as variáveis consistentes, fazemos a cópia do raw_df
+            copy() garante que df_selected_sheet é um DataFrame independente (ponteiro separado)
             """
             df_selected_sheet = raw_df.copy()
             sheet = sheet_name
             logger.info(f"Aba '{sheet_name}' encontrada e lida com sucesso.")
-
 
         if isinstance(df_selected_sheet, pd.DataFrame):
             # Pré-processa os dados
@@ -566,7 +565,7 @@ def read_data_budget(
         else:
             # Não encontrou um dataframe válido para análise
             return None, None, None
-    
+
     return None, None, None
 
 
@@ -588,7 +587,7 @@ def read_budget_table(
     raw_df, df_selected_sheet, sheet_name = read_data_budget(
         file_path=file_path, sheet_name=sheet_name, header=None
     )
-    
+
     if isinstance(df_selected_sheet, pd.DataFrame):
 
         # Localiza o cabeçalho da tabela
@@ -603,11 +602,11 @@ def read_budget_table(
         if row:
             # Extrai os metadados
             metadata = extract_metadata(
-                raw_df=raw_df, 
-                df=df_selected_sheet, 
-                sheet_name_selected=sheet_name, 
-                metadata_keys=DEFAULT_METADATA_KEYS, 
-                pattern_key=pattern
+                raw_df=raw_df,
+                df=df_selected_sheet,
+                sheet_name_selected=sheet_name,
+                metadata_keys=DEFAULT_METADATA_KEYS,
+                pattern_key=pattern,
             )
 
             # Extrai a tabela
@@ -622,7 +621,7 @@ def read_budget_table(
 
             # Retorna a tabela e os metadados
             return table, sheet_name, metadata
-    
+
     return None, None, None
 
 
@@ -645,7 +644,7 @@ def append_and_save_results(
     """
     # Concatena todas as tabelas
     data_result = pd.concat(all_tables, ignore_index=True)
-    
+
     # Seleciona apenas as colunas desejadas
     data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
 
@@ -664,9 +663,9 @@ def append_and_save_results(
     try:
         # Salva os dados no arquivo de saída em abas separadas usando export_data
         export_data({"Tables": data_result, "Metadata": metadata_result}, output_path)
-        
-        print("-"*50)
-        
+
+        print("-" * 50)
+
         # Loga o sucesso na exportação
         logger.success(f"Resultados salvos com sucesso em {output_path}")
     except Exception as e:
@@ -750,10 +749,12 @@ def get_files_from_directory(
 
 
 # Função para orquestrar o processamento de múltiplos arquivos de orçamento
-def orchestrate_budget_reader(*inputs: Union[FileInput, str], 
-                              extensions: Optional[Union[str, List[str]]] = None,
-                              prefix: Optional[Union[str, List[str]]] = None,
-                              suffix: Optional[Union[str, List[str]]] = None) -> pd.DataFrame:
+def orchestrate_budget_reader(
+    *inputs: Union[FileInput, str],
+    extensions: Optional[Union[str, List[str]]] = None,
+    prefix: Optional[Union[str, List[str]]] = None,
+    suffix: Optional[Union[str, List[str]]] = None,
+) -> pd.DataFrame:
     """
     Orquestra o processamento de múltiplos arquivos de orçamento ou diretórios.
 
@@ -777,27 +778,27 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str],
             file_path (str): Caminho do arquivo.
             sheet_name (Optional[str]): Nome da aba a ser lida.
         """
-        
-        print("-"*50)
+
+        print("-" * 50)
         logger.info(f"Iniciando o processamento do arquivo: {file_path}")
-        
+
         # Lê a tabela de orçamento do arquivo
         table, sheet_name, metadata = read_budget_table(file_path=file_path, sheet_name=sheet_name)
-        
+
         if isinstance(table, pd.DataFrame):
-        
+
             # Adiciona os resultados às listas
             append_data(all_tables, all_metadata, FileInput(file_path, sheet_name), table, metadata)
-            
+
             # Loga o sucesso no processamento do arquivo
             logger.success(f"Processamento concluído para o arquivo: {file_path}")
-            
+
             return True
-            
+
         else:
             # Loga a falha no processamento do arquivo
             logger.error(f"Falha ao processar o arquivo: {file_path}")
-            
+
             return False
 
     for input_item in inputs:
@@ -807,10 +808,10 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str],
         elif isinstance(input_item, (str, Path)):
             # Processa todos os arquivos em um diretório
             files = get_files_from_directory(
-                directory=input_item, 
+                directory=input_item,
                 extension=extensions if isinstance(extensions, str) else None,
                 prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
-                suffix=tuple(suffix) if isinstance(suffix, list) else suffix
+                suffix=tuple(suffix) if isinstance(suffix, list) else suffix,
             )
             for file_path in files:
                 _ = process_file(file_path=str(file_path))
@@ -821,8 +822,7 @@ def orchestrate_budget_reader(*inputs: Union[FileInput, str],
         append_and_save_results(
             all_tables=all_tables,
             all_metadatas=all_metadata,
-            output_file=settings.get("result.file_name_output", 
-                                     "budget_reader_output.xlsx"),
+            output_file=settings.get("result.file_name_output", "budget_reader_output.xlsx"),
         )
 
     # Retorna os dados consolidados

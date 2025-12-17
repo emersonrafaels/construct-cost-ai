@@ -22,7 +22,7 @@ import sys
 base_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from construct_cost_ai.domain.validador_lpu import (
+from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     validar_lpu,
     carregar_orcamento,
     carregar_lpu,
@@ -114,7 +114,7 @@ def executar_validacao(
             logger.debug("      ✅ Cálculos concluídos")
 
             # Salvar resultados
-            from construct_cost_ai.domain.validador_lpu import salvar_resultado
+            from construct_cost_ai.domain.validators.lpu.validator_lpu import salvar_resultado
 
             salvar_resultado(df_resultado, output_dir)
         else:

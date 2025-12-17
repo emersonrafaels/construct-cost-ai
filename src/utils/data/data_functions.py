@@ -253,6 +253,7 @@ def filter_columns(df: pd.DataFrame, columns: list, allow_partial: bool = True) 
     # Retorna o DataFrame filtrado com as colunas existentes
     return df[existing_columns]
 
+
 def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.DataFrame:
     """
     Renomeia as colunas de um DataFrame de forma resiliente, lidando com colunas NaN e colunas inexistentes.
@@ -278,6 +279,7 @@ def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.Data
     df = df.rename(columns=valid_rename_dict)
 
     return df
+
 
 def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
     """

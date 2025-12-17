@@ -975,7 +975,8 @@ def gerar_relatorio_excel_completo(
         df.to_excel(writer, sheet_name="Dados Completos", index=False)
 
     logger.success(f"✅ Relatório Excel completo salvo em: {excel_path}")
-    
+
+
 def get_default_settings(key):
     """
     Retorna os valores padrão das configurações do validador LPU.
@@ -1173,12 +1174,9 @@ def main():
     """Função principal para execução direta do módulo."""
     # Configurar caminhos padrão
     base_dir = Path(__file__).parents[3]
-    path_file_budget = Path(base_dir, 
-                             settings.get("module_validator_lpu.file_path_budget"))
-    path_file_lpu = Path(base_dir, 
-                       settings.get("module_validator_lpu.file_path_lpu"))
-    output_dir = Path(base_dir, 
-                      settings.get("module_validator_lpu.output_dir"))
+    path_file_budget = Path(base_dir, settings.get("module_validator_lpu.file_path_budget"))
+    path_file_lpu = Path(base_dir, settings.get("module_validator_lpu.file_path_lpu"))
+    output_dir = Path(base_dir, settings.get("module_validator_lpu.output_dir"))
     output_file = settings.get("module_validator_lpu.file_path_result")
 
     logger.debug(f"Orçamento: {path_file_budget}")
