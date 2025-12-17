@@ -5,20 +5,20 @@ squad_name = "DataCraft"
 app_version = "0.0.1"
 
 # Configuração - Validador LPU
-[default.validador_lpu]
+[default.module_validator_lpu]
 # Tolerância de divergência para status de conciliação (%)
-tolerancia_percentual = 0.0
+tol_percentile = 0.0
 
 # Caminhos padrão
-caminho_padrao_orcamento = "data/orcamento_exemplo.xlsx"
-caminho_padrao_lpu = "data/lpu_exemplo.xlsx"
-output_dir = "outputs"
+file_path_budget = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+file_path_lpu = "data/inputs/BASE_LPU.xlsx"
 
 # Nomes dos arquivos de saída
-arquivo_excel_basico = "validacao_lpu.xlsx"
-arquivo_csv = "validacao_lpu.csv"
-arquivo_excel_completo = "relatorio_completo_validacao_lpu.xlsx"
-arquivo_html = "relatorio_validacao_lpu.html"
+output_dir = "data/outputs"
+file_path_result = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+file_path_result_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
+file_path_result_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
+file_path_result_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
 
 # Configurações de exportação
 top_n_divergencias = 10

@@ -975,12 +975,33 @@ def gerar_relatorio_excel_completo(
         df.to_excel(writer, sheet_name="Dados Completos", index=False)
 
     logger.success(f"✅ Relatório Excel completo salvo em: {excel_path}")
+    
+def get_default_settings(key):
+    """
+    Retorna os valores padrão das configurações do validador LPU.
+
+    Returns:
+        Dicionário com as configurações padrão
+    """
+    return {
+        "caminho_padrao_orcamento": settings.validador_lpu.caminho_padrao_orcamento,
+        "caminho_padrao_lpu": settings.validador_lpu.caminho_padrao_lpu,
+        "output_dir": settings.validador_lpu.output_dir,
+        "tolerancia_percentual": settings.validador_lpu.tolerancia_percentual,
+        "arquivo_excel_basico": settings.validador_lpu.arquivo_excel_basico,
+        "arquivo_excel_completo": settings.validador_lpu.arquivo_excel_completo,
+        "arquivo_csv": settings.validador_lpu.arquivo_csv,
+        "arquivo_html": settings.validador_lpu.arquivo_html,
+        "top_n_divergencias": settings.validador_lpu.top_n_divergencias,
+        "top_n_divergencias_extended": settings.validador_lpu.top_n_divergencias_extended,
+    }
 
 
-def validar_lpu(
-    caminho_orcamento: Union[str, Path] = None,
-    caminho_lpu: Union[str, Path] = None,
+def validate_lpu(
+    file_path_budget: Union[str, Path] = None,
+    file_path_lpu: Union[str, Path] = None,
     output_dir: Union[str, Path] = None,
+    output_file: str = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx",
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
@@ -994,9 +1015,10 @@ def validar_lpu(
     5. Salva resultados em Excel, CSV e HTML
 
     Args:
-        caminho_orcamento: Caminho do arquivo de orçamento (padrão em settings)
-        caminho_lpu: Caminho do arquivo LPU (padrão em settings)
+        file_path_budget: Caminho do arquivo de orçamento (padrão em settings)
+        file_path_lpu: Caminho do arquivo LPU (padrão em settings)
         output_dir: Diretório para salvar resultados (padrão em settings)
+        output_file_name: Nome base dos arquivos de saída (sem extensão)
         verbose: Se True, exibe estatísticas no console
 
     Returns:
@@ -1005,33 +1027,20 @@ def validar_lpu(
     Raises:
         ValidadorLPUError: Em caso de erro na validação
     """
-    # Usar valores padrão do settings se não fornecidos
-    if caminho_orcamento is None:
-        caminho_orcamento = settings.validador_lpu.caminho_padrao_orcamento
-    if caminho_lpu is None:
-        caminho_lpu = settings.validador_lpu.caminho_padrao_lpu
-    if output_dir is None:
-        output_dir = settings.validador_lpu.output_dir
-
-    logger.debug("=" * 80)
-    logger.info("VALIDADOR LPU - Conciliação de Orçamento vs Base de Preços")
-    logger.debug(f"Tolerância configurada: {settings.validador_lpu.tolerancia_percentual}%")
-    logger.debug("=" * 80)
 
     if verbose:
-        logger.info("=" * 80)
+        print("-" * 50)
         logger.info("VALIDADOR LPU - Conciliação de Orçamento vs Base de Preços")
-        logger.info(f"Tolerância: {settings.validador_lpu.tolerancia_percentual}%")
-        logger.info("=" * 80)
-        logger.info("")
+        logger.info(f"Tolerância: {settings.get("module_validator_lpu.tol_percentile")}%")
+        print("-" * 50)
 
     # 1. Carregar dados
     if verbose:
         logger.info("📂 Carregando arquivos...")
 
     try:
-        logger.debug(f"Carregando orçamento de: {caminho_orcamento}")
-        df_orcamento = carregar_orcamento(caminho_orcamento)
+        logger.debug(f"Carregando orçamento de: {file_path_budget}")
+        df_orcamento = carregar_orcamento(file_path_budget)
         if verbose:
             logger.info(f"   ✅ Orçamento carregado: {len(df_orcamento)} itens")
     except Exception as e:
@@ -1039,16 +1048,13 @@ def validar_lpu(
         raise ValidadorLPUError(f"Erro ao carregar orçamento: {e}")
 
     try:
-        logger.debug(f"Carregando LPU de: {caminho_lpu}")
-        df_lpu = carregar_lpu(caminho_lpu)
+        logger.debug(f"Carregando LPU de: {file_path_lpu}")
+        df_lpu = carregar_lpu(file_path_lpu)
         if verbose:
             logger.info(f"   ✅ LPU carregado: {len(df_lpu)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar LPU: {e}")
         raise ValidadorLPUError(f"Erro ao carregar LPU: {e}")
-
-    if verbose:
-        logger.info("")
 
     # 2. Cruzar dados
     if verbose:
@@ -1167,20 +1173,24 @@ def main():
     """Função principal para execução direta do módulo."""
     # Configurar caminhos padrão
     base_dir = Path(__file__).parents[3]
-    caminho_orcamento = Path(base_dir, settings.validador_lpu.caminho_padrao_orcamento)
-    caminho_lpu = Path(base_dir, settings.validador_lpu.caminho_padrao_lpu)
-    output_dir = Path(base_dir, settings.validador_lpu.output_dir)
+    path_file_budget = Path(base_dir, 
+                             settings.get("module_validator_lpu.file_path_budget"))
+    path_file_lpu = Path(base_dir, 
+                       settings.get("module_validator_lpu.file_path_lpu"))
+    output_dir = Path(base_dir, 
+                      settings.get("module_validator_lpu.output_dir"))
+    output_file = settings.get("module_validator_lpu.file_path_result")
 
-    logger.info("Iniciando validador LPU via main()...")
-    logger.debug(f"Orçamento: {caminho_orcamento}")
-    logger.debug(f"LPU: {caminho_lpu}")
+    logger.debug(f"Orçamento: {path_file_budget}")
+    logger.debug(f"LPU: {path_file_lpu}")
     logger.debug(f"Output: {output_dir}")
 
     try:
-        df_resultado = validar_lpu(
-            caminho_orcamento=caminho_orcamento,
-            caminho_lpu=caminho_lpu,
+        df_resultado = validate_lpu(
+            file_path_budget=path_file_budget,
+            file_path_lpu=path_file_lpu,
             output_dir=output_dir,
+            output_file=output_file,
             verbose=True,
         )
 
