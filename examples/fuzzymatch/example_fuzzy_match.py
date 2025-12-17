@@ -27,36 +27,33 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from utils.fuzzy.fuzzy_validations import (
     fuzzy_match,
-    top_n_fuzzy_matches,
-    best_fuzzy_match,
-    filter_fuzzy_matches,
 )
 import pandas as pd
 
-if __name__ == "__main__":
-    # Exemplo 1: fuzzy_match com uma lista
+def example_fuzzy_match_list():
+    """
+    Exemplo de uso da função fuzzy_match com uma lista.
+    """
     choices = ["Residencial", "Comercial", "Industrial", "Hospitalar"]
     value = "Resindencial"
-    result = fuzzy_match(value, choices, threshold=85)
+    result = fuzzy_match(value, choices, top_matches=1, threshold=85)
     print(f"Fuzzy match encontrado: {result}")
 
-    # Exemplo 2: top_n_fuzzy_matches com uma lista
-    top_matches = top_n_fuzzy_matches(value, choices, n=3)
+def example_top_n_fuzzy_matches():
+    """
+    Exemplo de uso da função fuzzy_match para obter os top N matches com uma lista.
+    """
+    choices = ["Residencial", "Comercial", "Industrial", "Hospitalar"]
+    value = "Resindencial"
+    top_matches = fuzzy_match(value, choices, top_matches=3, threshold=50)
     print("Top 3 matches:")
     for match in top_matches:
         print(match)
 
-    # Exemplo 3: best_fuzzy_match com uma lista
-    best_match = best_fuzzy_match("Hospitar", choices)
-    print(f"Melhor match: {best_match}")
-
-    # Exemplo 4: filter_fuzzy_matches com uma lista
-    filtered_matches = filter_fuzzy_matches(value, choices, threshold=80)
-    print("Valores filtrados:")
-    for match in filtered_matches:
-        print(match)
-
-    # Exemplo 5: fuzzy_match com DataFrame
+def example_fuzzy_match_dataframe():
+    """
+    Exemplo de uso da função fuzzy_match com um DataFrame.
+    """
     df = pd.DataFrame(
         {
             "Categoria": ["Residencial", "Comercial", "Industrial", "Hospitalar"],
@@ -64,12 +61,62 @@ if __name__ == "__main__":
         }
     )
     df["Fuzzy Match"] = df["Categoria"].apply(
-        lambda x: fuzzy_match("Resindencial", [x], threshold=85)
+        lambda x: fuzzy_match("Resindencial", [x], top_matches=1, threshold=85)
     )
     print(df)
 
-    # Exemplo 6: Filtrando DataFrame com fuzzy_match
+def example_filter_dataframe():
+    """
+    Exemplo de filtragem de um DataFrame com fuzzy_match.
+    """
+    df = pd.DataFrame(
+        {
+            "Categoria": ["Residencial", "Comercial", "Industrial", "Hospitalar"],
+            "Descrição": ["Casa", "Loja", "Fábrica", "Clínica"],
+        }
+    )
     filtered_df = df[
-        df["Categoria"].apply(lambda x: fuzzy_match("Resindencial", [x], threshold=85))
+        df["Categoria"].apply(lambda x: fuzzy_match("Resindencial", [x], top_matches=1, threshold=85) is not None)
     ]
     print(filtered_df)
+
+def example_fuzzy_match_with_dataframes():
+    """
+    Exemplo de uso da função fuzzy_match com dois DataFrames: um com valores e outro com choices.
+    """
+    # DataFrame com valores
+    df_values = pd.DataFrame(
+        {
+            "Valores": ["Residencial", "Comercial", "Industrial", "Hospitalar", "Educacional"],
+        }
+    )
+
+    # DataFrame com choices
+    df_choices = pd.DataFrame(
+        {
+            "Choices": ["Residencial", "Comercial", "Industrial", "Hospitalar"],
+        }
+    )
+
+    # Aplicar fuzzy_match para encontrar o melhor match para cada valor
+    df_values["Melhor Match"] = df_values["Valores"].apply(
+        lambda x: fuzzy_match(x, df_choices["Choices"].tolist(), top_matches=1, threshold=80)
+    )
+
+    print("DataFrame com os melhores matches:")
+    print(df_values)
+
+    # Filtrar valores que possuem matches acima do threshold
+    filtered_values = df_values[
+        df_values["Melhor Match"].apply(lambda x: x is not None)
+    ]
+
+    print("DataFrame filtrado com matches válidos:")
+    print(filtered_values)
+
+if __name__ == "__main__":
+    example_fuzzy_match_list()
+    example_top_n_fuzzy_matches()
+    example_fuzzy_match_dataframe()
+    example_filter_dataframe()
+    example_fuzzy_match_with_dataframes()
