@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union, Dict
 import re
 import unicodedata
 
@@ -79,7 +79,7 @@ def fuzzy_match(
     scorer: Callable = fuzz.token_set_ratio,
     normalize: bool = True,
     return_all: bool = False,
-) -> Union[Optional[MatchResult], List[MatchResult]]:
+) -> Dict[str, List[Dict[str, Union[str, int]]]]:
     """
     Retorna os melhores matches fuzzy de uma lista de escolhas, com a opção de filtrar por threshold.
 
@@ -92,10 +92,8 @@ def fuzzy_match(
         normalize (bool): Se True, normaliza os valores (lowercase e remove espaços). Default é True.
 
     Returns:
-        Union[Tuple[str, int], List[Tuple[str, int]]]:
-            - Se top_matches=1, retorna uma tupla com o melhor match e seu percentual.
-            - Se top_matches>1, retorna uma lista de tuplas com os melhores matches e seus percentuais.
-            - Retorna None ou lista vazia se nenhum match atender ao threshold.
+        Dict[str, List[Dict[str, Union[str, int]]]]: Um dicionário contendo os melhores matches e suas pontuações.
+            - "matches": Uma lista de dicionários com "choice" e "score" para cada match.
     """
 
     # -------------------------
@@ -112,7 +110,7 @@ def fuzzy_match(
 
     # Se não tem value ou choices, devolve vazio/None conforme modo
     if not value or not choices:
-        return None if top_matches == 1 else []
+        return {"matches": []} if top_matches == 1 else []
 
     # -------------------------
     # Preparação das entradas
@@ -186,7 +184,7 @@ def fuzzy_match(
 
     # Se top_matches == 1, devolvemos apenas o primeiro ou None
     if top_matches == 1:
-        return results[0] if results else None
+        return {"matches": [results[0]]} if results else {"matches": []}
 
     # Se top_matches > 1, devolvemos a lista (talvez vazia)
-    return results
+    return {"matches": results}
