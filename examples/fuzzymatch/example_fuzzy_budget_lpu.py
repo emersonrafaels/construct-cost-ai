@@ -20,13 +20,18 @@ __status__ = "Production"
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 # Adicionar src ao path
 base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-import pandas as pd
 from utils.fuzzy.fuzzy_validations import fuzzy_match
+from utils.data.data_functions import export_data
+from utils.python_functions import measure_execution_time
 
+
+@measure_execution_time
 def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, lpu_column: str, threshold: int = 80):
     """
     Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
@@ -53,11 +58,22 @@ def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, 
 
     # Extrair os choices da base de LPU
     choices = lpu_df[lpu_column].dropna().tolist()
+    
+    # budget_df = budget_df.iloc[:100]
 
-    # Aplicar fuzzy_match para cada valor na coluna de orçamentos
-    budget_df['Melhor Match'] = budget_df[budget_column].apply(
+    # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
+    matches = budget_df[budget_column].apply(
         lambda x: fuzzy_match(x, choices, top_matches=1, threshold=threshold)
     )
+
+    # Atribuir os valores às colunas do DataFrame
+    budget_df['Melhor Match'] = matches.apply(lambda x: x.choice if x else None)
+    budget_df['Percentual Match'] = matches.apply(lambda x: x.score if x else None)
+
+    # Salvar o resultado em um arquivo Excel
+    output_file = "data/outputs/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+    export_data(data=budget_df, file_path=output_file)
+    print(f"Resultado salvo em: {output_file}")
 
     return budget_df
 
@@ -69,4 +85,3 @@ if __name__ == "__main__":
     lpu_column = "Item"
 
     result_df = process_budget_and_lpu(budget_file, lpu_file, budget_column, lpu_column)
-    print(result_df.head())

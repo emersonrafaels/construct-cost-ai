@@ -21,6 +21,8 @@ __status__ = "Production"
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 # Adicionar src ao path
 base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
@@ -28,7 +30,6 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 from utils.fuzzy.fuzzy_validations import (
     fuzzy_match,
 )
-import pandas as pd
 
 def example_fuzzy_match_list():
     """

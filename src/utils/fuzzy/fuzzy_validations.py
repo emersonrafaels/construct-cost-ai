@@ -1,9 +1,17 @@
-from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence, Union, Dict
 import re
+import sys
 import unicodedata
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, List, Optional, Sequence, Union
 
 from fuzzywuzzy import fuzz, process
+
+# Adicionar src ao path
+base_dir = Path(__file__).parents[4]
+sys.path.insert(0, str(Path(base_dir, "src")))
+
+from utils.python_functions import measure_execution_time
 
 
 # =========================
@@ -53,24 +61,25 @@ def normalize_text(value: str) -> str:
 class MatchResult:
     """
     Resultado estruturado de um match fuzzy.
-    - choice_original: texto original (não normalizado) vindo de choices
+    - query: valor original que você buscou
+    - query_normalized: valor normalizado (o que foi comparado)
+    - choice: texto original (não normalizado) vindo de choices
     - choice_normalized: texto normalizado do choice (o que foi comparado)
     - score: pontuação do scorer (0..100)
     - index: posição do choice dentro da lista original
-    - query_original: valor original que você buscou
-    - query_normalized: valor normalizado (o que foi comparado)
     """
-    choice_original: str
+    query: str
+    query_normalized: str
+    choice: str
     choice_normalized: str
     score: int
     index: int
-    query_original: str
-    query_normalized: str
 
 
 # =========================
 # 3) Função fuzzy match
 # =========================
+@measure_execution_time
 def fuzzy_match(
     value: str,
     choices: Sequence[str],
@@ -79,7 +88,7 @@ def fuzzy_match(
     scorer: Callable = fuzz.token_set_ratio,
     normalize: bool = True,
     return_all: bool = False,
-) -> Dict[str, List[Dict[str, Union[str, int]]]]:
+) -> Optional[Union[MatchResult, List[MatchResult]]]:
     """
     Retorna os melhores matches fuzzy de uma lista de escolhas, com a opção de filtrar por threshold.
 
@@ -90,10 +99,12 @@ def fuzzy_match(
         threshold (int): O percentual mínimo de match para incluir no resultado. Default é 80.
         scorer (Callable): Função de pontuação fuzzy a ser usada. Default é fuzz.ratio.
         normalize (bool): Se True, normaliza os valores (lowercase e remove espaços). Default é True.
+        return_all (bool): Se True, retorna todos os matches, mesmo abaixo do threshold. Default é False.
 
     Returns:
-        Dict[str, List[Dict[str, Union[str, int]]]]: Um dicionário contendo os melhores matches e suas pontuações.
-            - "matches": Uma lista de dicionários com "choice" e "score" para cada match.
+        Optional[Union[MatchResult, List[MatchResult]]]:
+            - Se top_matches=1, retorna um único objeto MatchResult ou None se não houver matches.
+            - Se top_matches>1, retorna uma lista de objetos MatchResult (vazia se não houver matches).
     """
 
     # -------------------------
@@ -110,7 +121,7 @@ def fuzzy_match(
 
     # Se não tem value ou choices, devolve vazio/None conforme modo
     if not value or not choices:
-        return {"matches": []} if top_matches == 1 else []
+        return None if top_matches == 1 else []
 
     # -------------------------
     # Preparação das entradas
@@ -144,7 +155,7 @@ def fuzzy_match(
     )
 
     # -------------------------
-    # Montagem estruturada
+    # Resultado estruturado
     # -------------------------
 
     results: List[MatchResult] = []
@@ -169,12 +180,12 @@ def fuzzy_match(
             # Monta o resultado com info completa
             results.append(
                 MatchResult(
-                    choice_original=original_choices[idx],  # choice original (não normalizado)
+                    query=value,                            # query original
+                    query_normalized=value_n,               # query normalizada (comparada)
+                    choice=original_choices[idx],           # choice original (não normalizado)
                     choice_normalized=choices_n[idx],       # choice normalizado (comparado)
                     score=score_int,                        # score final
                     index=int(idx),                         # índice na lista original
-                    query_original=value,                   # query original
-                    query_normalized=value_n,               # query normalizada (comparada)
                 )
             )
 
@@ -182,9 +193,9 @@ def fuzzy_match(
     # Formato do retorno
     # -------------------------
 
-    # Se top_matches == 1, devolvemos apenas o primeiro ou None
+    # Se top_matches=1, retorna um único objeto MatchResult ou None se não houver matches
     if top_matches == 1:
-        return {"matches": [results[0]]} if results else {"matches": []}
+        return results[0] if results else None
 
-    # Se top_matches > 1, devolvemos a lista (talvez vazia)
-    return {"matches": results}
+    # Se top_matches>1, retorna uma lista de objetos MatchResult (vazia se não houver matches)
+    return results

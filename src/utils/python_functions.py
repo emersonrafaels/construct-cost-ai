@@ -1,4 +1,30 @@
+import time
+from functools import wraps
 from typing import Any
+
+
+def measure_execution_time(func):
+    """
+    Decorator to measure the execution time of a function.
+
+    Args:
+        func (callable): The function to be decorated.
+
+    Returns:
+        callable: The wrapped function with execution time measurement.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(
+            f"Function '{func.__name__}' executed in {execution_time:.4f} seconds."
+        )
+        return result
+
+    return wrapper
 
 
 def convert_value(value: Any, expected_type: str) -> Any:
