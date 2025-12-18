@@ -19,8 +19,11 @@ __status__ = "Production"
 
 import sys
 from pathlib import Path
+from pprint import pprint
+from typing import Callable
 
 import pandas as pd
+from fuzzywuzzy import fuzz
 
 # Adicionar src ao path
 base_dir = Path(__file__).parents[2]
@@ -32,7 +35,56 @@ from utils.python_functions import measure_execution_time
 
 
 @measure_execution_time
-def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, lpu_column: str, threshold: int = 80):
+def process_match_value_and_lpu(budget_item: str, 
+                                lpu_file: str, 
+                                lpu_column: str, 
+                                threshold: int = 80, 
+                                scorer: Callable = fuzz.token_set_ratio):
+    """
+    Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
+
+    Args:
+        budget_item (str): Item de orçamento a ser processado.
+        lpu_file (str): Caminho para o arquivo de LPU.
+        lpu_column (str): Nome da coluna na base de LPU a ser usada como choices.
+        threshold (int): Percentual mínimo de match para considerar válido. Default é 80.
+        scorer (Callable): Função de pontuação fuzzy a ser usada. Default é fuzz.ratio.
+
+    Returns:
+        pd.DataFrame: DataFrame de orçamentos com uma nova coluna contendo os melhores matches.
+    """
+    # Ler os arquivos
+    lpu_df = pd.read_excel(lpu_file)
+
+    # Garantir que as colunas existem
+    if lpu_column not in lpu_df.columns:
+        raise ValueError(f"Coluna '{lpu_column}' não encontrada na base de LPU.")
+
+    # Extrair os choices da base de LPU
+    choices = lpu_df[lpu_column].dropna().tolist()
+    
+    # budget_df = budget_df.iloc[:100]
+
+    # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
+    matches = fuzzy_match(value=budget_item, 
+                          choices=choices, 
+                          top_matches=1, 
+                          threshold=threshold, 
+                          scorer=scorer)
+
+    # Atribuir os valores às colunas do DataFrame
+    pprint(matches)
+    
+    return matches
+
+
+@measure_execution_time
+def process_budget_and_lpu(budget_file: str, 
+                           lpu_file: str, 
+                           budget_column: str, 
+                           lpu_column: str, 
+                           threshold: int = 80, 
+                           scorer: Callable = fuzz.token_set_ratio):
     """
     Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
 
@@ -42,6 +94,7 @@ def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, 
         budget_column (str): Nome da coluna na base de orçamentos a ser percorrida.
         lpu_column (str): Nome da coluna na base de LPU a ser usada como choices.
         threshold (int): Percentual mínimo de match para considerar válido. Default é 80.
+        scorer (Callable): Função de pontuação fuzzy a ser usada. Default é fuzz.ratio.
 
     Returns:
         pd.DataFrame: DataFrame de orçamentos com uma nova coluna contendo os melhores matches.
@@ -63,7 +116,11 @@ def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, 
 
     # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     matches = budget_df[budget_column].apply(
-        lambda x: fuzzy_match(x, choices, top_matches=1, threshold=threshold)
+        lambda x: fuzzy_match(value=x, 
+                              choices=choices, 
+                              top_matches=1, 
+                              threshold=threshold, 
+                              scorer=scorer)
     )
 
     # Atribuir os valores às colunas do DataFrame
@@ -78,6 +135,7 @@ def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, 
     return budget_df
 
 if __name__ == "__main__":
+    
     # Exemplo de uso
     budget_file = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
     lpu_file = "data/inputs/lpu/BASE_LPU.xlsx"
@@ -90,3 +148,12 @@ if __name__ == "__main__":
                                        budget_column=budget_column, 
                                        lpu_column=lpu_column, 
                                        threshold=threshold)
+    print("-"*50)
+    
+    # Executando o teste para um único valor
+    result_value = process_match_value_and_lpu(budget_item="Serviço de Instalação de Ar Condicionado Tipo Split", 
+                                               lpu_file=lpu_file, 
+                                               lpu_column=lpu_column,
+                                               threshold=threshold, 
+                                               scorer=fuzz.token_sort_ratio)
+    print("-"*50)
