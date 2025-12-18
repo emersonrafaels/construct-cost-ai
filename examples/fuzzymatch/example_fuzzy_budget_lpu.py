@@ -72,7 +72,7 @@ def process_budget_and_lpu(budget_file: str, lpu_file: str, budget_column: str, 
 
     # Salvar o resultado em um arquivo Excel
     output_file = "data/outputs/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
-    export_data(data=budget_df, file_path=output_file)
+    export_data(data=budget_df, file_path=output_file, index=False)
     print(f"Resultado salvo em: {output_file}")
 
     return budget_df
@@ -83,5 +83,10 @@ if __name__ == "__main__":
     lpu_file = "data/inputs/lpu/BASE_LPU.xlsx"
     budget_column = "NOME"
     lpu_column = "Item"
+    threshold = 85
 
-    result_df = process_budget_and_lpu(budget_file, lpu_file, budget_column, lpu_column)
+    result_df = process_budget_and_lpu(budget_file=budget_file, 
+                                       lpu_file=lpu_file, 
+                                       budget_column=budget_column, 
+                                       lpu_column=lpu_column, 
+                                       threshold=threshold)

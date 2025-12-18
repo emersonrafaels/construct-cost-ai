@@ -119,19 +119,22 @@ def export_data(
     data: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
     file_path: Union[str, Path],
     create_dirs: bool = True,
+    index: bool = False,
     **kwargs,
 ) -> None:
     """
-    Exports data to various formats, with support for multiple sheets in Excel.
+    Exporta dados para vários formatos, com suporte para múltiplas abas em arquivos Excel.
 
     Args:
-        data: DataFrame or dict of DataFrames for Excel multi-sheet
-        file_path (Union[str, Path]): Path where to save the file
-        create_dirs (bool): Whether to create directories if they don't exist
-        **kwargs: Additional arguments passed to the pandas export function
+        data (Union[pd.DataFrame, Dict[str, pd.DataFrame]]): DataFrame ou dicionário de DataFrames para exportação.
+        file_path (Union[str, Path]): Caminho onde o arquivo será salvo.
+        create_dirs (bool): Se True, cria diretórios automaticamente se não existirem. Default é True.
+        index (bool): Se True, inclui o índice ao salvar os dados. Default é False.
+        **kwargs: Argumentos adicionais passados para a função de exportação do pandas.
 
     Raises:
-        ValueError: If file extension is not supported
+        ValueError: Se a extensão do arquivo não for suportada.
+        RuntimeError: Se ocorrer um erro durante a exportação.
     """
     file_path = Path(file_path)
 
@@ -141,11 +144,11 @@ def export_data(
     extension = file_path.suffix.lower()
 
     exporters = {
-        ".csv": lambda df, path: df.to_csv(path, **kwargs),
+        ".csv": lambda df, path: df.to_csv(path, index=index, **kwargs),
         ".xlsx": lambda df, path: (
-            df.to_excel(path, **kwargs)
+            df.to_excel(path, index=index, **kwargs)
             if isinstance(df, pd.DataFrame)
-            else (_export_multiple_sheets(df, path, **kwargs))
+            else (_export_multiple_sheets(df, path, index=index, **kwargs))
         ),
         ".json": lambda df, path: df.to_json(path, **kwargs),
         ".parquet": lambda df, path: df.to_parquet(path, **kwargs),
@@ -163,18 +166,19 @@ def export_data(
         raise RuntimeError(f"Error exporting to {file_path}: {str(e)}")
 
 
-def _export_multiple_sheets(data: Dict[str, pd.DataFrame], path: Union[str, Path], **kwargs):
+def _export_multiple_sheets(data: Dict[str, pd.DataFrame], path: Union[str, Path], index: bool = False, **kwargs):
     """
-    Helper function to export multiple sheets to an Excel file.
+    Função auxiliar para exportar múltiplas abas para um arquivo Excel.
 
     Args:
-        data: Dictionary of DataFrames to export.
-        path: Path to the Excel file.
-        **kwargs: Additional arguments for pandas to_excel.
+        data (Dict[str, pd.DataFrame]): Dicionário de DataFrames para exportação.
+        path (Union[str, Path]): Caminho para o arquivo Excel.
+        index (bool): Se True, inclui o índice ao salvar os dados. Default é False.
+        **kwargs: Argumentos adicionais para pandas.to_excel.
     """
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         for sheet_name, sheet_data in data.items():
-            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, **kwargs)
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=index, **kwargs)
 
 
 def transform_case(
