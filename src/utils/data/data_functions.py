@@ -166,7 +166,9 @@ def export_data(
         raise RuntimeError(f"Error exporting to {file_path}: {str(e)}")
 
 
-def _export_multiple_sheets(data: Dict[str, pd.DataFrame], path: Union[str, Path], index: bool = False, **kwargs):
+def _export_multiple_sheets(
+    data: Dict[str, pd.DataFrame], path: Union[str, Path], index: bool = False, **kwargs
+):
     """
     Função auxiliar para exportar múltiplas abas para um arquivo Excel.
 

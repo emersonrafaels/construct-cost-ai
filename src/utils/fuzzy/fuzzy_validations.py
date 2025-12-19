@@ -3,9 +3,7 @@ import sys
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Union
-
-from fuzzywuzzy import fuzz, process
+from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union, overload
 
 # Adicionar src ao path
 base_dir = Path(__file__).parents[4]
@@ -68,6 +66,7 @@ class MatchResult:
     - score: pontuação do scorer (0..100)
     - index: posição do choice dentro da lista original
     """
+
     query: str
     query_normalized: str
     choice: str
@@ -85,9 +84,10 @@ def fuzzy_match(
     choices: Sequence[str],
     top_matches: int = 1,
     threshold: int = 80,
-    scorer: Callable = fuzz.token_set_ratio,
+    scorer: Optional[Callable] = None,
     normalize: bool = True,
     return_all: bool = False,
+    library: Literal["fuzzywuzzy", "rapidfuzz"] = "rapidfuzz",
 ) -> Optional[Union[MatchResult, List[MatchResult]]]:
     """
     Retorna os melhores matches fuzzy de uma lista de escolhas, com a opção de filtrar por threshold.
@@ -97,9 +97,10 @@ def fuzzy_match(
         choices (List[str]): A lista de valores para comparação.
         top_matches (int): O número de melhores matches a retornar. Default é 1.
         threshold (int): O percentual mínimo de match para incluir no resultado. Default é 80.
-        scorer (Callable): Função de pontuação fuzzy a ser usada. Default é fuzz.ratio.
+        scorer (Callable): Função de pontuação fuzzy a ser usada. Default é None.
         normalize (bool): Se True, normaliza os valores (lowercase e remove espaços). Default é True.
         return_all (bool): Se True, retorna todos os matches, mesmo abaixo do threshold. Default é False.
+        library (Literal["fuzzywuzzy", "rapidfuzz"]): Biblioteca a ser usada para fuzzy matching. Default é "rapidfuzz".
 
     Returns:
         Optional[Union[MatchResult, List[MatchResult]]]:
@@ -111,15 +112,15 @@ def fuzzy_match(
     # Validações de parâmetros
     # -------------------------
 
-    # top_matches precisa ser >= 1 para fazer sentido
+    if library not in {"fuzzywuzzy", "rapidfuzz"}:
+        raise ValueError("A biblioteca deve ser 'fuzzywuzzy' ou 'rapidfuzz'.")
+
     if top_matches <= 0:
         raise ValueError("top_matches deve ser >= 1")
 
-    # threshold deve ser um percentual válido
     if not (0 <= threshold <= 100):
         raise ValueError("threshold deve estar entre 0 e 100")
 
-    # Se não tem value ou choices, devolve vazio/None conforme modo
     if not value or not choices:
         return None if top_matches == 1 else []
 
@@ -127,75 +128,57 @@ def fuzzy_match(
     # Preparação das entradas
     # -------------------------
 
-    # Guardamos a lista original (como veio)
     original_choices = list(choices)
 
-    # Normaliza (ou não) o value e choices
     if normalize:
-        # Normaliza a query (value)
         value_n = normalize_text(value)
-        # Normaliza cada choice
         choices_n = [normalize_text(c) for c in original_choices]
     else:
-        # Se não normalizar, comparamos como está
         value_n = value
         choices_n = original_choices
 
     # -------------------------
-    # Extração dos melhores
+    # Seleção da biblioteca
     # -------------------------
 
-    # process.extract compara value_n contra choices_n e retorna os "top_matches" melhores
-    # limit define quantos resultados você quer
-    raw_matches = process.extract(
-        value_n,         # query
-        choices_n,       # lista comparada
-        scorer=scorer,   # função de score
-        limit=top_matches
-    )
+    if library == "fuzzywuzzy":
+        from fuzzywuzzy import process, fuzz
+        scorer = scorer or fuzz.token_set_ratio
+        raw_matches = process.extract(
+            value_n,
+            choices_n,
+            scorer=scorer,
+            limit=top_matches,
+        )
+    else:  # library == "rapidfuzz"
+        from rapidfuzz import process, fuzz
+        scorer = scorer or fuzz.token_set_ratio
+        raw_matches = process.extract(
+            value_n,
+            choices_n,
+            scorer=scorer,
+            limit=top_matches,
+            score_cutoff=threshold,
+        )
 
     # -------------------------
     # Resultado estruturado
     # -------------------------
 
-    results: List[MatchResult] = []
+    results = [
+        MatchResult(
+            query=value,
+            query_normalized=value_n,
+            choice=original_choices[idx],
+            choice_normalized=choices_n[idx],
+            score=int(score),
+            index=idx,
+        )
+        for match_norm, score, idx in (
+            (item[0], item[1], item[2] if len(item) == 3 else choices_n.index(item[0]))
+            for item in raw_matches
+        )
+        if return_all or score >= threshold
+    ]
 
-    for item in raw_matches:
-        # item pode ser: (match_norm, score) ou (match_norm, score, idx)
-        if len(item) == 3:
-            # Caso ideal: já vem o índice (idx) do match em choices_n
-            match_norm, score, idx = item
-        else:
-            # Caso venha só (match_norm, score), precisamos "achar" o índice
-            # Atenção: se houver choices_n duplicados, index pega o primeiro.
-            match_norm, score = item
-            idx = choices_n.index(match_norm)
-
-        # Converte score para int (garantia de tipo)
-        score_int = int(score)
-
-        # Se return_all=False, aplicamos o filtro do threshold
-        # Se return_all=True, não filtramos (útil pra debugar por que não bateu)
-        if (score_int >= threshold) or return_all:
-            # Monta o resultado com info completa
-            results.append(
-                MatchResult(
-                    query=value,                            # query original
-                    query_normalized=value_n,               # query normalizada (comparada)
-                    choice=original_choices[idx],           # choice original (não normalizado)
-                    choice_normalized=choices_n[idx],       # choice normalizado (comparado)
-                    score=score_int,                        # score final
-                    index=int(idx),                         # índice na lista original
-                )
-            )
-
-    # -------------------------
-    # Formato do retorno
-    # -------------------------
-
-    # Se top_matches=1, retorna um único objeto MatchResult ou None se não houver matches
-    if top_matches == 1:
-        return results[0] if results else None
-
-    # Se top_matches>1, retorna uma lista de objetos MatchResult (vazia se não houver matches)
-    return results
+    return results[0] if top_matches == 1 and results else results
