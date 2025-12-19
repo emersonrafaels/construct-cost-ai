@@ -59,6 +59,7 @@ __status__ = "Development"
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+import json
 
 import pandas as pd
 
@@ -305,6 +306,56 @@ def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
     return df[existing_columns]
 
 
+def export_to_json(
+    data: Union[pd.DataFrame, Dict[str, Union[pd.DataFrame, dict]]],
+    file_path: Union[str, Path],
+    create_dirs: bool = True,
+    orient: str = "records",
+    **kwargs,
+) -> None:
+    """
+    Exporta dados para o formato JSON, com suporte para criar diretórios automaticamente.
+
+    Args:
+        data (Union[pd.DataFrame, Dict[str, Union[pd.DataFrame, dict]]]): DataFrame, dicionário de DataFrames ou dicionário de dados para exportação.
+        file_path (Union[str, Path]): Caminho onde o arquivo JSON será salvo.
+        create_dirs (bool): Se True, cria diretórios automaticamente se não existirem. Default é True.
+        orient (str): Orientação do JSON (ex.: "records", "split", "index", etc.). Default é "records".
+        **kwargs: Argumentos adicionais passados para `DataFrame.to_json`.
+
+    Raises:
+        ValueError: Se o tipo de dado não for suportado.
+        RuntimeError: Se ocorrer um erro durante a exportação.
+    """
+    def default_serializer(obj):
+        """Serializador padrão para objetos não serializáveis pelo JSON."""
+        if hasattr(obj, "__dict__"):
+            return obj.__dict__
+        return str(obj)
+
+    file_path = Path(file_path)
+
+    if create_dirs:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if isinstance(data, pd.DataFrame):
+            # Exporta um único DataFrame para JSON
+            data.to_json(file_path, orient=orient, **kwargs)
+        elif isinstance(data, dict):
+            # Verifica se os valores do dicionário são DataFrames ou outros dicionários
+            json_data = {
+                key: (df.to_dict(orient=orient) if isinstance(df, pd.DataFrame) else df)
+                for key, df in data.items()
+            }
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(json_data, f, ensure_ascii=False, indent=4, default=default_serializer)
+        else:
+            raise ValueError("O tipo de dado fornecido não é suportado. Use um DataFrame ou um dicionário de DataFrames/dados.")
+    except Exception as e:
+        raise RuntimeError(f"Erro ao exportar para JSON em {file_path}: {str(e)}")
+
+
 # Example usage:
 if __name__ == "__main__":
     # Reading example
@@ -332,3 +383,10 @@ if __name__ == "__main__":
         print("Multiple sheets exported successfully")
     except Exception as e:
         print(f"Error exporting multiple sheets: {e}")
+
+    # JSON export example
+    try:
+        export_to_json(df, "output/data.json", create_dirs=True)
+        print("Data exported to JSON successfully")
+    except Exception as e:
+        print(f"Error exporting to JSON: {e}")

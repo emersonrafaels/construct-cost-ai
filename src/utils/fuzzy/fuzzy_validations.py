@@ -25,7 +25,7 @@ Funcionalidades principais
 • Fuzzy matching com múltiplas bibliotecas:
   - Suporte a `rapidfuzz` (default, mais performático)
   - Suporte a `fuzzywuzzy` (fallback / compatibilidade)
-  - Seleção dinâmica da função de scoring (ex.: token_set_ratio)
+  - Seleção dinâmica da função de scoring (ex.: token_sort_ratio)
 
 • Resultado estruturado:
   - Uso do dataclass `MatchResult`
@@ -253,7 +253,7 @@ def fuzzy_match(
         # fuzzywuzzy normalmente retorna (match, score) e nem sempre inclui index
         from fuzzywuzzy import fuzz, process  # noqa: E402
 
-        scorer = scorer or fuzz.token_set_ratio
+        scorer = scorer or fuzz.token_sort_ratio
 
         extracted = process.extract(
             value_n,
@@ -277,7 +277,7 @@ def fuzzy_match(
         # rapidfuzz geralmente retorna (match, score, idx)
         from rapidfuzz import fuzz, process  # noqa: E402
 
-        scorer = scorer or fuzz.token_set_ratio
+        scorer = scorer or fuzz.token_sort_ratio
 
         # Monta kwargs para permitir return_all funcionar
         extract_kwargs = dict(

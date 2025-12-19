@@ -22,6 +22,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Callable
 import time
+import json
 
 import pandas as pd
 from fuzzywuzzy import fuzz
@@ -31,7 +32,7 @@ base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from utils.fuzzy.fuzzy_validations import fuzzy_match
-from utils.data.data_functions import export_data
+from utils.data.data_functions import export_to_json
 
 
 def benchmark_fuzzy_match(
@@ -64,7 +65,6 @@ def benchmark_fuzzy_match(
 
     # Benchmark para fuzzywuzzy
     start_time = time.time()
-    # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     result_fuzzywuzzy = budget_df[budget_column].apply(
         lambda x: fuzzy_match(
             value=x, 
@@ -78,7 +78,6 @@ def benchmark_fuzzy_match(
 
     # Benchmark para rapidfuzz
     start_time = time.time()
-    # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     result_rapidfuzz = budget_df[budget_column].apply(
         lambda x: fuzzy_match(
             value=x, 
@@ -99,6 +98,24 @@ def benchmark_fuzzy_match(
     pprint(f"Results: {result_rapidfuzz}")
     print(f"Execution Time: {time_rapidfuzz:.6f} seconds")
     print(f"Difference in Execution Time: {time_fuzzywuzzy - time_rapidfuzz:.6f} seconds")
+
+    # Salvar os resultados em um arquivo JSON
+    output_file = Path(Path(__file__).parent, 
+                       "data/outputs/benchmark_results.json")
+    results = {
+        "fuzzywuzzy": {
+            "results": result_fuzzywuzzy.to_dict(),
+            "execution_time": time_fuzzywuzzy,
+        },
+        "rapidfuzz": {
+            "results": result_rapidfuzz.to_dict(),
+            "execution_time": time_rapidfuzz,
+        },
+        "execution_time_difference": time_fuzzywuzzy - time_rapidfuzz,
+    }
+
+    export_to_json(results, output_file, create_dirs=True)
+    print(f"Resultados do benchmark salvos em: {output_file}")
 
 
 if __name__ == "__main__":

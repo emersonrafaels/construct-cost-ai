@@ -1,0 +1,93 @@
+{
+    "fuzzywuzzy": {
+        "results": {
+            "0": {
+                "query": "CONTRA-PISO 2CM",
+                "query_normalized": "contra piso 2cm",
+                "choice": "PINTURA DE PISO COM DESCARTE",
+                "choice_normalized": "pintura de piso com descarte",
+                "score": 60,
+                "index": 827
+            },
+            "1": {
+                "query": "CONTRA-PISO 2CM",
+                "query_normalized": "contra piso 2cm",
+                "choice": "PINTURA DE PISO COM DESCARTE",
+                "choice_normalized": "pintura de piso com descarte",
+                "score": 60,
+                "index": 827
+            },
+            "2": {
+                "query": "PISO VINÍLICO ROLÔ P/A (INCLUSO ARREMATE)",
+                "query_normalized": "piso vinilico rolo p a incluso arremate",
+                "choice": "PINTURA DE PISO COM REMOCAO",
+                "choice_normalized": "pintura de piso com remocao",
+                "score": 45,
+                "index": 270
+            },
+            "3": {
+                "query": "FORRO GESSO ACARTONADO (INCLUI FURAÇÃO, TABICA, PERFIS)",
+                "query_normalized": "forro gesso acartonado inclui furacao tabica perfis",
+                "choice": "FIXACAO DE GESSO ACARTONADO EM AREA INTERNA",
+                "choice_normalized": "fixacao de gesso acartonado em area interna",
+                "score": 64,
+                "index": 635
+            },
+            "4": {
+                "query": "RETIRADA DE PAINEL DO AA C/TRANSP.",
+                "query_normalized": "retirada de painel do aa c transp",
+                "choice": "RETIRADA DE CABO UTP CAT6 PADRAO",
+                "choice_normalized": "retirada de cabo utp cat6 padrao",
+                "score": 65,
+                "index": 931
+            }
+        },
+        "execution_time": 0.36888837814331055
+    },
+    "rapidfuzz": {
+        "results": {
+            "0": {
+                "query": "CONTRA-PISO 2CM",
+                "query_normalized": "contra piso 2cm",
+                "choice": "PINTURA DE PISO COM DESCARTE",
+                "choice_normalized": "pintura de piso com descarte",
+                "score": 60,
+                "index": 827
+            },
+            "1": {
+                "query": "CONTRA-PISO 2CM",
+                "query_normalized": "contra piso 2cm",
+                "choice": "PINTURA DE PISO COM DESCARTE",
+                "choice_normalized": "pintura de piso com descarte",
+                "score": 60,
+                "index": 827
+            },
+            "2": {
+                "query": "PISO VINÍLICO ROLÔ P/A (INCLUSO ARREMATE)",
+                "query_normalized": "piso vinilico rolo p a incluso arremate",
+                "choice": "REGULARIZACAO DE PISO EM AREA INTERNA",
+                "choice_normalized": "regularizacao de piso em area interna",
+                "score": 50,
+                "index": 727
+            },
+            "3": {
+                "query": "FORRO GESSO ACARTONADO (INCLUI FURAÇÃO, TABICA, PERFIS)",
+                "query_normalized": "forro gesso acartonado inclui furacao tabica perfis",
+                "choice": "FIXACAO DE GESSO ACARTONADO COM LIMPEZA",
+                "choice_normalized": "fixacao de gesso acartonado com limpeza",
+                "score": 66,
+                "index": 691
+            },
+            "4": {
+                "query": "RETIRADA DE PAINEL DO AA C/TRANSP.",
+                "query_normalized": "retirada de painel do aa c transp",
+                "choice": "RETIRADA DE CABO UTP CAT6 PADRAO",
+                "choice_normalized": "retirada de cabo utp cat6 padrao",
+                "score": 64,
+                "index": 931
+            }
+        },
+        "execution_time": 0.0518341064453125
+    },
+    "execution_time_difference": 0.31705427169799805
+}
