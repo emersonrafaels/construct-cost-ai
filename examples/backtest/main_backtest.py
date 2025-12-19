@@ -17,7 +17,7 @@ __version__ = "1.0.0"
 __maintainer__ = "Emerson V. Rafael (emervin), Lucas Ken (kushida), Clarissa Simoyama (simoyam)"
 __squad__ = "DataCraft"
 __email__ = "emersonssmile@gmail.com"
-__status__ = "Production"
+__status__ = "Development"
 
 import sys
 from pathlib import Path

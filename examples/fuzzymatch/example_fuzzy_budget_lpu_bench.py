@@ -15,7 +15,7 @@ __version__ = "1.0.0"
 __maintainer__ = "Emerson V. Rafael (emervin), Lucas Ken (kushida), Clarissa Simoyama (simoyam)"
 __squad__ = "DataCraft"
 __email__ = "emersonssmile@gmail.com"
-__status__ = "Production"
+__status__ = "Development"
 
 import sys
 from pathlib import Path
@@ -93,10 +93,10 @@ def benchmark_fuzzy_match(
     # Resultados
     print("Benchmark Results:")
     print("FuzzyWuzzy:")
-    print(f"Results: {result_fuzzywuzzy}")
+    pprint(f"Results: {result_fuzzywuzzy}")
     print(f"Execution Time: {time_fuzzywuzzy:.6f} seconds")
     print("RapidFuzz:")
-    print(f"Results: {result_rapidfuzz}")
+    pprint(f"Results: {result_rapidfuzz}")
     print(f"Execution Time: {time_rapidfuzz:.6f} seconds")
     print(f"Difference in Execution Time: {time_fuzzywuzzy - time_rapidfuzz:.6f} seconds")
 

@@ -13,7 +13,7 @@ __license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Emerson V. Rafael"
 __email__ = "emersonssmile@gmail.com"
-__status__ = "Production"
+__status__ = "Development"
 
 from pathlib import Path
 from typing import Union
