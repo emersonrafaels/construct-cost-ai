@@ -39,7 +39,7 @@ def process_match_value_and_lpu(budget_item: str,
                                 lpu_file: str, 
                                 lpu_column: str, 
                                 threshold: int = 80, 
-                                scorer: Callable = fuzz.token_set_ratio):
+                                library: str = "rapidfuzz"):
     """
     Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
 
@@ -48,7 +48,7 @@ def process_match_value_and_lpu(budget_item: str,
         lpu_file (str): Caminho para o arquivo de LPU.
         lpu_column (str): Nome da coluna na base de LPU a ser usada como choices.
         threshold (int): Percentual mínimo de match para considerar válido. Default é 80.
-        scorer (Callable): Função de pontuação fuzzy a ser usada. Default é fuzz.ratio.
+        library (str): Biblioteca de fuzzy matching a ser usada ("rapidfuzz" ou "fuzzywuzzy").
 
     Returns:
         pd.DataFrame: DataFrame de orçamentos com uma nova coluna contendo os melhores matches.
@@ -62,15 +62,13 @@ def process_match_value_and_lpu(budget_item: str,
 
     # Extrair os choices da base de LPU
     choices = lpu_df[lpu_column].dropna().tolist()
-    
-    # budget_df = budget_df.iloc[:100]
 
     # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     matches = fuzzy_match(value=budget_item, 
                           choices=choices, 
                           top_matches=1, 
                           threshold=threshold, 
-                          scorer=scorer)
+                          library=library)
 
     # Atribuir os valores às colunas do DataFrame
     pprint(matches)
@@ -84,7 +82,7 @@ def process_budget_and_lpu(budget_file: str,
                            budget_column: str, 
                            lpu_column: str, 
                            threshold: int = 80, 
-                           scorer: Callable = fuzz.token_set_ratio):
+                           library: str = "rapidfuzz"):
     """
     Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
 
@@ -94,7 +92,7 @@ def process_budget_and_lpu(budget_file: str,
         budget_column (str): Nome da coluna na base de orçamentos a ser percorrida.
         lpu_column (str): Nome da coluna na base de LPU a ser usada como choices.
         threshold (int): Percentual mínimo de match para considerar válido. Default é 80.
-        scorer (Callable): Função de pontuação fuzzy a ser usada. Default é fuzz.ratio.
+        library (str): Biblioteca de fuzzy matching a ser usada ("rapidfuzz" ou "fuzzywuzzy").
 
     Returns:
         pd.DataFrame: DataFrame de orçamentos com uma nova coluna contendo os melhores matches.
@@ -111,8 +109,6 @@ def process_budget_and_lpu(budget_file: str,
 
     # Extrair os choices da base de LPU
     choices = lpu_df[lpu_column].dropna().tolist()
-    
-    # budget_df = budget_df.iloc[:100]
 
     # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     matches = budget_df[budget_column].apply(
@@ -120,7 +116,7 @@ def process_budget_and_lpu(budget_file: str,
                               choices=choices, 
                               top_matches=1, 
                               threshold=threshold, 
-                              scorer=scorer)
+                              library=library)
     )
 
     # Atribuir os valores às colunas do DataFrame
@@ -151,9 +147,8 @@ if __name__ == "__main__":
     print("-"*50)
     
     # Executando o teste para um único valor
-    result_value = process_match_value_and_lpu(budget_item="Serviço de Instalação de Ar Condicionado Tipo Split", 
+    result_value = process_match_value_and_lpu(budget_item="Cabo de Aço", 
                                                lpu_file=lpu_file, 
                                                lpu_column=lpu_column,
-                                               threshold=threshold, 
-                                               scorer=fuzz.token_sort_ratio)
+                                               threshold=threshold)
     print("-"*50)
