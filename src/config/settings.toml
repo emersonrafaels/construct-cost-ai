@@ -11,7 +11,11 @@ tol_percentile = 0.0
 
 # Caminhos padrão
 file_path_budget = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+sheet_name_budget_table = "Tables"
+sheet_name_budget_metadata = "Metadata"
+
 file_path_lpu = "data/inputs/BASE_LPU.xlsx"
+sheet_name_budget_lpu = "LPU"
 
 # Colunas obrigatórias
 required_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "QUANTIDADE", "SOURCE_FILE", "SHEET_NAME"]

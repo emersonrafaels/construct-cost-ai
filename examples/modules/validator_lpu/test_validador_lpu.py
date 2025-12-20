@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     validate_lpu,
-    carregar_orcamento,
+    load_budget,
     carregar_lpu,
     cruzar_orcamento_lpu,
     calcular_divergencias,
@@ -106,7 +106,7 @@ def executar_validacao(
             logger.debug("-" * 80)
 
             logger.info("[1/4] Carregando orçamento...")
-            df_orcamento = carregar_orcamento(caminho_orcamento)
+            df_orcamento = load_budget(caminho_orcamento)
             logger.debug(f"      ✅ {len(df_orcamento)} itens carregados")
             logger.debug(f"      📊 Categorias: {df_orcamento['categoria'].nunique()}")
             logger.debug(f"      📋 UPEs: {df_orcamento['cod_upe'].nunique()}")

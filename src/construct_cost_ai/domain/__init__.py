@@ -12,7 +12,7 @@ from construct_cost_ai.domain.models import (
 )
 from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     validate_lpu,
-    carregar_orcamento,
+    load_budget,
     carregar_lpu,
     cruzar_orcamento_lpu,
     calcular_divergencias,
@@ -34,7 +34,7 @@ __all__ = [
     "ValidationSummary",
     # Validador LPU
     "validar_lpu",
-    "carregar_orcamento",
+    "load_budget",
     "carregar_lpu",
     "cruzar_orcamento_lpu",
     "calcular_divergencias",

@@ -68,21 +68,24 @@ def read_data(
     file_path: Union[str, Path],
     sheet_name: Optional[Union[str, int]] = None,
     header: Optional[Union[int, List[int]]] = 0,
+    default_sheet: Optional[Union[str, List[str]]] = ["Sheet1", "Planilha1"],
 ) -> pd.DataFrame:
     """
-    Reads data from various file formats using the file extension to determine the appropriate method.
-
+    Lê dados de vários formatos de arquivo usando a extensão do arquivo para determinar o método apropriado.
+    Se a aba especificada (sheet_name) não existir, utiliza a aba padrão (default_sheet).
+    
     Args:
-        file_path (Union[str, Path]): Path to the file to be read.
-        sheet_name (Optional[Union[str, int]]): Name or index of the sheet to read (for Excel files). Default is None.
-        header (Optional[Union[int, List[int]]]): Row number(s) to use as the column names. Default is 0.
-
+        file_path (Union[str, Path]): Caminho para o arquivo a ser lido.
+        sheet_name (Optional[Union[str, int]]): Nome ou índice da aba a ser lida (para arquivos Excel). Padrão é None.
+        header (Optional[Union[int, List[int]]]): Número(s) da(s) linha(s) a ser(em) usada(s) como nomes das colunas. Padrão é 0.
+        default_sheet (Optional[Union[str, List[str]]]): Nome ou lista de nomes das abas padrão a serem lidas se a aba especificada não for encontrada.
+    
     Returns:
-        pd.DataFrame: DataFrame containing the read data.
-
+        pd.DataFrame: DataFrame contendo os dados lidos.
+    
     Raises:
-        ValueError: If file extension is not supported.
-        FileNotFoundError: If file doesn't exist.
+        ValueError: Se a extensão do arquivo não for suportada.
+        FileNotFoundError: Se o arquivo não existir.
     """
     file_path = Path(file_path)
 
@@ -111,9 +114,38 @@ def read_data(
         raise ValueError(f"Unsupported file extension: {extension}")
 
     try:
+        # Tenta carregar a aba especificada
         return reader(file_path)
+    except ValueError as e:
+        # Tratamento específico para erro de aba não encontrada
+        if "Worksheet named" in str(e) and "not found" in str(e):
+            try:
+                # Listar todas as abas disponíveis no arquivo
+                available_sheets = pd.ExcelFile(file_path).sheet_names
+                if isinstance(default_sheet, str) and default_sheet in available_sheets:
+                    logger.warning(
+                        f"Aba '{sheet_name}' não encontrada. Carregando a aba padrão '{default_sheet}'."
+                    )
+                    return pd.read_excel(file_path, sheet_name=default_sheet, header=header)
+                elif isinstance(default_sheet, list):
+                    for sheet in default_sheet:
+                        if sheet in available_sheets:
+                            logger.warning(
+                                f"Aba '{sheet_name}' não encontrada. Carregando a aba padrão '{sheet}'."
+                            )
+                            return pd.read_excel(file_path, sheet_name=sheet, header=header)
+                raise ValueError(
+                    f"Aba '{sheet_name}' não encontrada no arquivo '{file_path}'. "
+                    f"As abas disponíveis são: {available_sheets}"
+                )
+            except Exception as inner_e:
+                raise RuntimeError(
+                    f"Erro ao tentar listar as abas disponíveis no arquivo '{file_path}': {str(inner_e)}"
+                )
+        else:
+            raise e
     except Exception as e:
-        print(f"Error reading file {file_path}: {str(e)}")
+        raise RuntimeError(f"Erro ao ler o arquivo {file_path}: {str(e)}")
 
 
 def export_data(

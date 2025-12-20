@@ -50,7 +50,7 @@ class ColunasFaltandoError(ValidadorLPUError):
     pass
 
 
-def carregar_orcamento(file_path: Union[str, Path]) -> pd.DataFrame:
+def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
     """
     Carrega o arquivo de orçamento.
 
@@ -73,7 +73,9 @@ def carregar_orcamento(file_path: Union[str, Path]) -> pd.DataFrame:
     required_columns = settings.get("module_validator_lpu.required_columns", [])
 
     try:
-        read_data(file_path=file_path, sheet_name="utf-8-sig")
+        read_data(file_path=file_path, 
+                  sheet_name=settings.get("module_validator_lpu.sheet_name_budget_table", 
+                                          "Tables"))
     except Exception as e:
         raise ValidadorLPUError(f"Erro ao carregar orçamento: {e}")
 
@@ -1023,7 +1025,7 @@ def validate_lpu(
     if verbose:
         print("-" * 50)
         logger.info("VALIDADOR LPU - Conciliação de Orçamento vs Base de Preços")
-        logger.info(f"Tolerância: {settings.get("module_validator_lpu.tol_percentile")}%")
+        logger.info(f"Tolerância configurada: {settings.get("module_validator_lpu.tol_percentile")}%")
         print("-" * 50)
 
     # 1. Carregar dados
@@ -1032,7 +1034,7 @@ def validate_lpu(
 
     try:
         logger.info(f"Carregando orçamento de: {file_path_budget}")
-        df_orcamento = carregar_orcamento(file_path_budget)
+        df_orcamento = load_budget(file_path_budget)
         if verbose:
             logger.info(f"   ✅ Orçamento carregado: {len(df_orcamento)} itens")
     except Exception as e:
@@ -1161,17 +1163,32 @@ def validate_lpu(
     return df_resultado
 
 
-def main():
-    """Função principal para execução direta do módulo."""
-    # Configurar caminhos padrão
+def orchestrate_validate_lpu(
+    file_path_budget: Union[str, Path] = None,
+    file_path_lpu: Union[str, Path] = None,
+    output_dir: Union[str, Path] = None,
+    output_file: str = None,
+    verbose: bool = True,
+) -> int:
+    """
+    Função principal para execução direta do módulo ou chamada externa.
+
+    Args:
+        file_path_budget: Caminho do arquivo de orçamento (padrão em settings se None).
+        file_path_lpu: Caminho do arquivo de LPU (padrão em settings se None).
+        output_dir: Diretório para salvar resultados (padrão em settings se None).
+        output_file: Nome base dos arquivos de saída (padrão em settings se None).
+        verbose: Se True, exibe estatísticas no console.
+
+    Returns:
+        int: Código de status (0 para sucesso, 1 para erro).
+    """
+    # Configurar caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
-    path_file_budget = Path(base_dir, 
-                            settings.get("module_validator_lpu.file_path_budget"))
-    path_file_lpu = Path(base_dir, 
-                         settings.get("module_validator_lpu.file_path_lpu"))
-    output_dir = Path(base_dir, 
-                      settings.get("module_validator_lpu.output_dir"))
-    output_file = settings.get("module_validator_lpu.file_path_output")
+    path_file_budget = Path(base_dir, file_path_budget or settings.get("module_validator_lpu.file_path_budget"))
+    path_file_lpu = Path(base_dir, file_path_lpu or settings.get("module_validator_lpu.file_path_lpu"))
+    output_dir = Path(base_dir, output_dir or settings.get("module_validator_lpu.output_dir"))
+    output_file = output_file or settings.get("module_validator_lpu.file_path_output")
 
     logger.debug(f"Orçamento: {path_file_budget}")
     logger.debug(f"LPU: {path_file_lpu}")
@@ -1183,25 +1200,26 @@ def main():
             file_path_lpu=path_file_lpu,
             output_dir=output_dir,
             output_file=output_file,
-            verbose=True,
+            verbose=verbose,
         )
 
         # Exibir primeiras linhas
-        logger.info("\n📋 PREVIEW DOS RESULTADOS:")
-        logger.info("-" * 80)
-        colunas_preview = [
-            "cod_item",
-            "nome",
-            "unidade",
-            "qtde",
-            "unitario_orcado",
-            "unitario_lpu",
-            "dif_unitario",
-            "perc_dif",
-            "status_conciliacao",
-        ]
-        colunas_preview = [col for col in colunas_preview if col in df_resultado.columns]
-        logger.info(f"\n{df_resultado[colunas_preview].head(10).to_string(index=False)}")
+        if verbose:
+            logger.info("\n📋 PREVIEW DOS RESULTADOS:")
+            logger.info("-" * 80)
+            colunas_preview = [
+                "cod_item",
+                "nome",
+                "unidade",
+                "qtde",
+                "unitario_orcado",
+                "unitario_lpu",
+                "dif_unitario",
+                "perc_dif",
+                "status_conciliacao",
+            ]
+            colunas_preview = [col for col in colunas_preview if col in df_resultado.columns]
+            logger.info(f"\n{df_resultado[colunas_preview].head(10).to_string(index=False)}")
 
         logger.success("Execução principal concluída com sucesso!")
         return 0
@@ -1215,4 +1233,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(orchestrate_validate_lpu())
