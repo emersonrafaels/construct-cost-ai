@@ -13,12 +13,15 @@ tol_percentile = 0.0
 file_path_budget = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
 file_path_lpu = "data/inputs/BASE_LPU.xlsx"
 
+# Colunas obrigatórias
+required_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "QUANTIDADE", "SOURCE_FILE", "SHEET_NAME"]
+
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"
-file_path_result = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
-file_path_result_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
-file_path_result_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
-file_path_result_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
+file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
+file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
+file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
 
 # Configurações de exportação
 top_n_divergencias = 10

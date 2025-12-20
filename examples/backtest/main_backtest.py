@@ -1,6 +1,6 @@
 """
 Realiza o uso do Módulo: budget_reader
-------------------------5
+------------------------
 
 Responsável por localizar e extrair, de forma robusta e independente de posição,
 a tabela principal de itens de orçamento no padrão utilizado pelas construtoras

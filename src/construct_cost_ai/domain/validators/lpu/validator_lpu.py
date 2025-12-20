@@ -18,12 +18,16 @@ __status__ = "Development"
 from pathlib import Path
 from typing import Union
 import sys
+
 import pandas as pd
 
-# Importar logger e settings
-sys.path.insert(0, str(Path(__file__).parents[3]))
-from src.config.config_logger import logger
-from src.config.config_dynaconf import get_settings
+# Adicionar o diretório src ao path
+base_dir = Path(__file__).parents[5]
+sys.path.insert(0, str(Path(base_dir, "src")))
+
+from config.config_logger import logger
+from config.config_dynaconf import get_settings
+from utils.data.data_functions import read_data
 
 settings = get_settings()
 
@@ -46,7 +50,7 @@ class ColunasFaltandoError(ValidadorLPUError):
     pass
 
 
-def carregar_orcamento(path: Union[str, Path]) -> pd.DataFrame:
+def carregar_orcamento(file_path: Union[str, Path]) -> pd.DataFrame:
     """
     Carrega o arquivo de orçamento.
 
@@ -60,29 +64,16 @@ def carregar_orcamento(path: Union[str, Path]) -> pd.DataFrame:
         ArquivoNaoEncontradoError: Se o arquivo não for encontrado
         ColunasFaltandoError: Se colunas obrigatórias estiverem ausentes
     """
-    path = Path(path)
+    file_path = Path(file_path)
 
-    if not path.exists():
-        raise ArquivoNaoEncontradoError(f"Arquivo de orçamento não encontrado: {path}")
+    if not file_path.exists():
+        raise ArquivoNaoEncontradoError(f"Arquivo de orçamento não encontrado: {file_path}")
 
     # Colunas obrigatórias
-    colunas_obrigatorias = [
-        "cod_upe",
-        "cod_item",
-        "nome",
-        "categoria",
-        "unidade",
-        "qtde",
-        "unitario_orcado",
-    ]
+    required_columns = settings.get("module_validator_lpu.required_columns", [])
 
     try:
-        if path.suffix in [".xlsx", ".xls"]:
-            df = pd.read_excel(path)
-        elif path.suffix == ".csv":
-            df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
-        else:
-            raise ValidadorLPUError(f"Formato não suportado: {path.suffix}")
+        read_data(file_path=file_path, sheet_name="utf-8-sig")
     except Exception as e:
         raise ValidadorLPUError(f"Erro ao carregar orçamento: {e}")
 
@@ -1040,7 +1031,7 @@ def validate_lpu(
         logger.info("📂 Carregando arquivos...")
 
     try:
-        logger.debug(f"Carregando orçamento de: {file_path_budget}")
+        logger.info(f"Carregando orçamento de: {file_path_budget}")
         df_orcamento = carregar_orcamento(file_path_budget)
         if verbose:
             logger.info(f"   ✅ Orçamento carregado: {len(df_orcamento)} itens")
@@ -1173,11 +1164,14 @@ def validate_lpu(
 def main():
     """Função principal para execução direta do módulo."""
     # Configurar caminhos padrão
-    base_dir = Path(__file__).parents[3]
-    path_file_budget = Path(base_dir, settings.get("module_validator_lpu.file_path_budget"))
-    path_file_lpu = Path(base_dir, settings.get("module_validator_lpu.file_path_lpu"))
-    output_dir = Path(base_dir, settings.get("module_validator_lpu.output_dir"))
-    output_file = settings.get("module_validator_lpu.file_path_result")
+    base_dir = Path(__file__).parents[5]
+    path_file_budget = Path(base_dir, 
+                            settings.get("module_validator_lpu.file_path_budget"))
+    path_file_lpu = Path(base_dir, 
+                         settings.get("module_validator_lpu.file_path_lpu"))
+    output_dir = Path(base_dir, 
+                      settings.get("module_validator_lpu.output_dir"))
+    output_file = settings.get("module_validator_lpu.file_path_output")
 
     logger.debug(f"Orçamento: {path_file_budget}")
     logger.debug(f"LPU: {path_file_lpu}")

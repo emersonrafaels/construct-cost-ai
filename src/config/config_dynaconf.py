@@ -34,6 +34,7 @@ def get_settings() -> Dynaconf:
     settings = Dynaconf(
         settings_files=[
             Path(CONFIG_PATH, "settings.toml"),
+            Path(CONFIG_PATH, "settings_budget_reader.toml"),
             Path(CONFIG_PATH, ".secrets.toml"),
         ],
         environments=True,  # Enable multiple environments like development, production
@@ -49,3 +50,9 @@ settings.validators.register(
     Validator("stackspot_client_secret", must_exist=True)
 )
 """
+
+if __name__ == "__main__":
+    # Test loading settings
+    settings = get_settings()
+    print("Loaded settings:")
+    print(settings.as_dict())
