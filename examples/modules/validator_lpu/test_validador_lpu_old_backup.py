@@ -19,7 +19,7 @@ from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     carregar_lpu,
     cruzar_orcamento_lpu,
     calcular_divergencias,
-    ValidadorLPUError,
+    ValidatorLPUError,
 )
 import pandas as pd
 
@@ -315,7 +315,7 @@ def executar_validacao(
 
         return df_resultado if not filtros_aplicados else df_filtrado
 
-    except ValidadorLPUError as e:
+    except ValidatorLPUError as e:
         print(f"\n❌ ERRO NA VALIDAÇÃO: {e}\n")
         return None
     except Exception as e:
@@ -348,7 +348,7 @@ def exemplo_1_validacao_completa():
 
         return df_resultado
 
-    except ValidadorLPUError as e:
+    except ValidatorLPUError as e:
         print(f"\n❌ Erro na validação: {e}")
         return None
 
@@ -425,7 +425,7 @@ def exemplo_2_analise_divergencias():
 
         return df_resultado
 
-    except ValidadorLPUError as e:
+    except ValidatorLPUError as e:
         print(f"\n❌ Erro na validação: {e}")
         return None
 
@@ -496,7 +496,7 @@ def exemplo_3_filtros_customizados():
 
         return df_resultado
 
-    except ValidadorLPUError as e:
+    except ValidatorLPUError as e:
         print(f"\n❌ Erro na validação: {e}")
         return None
 
@@ -541,7 +541,7 @@ def exemplo_4_uso_modular():
 
         return df_resultado
 
-    except ValidadorLPUError as e:
+    except ValidatorLPUError as e:
         print(f"\n❌ Erro: {e}")
         return None
 

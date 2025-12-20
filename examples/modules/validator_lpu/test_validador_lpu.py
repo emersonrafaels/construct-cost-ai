@@ -30,7 +30,7 @@ from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     carregar_lpu,
     cruzar_orcamento_lpu,
     calcular_divergencias,
-    ValidadorLPUError,
+    ValidatorLPUError,
 )
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
@@ -330,7 +330,7 @@ def executar_validacao(
 
         return df_resultado if not filtros_aplicados else df_filtrado
 
-    except ValidadorLPUError as e:
+    except ValidatorLPUError as e:
         logger.error(f"ERRO NA VALIDAÇÃO: {e}")
         return None
     except Exception as e:

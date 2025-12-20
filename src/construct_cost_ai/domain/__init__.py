@@ -17,7 +17,7 @@ from construct_cost_ai.domain.validators.lpu.validator_lpu import (
     cruzar_orcamento_lpu,
     calcular_divergencias,
     salvar_resultado,
-    ValidadorLPUError,
+    ValidatorLPUError,
     ArquivoNaoEncontradoError,
     ColunasFaltandoError,
 )
@@ -39,7 +39,7 @@ __all__ = [
     "cruzar_orcamento_lpu",
     "calcular_divergencias",
     "salvar_resultado",
-    "ValidadorLPUError",
+    "ValidatorLPUError",
     "ArquivoNaoEncontradoError",
     "ColunasFaltandoError",
 ]
