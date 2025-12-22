@@ -17,8 +17,11 @@ sheet_name_budget_metadata = "Metadata"
 file_path_lpu = "data/inputs/BASE_LPU.xlsx"
 sheet_name_budget_lpu = "LPU"
 
-# Colunas obrigatórias
-required_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "QUANTIDADE", "SOURCE_FILE", "SHEET_NAME"]
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"ID" = "object", "NOME" = "object", "UNIDADE" = "object", "PREÇO LPU" = "float64", "QUANTIDADE" = "float64", "SOURCE_FILE" = "object", "SHEET_NAME" = "object"}
+column_quantity = "QUANTIDADE"
+column_unit_price = "PREÇO LPU"
+column_total_value = "VALOR TOTAL"
 
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"

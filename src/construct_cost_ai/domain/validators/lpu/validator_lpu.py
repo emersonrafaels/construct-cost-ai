@@ -1,9 +1,9 @@
 """
-LPU Validation Module - Checks discrepancies between budget and price base.
+Módulo de Validação LPU - Verifica discrepâncias entre orçamento e base de preços.
 
-This module performs reconciliation between the budget sent by the construction company
-and the official LPU (Unit Price List) database, identifying discrepancies
-in values with configurable tolerance.
+Este módulo realiza a conciliação entre o orçamento enviado pela construtora
+e a base de dados oficial da LPU (Lista de Preços Unitários), identificando discrepâncias
+nos valores com tolerância configurável.
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
@@ -21,106 +21,109 @@ import sys
 
 import pandas as pd
 
-# Add the src directory to the path
+# Adiciona o diretório src ao path
 base_dir = Path(__file__).parents[5]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
-from utils.data.data_functions import read_data
+from utils.data.data_functions import read_data, export_data, cast_columns
 
 settings = get_settings()
 
 
 class ValidatorLPUError(Exception):
-    """Base exception for LPU validator errors."""
+    """Exceção base para erros do validador LPU."""
 
     pass
 
 
 class FileNotFoundError(ValidatorLPUError):
-    """Exception for file not found."""
+    """Exceção para arquivo não encontrado."""
 
     pass
 
 
 class MissingColumnsError(ValidatorLPUError):
-    """Exception for missing mandatory columns."""
+    """Exceção para colunas obrigatórias ausentes."""
 
     pass
 
 
 def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
     """
-    Loads the budget file.
+    Carrega o arquivo de orçamento.
 
     Args:
-        path: Path to the budget file (Excel or CSV)
+        path: Caminho para o arquivo de orçamento (Excel ou CSV)
 
     Returns:
-        DataFrame with the loaded budget
+        DataFrame com o orçamento carregado
 
     Raises:
-        FileNotFoundError: If the file is not found
-        MissingColumnsError: If mandatory columns are missing
+        FileNotFoundError: Se o arquivo não for encontrado
+        MissingColumnsError: Se colunas obrigatórias estiverem ausentes
     """
     file_path = Path(file_path)
 
     if not file_path.exists():
-        raise FileNotFoundError(f"Budget file not found: {file_path}")
+        raise FileNotFoundError(f"Arquivo de orçamento não encontrado: {file_path}")
 
-    # Mandatory columns
-    required_columns = settings.get("module_validator_lpu.required_columns", [])
+    # Colunas obrigatórias
+    required_columns = settings.get("module_validator_lpu.required_columns_with_types", [])
+
+    # Coluna valor total
+    column_total_value = settings.get("module_validator_lpu.column_total_value", "VALOR TOTAL")
 
     try:
         df = read_data(file_path=file_path, 
                        sheet_name=settings.get("module_validator_lpu.sheet_name_budget_table", 
                                                "Tables"))
     except Exception as e:
-        raise ValidatorLPUError(f"Error loading budget: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
 
-    # Validate mandatory columns
-    empty_columns = set(required_columns) - set(df.columns)
+    # Valida colunas obrigatórias
+    empty_columns = set(required_columns.keys()) - set(df.columns)
     if empty_columns:
         raise MissingColumnsError(
-            f"Mandatory columns missing in the budget: {', '.join(empty_columns)}"
+            f"Colunas obrigatórias ausentes no orçamento: {', '.join(empty_columns)}"
         )
 
-    # Ensure correct types
-    df["cod_item"] = df["cod_item"].astype(str)
-    df["unidade"] = df["unidade"].astype(str)
-    df["qtde"] = pd.to_numeric(df["qtde"], errors="coerce")
-    df["unitario_orcado"] = pd.to_numeric(df["unitario_orcado"], errors="coerce")
+    # Garante tipos corretos usando cast_columns
+    try:
+        df = cast_columns(df, required_columns)
+    except ValueError as e:
+        raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
-    # If total_orcado does not exist, calculate it
-    if "total_orcado" not in df.columns:
-        df["total_orcado"] = df["qtde"] * df["unitario_orcado"]
+    # Se total_orcado não existir, calcula
+    if column_total_value not in df.columns:
+        df[column_total_value] = df[settings.get("module_validator_lpu.column_quantity", "qtde")] * df[settings.get("module_validator_lpu.column_unit_price", "unitario_orcado")]
     else:
-        df["total_orcado"] = pd.to_numeric(df["total_orcado"], errors="coerce")
+        df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
 
     return df
 
 
 def load_lpu(path: Union[str, Path]) -> pd.DataFrame:
     """
-    Loads the LPU base file.
+    Carrega o arquivo base da LPU.
 
     Args:
-        path: Path to the LPU file (Excel or CSV)
+        path: Caminho para o arquivo da LPU (Excel ou CSV)
 
     Returns:
-        DataFrame with the loaded LPU base
+        DataFrame com a base da LPU carregada
 
     Raises:
-        FileNotFoundError: If the file is not found
-        MissingColumnsError: If mandatory columns are missing
+        FileNotFoundError: Se o arquivo não for encontrado
+        MissingColumnsError: Se colunas obrigatórias estiverem ausentes
     """
     path = Path(path)
 
     if not path.exists():
-        raise FileNotFoundError(f"LPU file not found: {path}")
+        raise FileNotFoundError(f"Arquivo LPU não encontrado: {path}")
 
-    # Mandatory columns
+    # Colunas obrigatórias
     mandatory_columns = [
         "cod_item",
         "descricao",
@@ -135,18 +138,18 @@ def load_lpu(path: Union[str, Path]) -> pd.DataFrame:
         elif path.suffix == ".csv":
             df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         else:
-            raise ValidatorLPUError(f"Unsupported format: {path.suffix}")
+            raise ValidatorLPUError(f"Formato não suportado: {path.suffix}")
     except Exception as e:
-        raise ValidatorLPUError(f"Error loading LPU: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar LPU: {e}")
 
-    # Validate mandatory columns
+    # Valida colunas obrigatórias
     missing_columns = set(mandatory_columns) - set(df.columns)
     if missing_columns:
         raise MissingColumnsError(
-            f"Mandatory columns missing in LPU: {', '.join(missing_columns)}"
+            f"Colunas obrigatórias ausentes na LPU: {', '.join(missing_columns)}"
         )
 
-    # Ensure correct types
+    # Garante tipos corretos
     df["cod_item"] = df["cod_item"].astype(str)
     df["unidade"] = df["unidade"].astype(str)
     df["unitario_lpu"] = pd.to_numeric(df["unitario_lpu"], errors="coerce")
@@ -156,102 +159,102 @@ def load_lpu(path: Union[str, Path]) -> pd.DataFrame:
 
 def cross_budget_lpu(budget: pd.DataFrame, lpu: pd.DataFrame) -> pd.DataFrame:
     """
-    Merges budget and LPU using cod_item + unidade.
+    Mescla orçamento e LPU usando cod_item + unidade.
 
     Args:
-        budget: Budget DataFrame
-        lpu: LPU base DataFrame
+        budget: DataFrame do orçamento
+        lpu: DataFrame da base LPU
 
     Returns:
-        Combined DataFrame with INNER JOIN
+        DataFrame combinado com INNER JOIN
 
     Raises:
-        ValidatorLPUError: If the merge results in an empty DataFrame
+        ValidatorLPUError: Se a mesclagem resultar em um DataFrame vazio
     """
-    # Merge on cod_item + unidade
+    # Mescla em cod_item + unidade
     merged_df = pd.merge(
         budget, lpu, on=["cod_item", "unidade"], how="inner", suffixes=("_orc", "_lpu")
     )
 
     if merged_df.empty:
         raise ValidatorLPUError(
-            "No match found between budget and LPU. "
-            "Check if cod_item and unidade are consistent."
+            "Nenhuma correspondência encontrada entre orçamento e LPU. "
+            "Verifique se cod_item e unidade estão consistentes."
         )
 
-    # Calculate items not found in LPU
+    # Calcula itens não encontrados na LPU
     items_not_in_lpu = len(budget) - len(merged_df)
     if items_not_in_lpu > 0:
-        logger.warning(f"⚠️  Attention: {items_not_in_lpu} budget items not found in LPU")
+        logger.warning(f"⚠️  Atenção: {items_not_in_lpu} itens do orçamento não encontrados na LPU")
 
     return merged_df
 
 
 def calculate_discrepancies(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calculates discrepancies between budget and LPU.
+    Calcula discrepâncias entre orçamento e LPU.
 
-    Adds the columns:
+    Adiciona as colunas:
     - valor_total_orcado: qtde * unitario_orcado
     - dif_unitario: unitario_orcado - unitario_lpu
     - dif_total: dif_unitario * qtde
     - perc_dif: (dif_unitario / unitario_lpu) * 100
-    - status_conciliacao: discrepancy classification
+    - status_conciliacao: classificação da discrepância
 
-    Classification rules (tolerance configurable in settings.toml):
-    - "OK": -tolerance <= discrepancy <= +tolerance
-    - "For reimbursement": discrepancy > +tolerance
-    - "Below LPU": discrepancy < -tolerance
+    Regras de classificação (tolerância configurável em settings.toml):
+    - "OK": -tolerancia <= discrepância <= +tolerancia
+    - "Para ressarcimento": discrepância > +tolerancia
+    - "Abaixo LPU": discrepância < -tolerancia
 
     Args:
-        df: DataFrame with crossed data
+        df: DataFrame com dados cruzados
 
     Returns:
-        DataFrame with calculated discrepancy columns
+        DataFrame com colunas de discrepância calculadas
     """
     df = df.copy()
 
-    # Get tolerance from settings
+    # Obtém tolerância das configurações
     tolerance = settings.validador_lpu.tolerancia_percentual
-    logger.debug(f"Calculating discrepancies with tolerance of {tolerance}%")
+    logger.debug(f"Calculando discrepâncias com tolerância de {tolerance}%")
 
-    # Calculate total budgeted value (revalidate)
+    # Calcula valor total orçado (revalida)
     df["valor_total_orcado"] = df["qtde"] * df["unitario_orcado"]
 
-    # Check consistency of total_orcado if it exists
+    # Verifica consistência de total_orcado se existir
     if "total_orcado" in df.columns:
         inconsistencies = (abs(df["total_orcado"] - df["valor_total_orcado"]) > 0.01).sum()
         if inconsistencies > 0:
             logger.warning(
-                f"⚠️  Attention: {inconsistencies} inconsistencies in total_orcado detected"
+                f"⚠️  Atenção: {inconsistencies} inconsistências em total_orcado detectadas"
             )
 
-    # Calculate differences
+    # Calcula diferenças
     df["dif_unitario"] = df["unitario_orcado"] - df["unitario_lpu"]
     df["dif_total"] = df["dif_unitario"] * df["qtde"]
 
-    # Calculate percentage (handling division by zero)
+    # Calcula porcentagem (tratando divisão por zero)
     df["perc_dif"] = 0.0
     valid_mask = df["unitario_lpu"] != 0
     df.loc[valid_mask, "perc_dif"] = (
         df.loc[valid_mask, "dif_unitario"] / df.loc[valid_mask, "unitario_lpu"]
     ) * 100
 
-    # Classification WITH TOLERANCE (configurable)
+    # Classificação COM TOLERÂNCIA (configurável)
     def classify_discrepancy(row):
         perc = row["perc_dif"]
         if -tolerance <= perc <= tolerance:
             return "OK"
         elif perc > tolerance:
-            return "For reimbursement"
+            return "Para ressarcimento"
         else:
-            return "Below LPU"
+            return "Abaixo LPU"
 
     df["status_conciliacao"] = df.apply(classify_discrepancy, axis=1)
 
-    logger.debug(f"Discrepancies calculated for {len(df)} items")
+    logger.debug(f"Discrepâncias calculadas para {len(df)} itens")
 
-    # Round values to 2 decimal places
+    # Arredonda valores para 2 casas decimais
     columns_to_round = [
         "unitario_orcado",
         "unitario_lpu",
@@ -269,23 +272,23 @@ def calculate_discrepancies(df: pd.DataFrame) -> pd.DataFrame:
 
 def save_results(df: pd.DataFrame, output_dir: Union[str, Path], base_name: str = None) -> None:
     """
-    Saves the results in Excel and CSV formats.
+    Salva os resultados nos formatos Excel e CSV.
 
     Args:
-        df: DataFrame with validation results
-        output_dir: Output directory
-        base_name: Base name for the files (default configured in settings)
+        df: DataFrame com os resultados da validação
+        output_dir: Diretório de saída
+        base_name: Nome base para os arquivos (padrão configurado nas configurações)
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Use base name from settings if not provided
+    # Usa nome base das configurações se não fornecido
     if base_name is None:
         base_name = settings.validador_lpu.arquivo_excel_basico.replace(".xlsx", "")
 
-    logger.debug(f"Saving results to {output_dir}")
+    logger.debug(f"Salvando resultados em {output_dir}")
 
-    # Define column order
+    # Define ordem das colunas
     ordered_columns = [
         "cod_upe",
         "cod_item",
@@ -309,21 +312,21 @@ def save_results(df: pd.DataFrame, output_dir: Union[str, Path], base_name: str 
         "observacoes_lpu",
     ]
 
-    # Select only existing columns
+    # Seleciona apenas colunas existentes
     existing_columns = [col for col in ordered_columns if col in df.columns]
     output_df = df[existing_columns].copy()
 
-    # Save as Excel with formatting
+    # Salva como Excel com formatação
     excel_filename = settings.validador_lpu.arquivo_excel_basico
     excel_path = output_dir / excel_filename
 
-    logger.debug(f"Generating Excel file: {excel_filename}")
+    logger.debug(f"Gerando arquivo Excel: {excel_filename}")
 
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        # Main sheet with complete validation
+        # Planilha principal com validação completa
         output_df.to_excel(writer, sheet_name="Complete Validation", index=False)
 
-        # Summary sheet by status
+        # Planilha de resumo por status
         status_summary = (
             df.groupby("status_conciliacao")
             .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
@@ -332,7 +335,7 @@ def save_results(df: pd.DataFrame, output_dir: Union[str, Path], base_name: str 
         status_summary.columns = ["Status", "Item Count", "Total Difference (R$)", "Total Budgeted Value (R$)"]
         status_summary.to_excel(writer, sheet_name="Status Summary", index=False)
 
-        # Summary sheet by category
+        # Planilha de resumo por categoria
         if "categoria" in df.columns:
             category_summary = (
                 df.groupby(["categoria", "status_conciliacao"])
@@ -342,7 +345,7 @@ def save_results(df: pd.DataFrame, output_dir: Union[str, Path], base_name: str 
             category_summary.columns = ["Category", "Status", "Item Count", "Total Difference (R$)"]
             category_summary.to_excel(writer, sheet_name="Category Summary", index=False)
 
-        # Summary sheet by UPE
+        # Planilha de resumo por UPE
         if "cod_upe" in df.columns:
             upe_summary = (
                 df.groupby(["cod_upe", "status_conciliacao"])
@@ -352,38 +355,38 @@ def save_results(df: pd.DataFrame, output_dir: Union[str, Path], base_name: str 
             upe_summary.columns = ["UPE Code", "Status", "Item Count", "Total Difference (R$)"]
             upe_summary.to_excel(writer, sheet_name="UPE Summary", index=False)
 
-    logger.success(f"✅ Excel saved at: {excel_path}")
+    logger.success(f"✅ Excel salvo em: {excel_path}")
 
-    # Save as CSV
+    # Salva como CSV
     csv_filename = settings.validador_lpu.arquivo_csv
     csv_path = output_dir / csv_filename
     output_df.to_csv(csv_path, index=False, sep=";", encoding="utf-8-sig")
-    logger.success(f"✅ CSV saved at: {csv_path}")
+    logger.success(f"✅ CSV salvo em: {csv_path}")
 
 
 def generate_html_report(
     df: pd.DataFrame, output_dir: Union[str, Path], base_name: str = None
 ) -> None:
     """
-    Generates an HTML report for LPU validation.
+    Gera um relatório HTML para validação LPU.
 
     Args:
-        df (pd.DataFrame): DataFrame containing the validation results.
-        output_dir (Union[str, Path]): Directory to save the HTML report.
-        base_name (str): Base name for the HTML file. Defaults to None.
+        df (pd.DataFrame): DataFrame contendo os resultados da validação.
+        output_dir (Union[str, Path]): Diretório para salvar o relatório HTML.
+        base_name (str): Nome base para o arquivo HTML. Padrão é None.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Use base name from settings if not provided
+    # Usa nome base das configurações se não fornecido
     if base_name is None:
         base_name = settings.validador_lpu.arquivo_html.replace(".html", "")
 
     html_path = output_dir / f"{base_name}.html"
 
-    logger.debug(f"Generating HTML report: {base_name}.html")
+    logger.debug(f"Gerando relatório HTML: {base_name}.html")
 
-    # General statistics
+    # Estatísticas gerais
     total_items = len(df)
     items_ok = (df["status_conciliacao"] == "OK").sum()
     items_refund = (df["status_conciliacao"] == "Para ressarcimento").sum()
@@ -393,7 +396,7 @@ def generate_html_report(
     total_divergence = df["dif_total"].sum()
     refund_divergence = df[df["status_conciliacao"] == "Para ressarcimento"]["dif_total"].sum()
 
-    # Top 10 divergences
+    # Top 10 divergências
     df["perc_dif_abs"] = abs(df["perc_dif"])
     top_10_abs = df.nlargest(10, "dif_total")[
         [
@@ -418,7 +421,7 @@ def generate_html_report(
         ]
     ]
 
-    # Status summary
+    # Resumo por status
     status_summary = (
         df.groupby("status_conciliacao")
         .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
@@ -426,7 +429,7 @@ def generate_html_report(
     )
     status_summary.columns = ["Status", "Item Count", "Total Difference (R$)", "Total Budgeted Value (R$)"]
 
-    # Category summary
+    # Resumo por categoria
     category_summary = None
     if "categoria" in df.columns:
         category_summary = (
@@ -436,7 +439,7 @@ def generate_html_report(
         )
         category_summary.columns = ["Category", "Status", "Item Count", "Total Difference (R$)"]
 
-    # UPE summary
+    # Resumo por UPE
     upe_summary = None
     if "cod_upe" in df.columns:
         upe_summary = (
@@ -446,14 +449,14 @@ def generate_html_report(
         )
         upe_summary.columns = ["UPE Code", "Status", "Item Count", "Total Difference (R$)"]
 
-    # Create HTML
+    # Cria HTML
     html_content = f"""
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPU Validation Report</title>
+    <title>Relatório de Validação LPU</title>
     <style>
         * {{
             margin: 0;
@@ -653,122 +656,122 @@ def generate_html_report(
 <body>
     <div class="container">
         <div class="header">
-            <h1>📋 LPU Validation Report</h1>
-            <p>Budget vs Reference Price Base Reconciliation</p>
-            <p style="font-size: 0.9em; margin-top: 10px;">Generated on: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
+            <h1>📋 Relatório de Validação LPU</h1>
+            <p>Conciliação de Orçamento vs Base de Preços de Referência</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Gerado em: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
         </div>
         
         <div class="content">
-            <!-- GENERAL STATISTICS -->
+            <!-- ESTATÍSTICAS GERAIS -->
             <div class="section">
-                <h2>General Statistics</h2>
+                <h2>Estatísticas Gerais</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">Total Items</div>
+                        <div class="stat-label">Total de Itens</div>
                         <div class="stat-value">{total_items}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Items OK</div>
+                        <div class="stat-label">Itens OK</div>
                         <div class="stat-value stat-ok">{items_ok} ({items_ok/total_items*100:.1f}%)</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">For Refund</div>
+                        <div class="stat-label">Para Ressarcimento</div>
                         <div class="stat-value stat-warning">{items_refund} ({items_refund/total_items*100:.1f}%)</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Below LPU</div>
+                        <div class="stat-label">Abaixo LPU</div>
                         <div class="stat-value stat-danger">{items_below} ({items_below/total_items*100:.1f}%)</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Total Budgeted Value</div>
+                        <div class="stat-label">Valor Total Orçado</div>
                         <div class="stat-value">R$ {total_value:,.2f}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Total Divergence</div>
+                        <div class="stat-label">Divergência Total</div>
                         <div class="stat-value stat-warning">R$ {total_divergence:,.2f}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Potential Refund</div>
+                        <div class="stat-label">Potencial Ressarcimento</div>
                         <div class="stat-value stat-danger">R$ {refund_divergence:,.2f}</div>
                     </div>
                 </div>
             </div>
             
-            <!-- STATUS SUMMARY -->
+            <!-- RESUMO POR STATUS -->
             <div class="section">
-                <h2>Status Summary</h2>
+                <h2>Resumo por Status</h2>
                 {status_summary.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: f'R$ {x:,.2f}' if pd.notna(x) else '')}
             </div>
             
-            <!-- TOP 10 ABSOLUTE DIVERGENCES -->
+            <!-- TOP 10 DIVERGÊNCIAS ABSOLUTAS -->
             <div class="section">
-                <h2>🔴 Top 10 Largest Absolute Divergences</h2>
+                <h2>🔴 Top 10 Maiores Divergências Absolutas</h2>
                 {top_10_abs.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: f'R$ {x:,.2f}' if pd.notna(x) else '')}
             </div>
             
-            <!-- TOP 10 PERCENTUAL DIVERGENCES -->
+            <!-- TOP 10 DIVERGÊNCIAS PERCENTUAIS -->
             <div class="section">
-                <h2>📈 Top 10 Largest Percentual Divergences</h2>
+                <h2>📈 Top 10 Maiores Divergências Percentuais</h2>
                 {top_10_perc.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: f'{x:.2f}%' if 'perc' in str(x) else (f'R$ {x:,.2f}' if pd.notna(x) else ''))}
             </div>
-            {"<!-- CATEGORY SUMMARY -->" if category_summary is not None else ""}
+            {"<!-- RESUMO POR CATEGORIA -->" if category_summary is not None else ""}
             {f'''<div class="section">
-                <h2>Category Summary</h2>
+                <h2>Resumo por Categoria</h2>
                 {category_summary.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: 'R$ {x:,.2f}' if pd.notna(x) else '')}
             </div>''' if category_summary is not None else ""}
-            {"<!-- UPE SUMMARY -->" if upe_summary is not None else ""}
+            {"<!-- RESUMO POR UPE -->" if upe_summary is not None else ""}
             {f'''<div class="section">
-                <h2>UPE Summary</h2>
+                <h2>Resumo por UPE</h2>
                 {upe_summary.to_html(index=False, classes='dataframe', escape=False, float_format=lambda x: 'R$ {x:,.2f}' if pd.notna(x) else '')}
             </div>''' if upe_summary is not None else ""}
         </div>
         
         <div class="footer">
-            <p>Report automatically generated by the LPU Validator system</p>
-            <p style="margin-top: 5px; font-size: 0.9em;">Construct Cost AI - Intelligent Construction Budget Verifier</p>
+            <p>Relatório gerado automaticamente pelo sistema Validador LPU</p>
+            <p style="margin-top: 5px; font-size: 0.9em;">Construct Cost AI - Verificador Inteligente de Obras</p>
         </div>
     </div>
 </body>
 </html>
 """
 
-    # Save HTML
+    # Salvar HTML
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html_content)
 
-    logger.success(f"✅ HTML report saved at: {html_path}")
+    logger.success(f"✅ Relatório HTML salvo em: {html_path}")
 
 
 def generate_complete_excel_report(
     df: pd.DataFrame, output_dir: Union[str, Path], base_name: str = None
 ) -> None:
     """
-    Generates a complete Excel report with all analyses in separate sheets.
+    Gera um relatório Excel completo com todas as análises em planilhas separadas.
 
     Args:
-        df: DataFrame with validation results
-        output_dir: Output directory
-        base_name: Base name for the Excel file (default configured in settings)
+        df: DataFrame com os resultados da validação
+        output_dir: Diretório de saída
+        base_name: Nome base para o arquivo Excel (padrão configurado nas configurações)
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Use base name from settings if not provided
+    # Usa nome base das configurações se não fornecido
     if base_name is None:
         base_name = settings.validador_lpu.arquivo_excel_completo.replace(".xlsx", "")
 
     excel_path = output_dir / f"{base_name}.xlsx"
 
-    logger.debug(f"Generating complete Excel report: {base_name}.xlsx")
+    logger.debug(f"Gerando relatório Excel completo: {base_name}.xlsx")
 
-    # Prepare data
+    # Prepara dados
     df["perc_dif_abs"] = abs(df["perc_dif"])
 
-    # Get top_n configuration from settings
+    # Obtém configuração top_n das configurações
     top_n = settings.validador_lpu.top_n_divergencias
     top_n_extended = settings.validador_lpu.top_n_divergencias_extended
 
-    # Top divergences
+    # Top divergências
     top_10_abs = df.nlargest(top_n, "dif_total")[
         [
             "cod_item",
@@ -815,7 +818,7 @@ def generate_complete_excel_report(
         ]
     ]
 
-    # Statistics
+    # Estatísticas
     total_items = len(df)
     items_ok = (df["status_conciliacao"] == "OK").sum()
     items_refund = (df["status_conciliacao"] == "Para ressarcimento").sum()
@@ -826,19 +829,19 @@ def generate_complete_excel_report(
     refund_divergence = df[df["status_conciliacao"] == "Para ressarcimento"]["dif_total"].sum()
 
     stats_data = {
-        "Metric": [
-            "Total Items",
-            "Items OK",
-            "Items For Refund",
-            "Items Below LPU",
+        "Métrica": [
+            "Total de Itens",
+            "Itens OK",
+            "Itens Para Ressarcimento",
+            "Itens Abaixo LPU",
             "% OK",
-            "% For Refund",
-            "% Below LPU",
-            "Total Budgeted Value (R$)",
-            "Total Divergence (R$)",
-            "Potential Refund (R$)",
+            "% Para Ressarcimento",
+            "% Abaixo LPU",
+            "Valor Total Orçado (R$)",
+            "Divergência Total (R$)",
+            "Ressarcimento Potencial (R$)",
         ],
-        "Value": [
+        "Valor": [
             total_items,
             items_ok,
             items_refund,
@@ -853,7 +856,7 @@ def generate_complete_excel_report(
     }
     df_stats = pd.DataFrame(stats_data)
 
-    # Status summary
+    # Resumo por status
     status_summary = (
         df.groupby("status_conciliacao")
         .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
@@ -861,7 +864,7 @@ def generate_complete_excel_report(
     )
     status_summary.columns = ["Status", "Item Count", "Total Difference (R$)", "Total Budgeted Value (R$)"]
 
-    # Items for reimbursement
+    # Itens para ressarcimento
     items_for_refund = df[df["status_conciliacao"] == "Para ressarcimento"][
         [
             "cod_item",
@@ -877,7 +880,7 @@ def generate_complete_excel_report(
         ]
     ].sort_values("dif_total", ascending=False)
 
-    # Items below LPU
+    # Itens abaixo da LPU
     items_below_lpu = df[df["status_conciliacao"] == "Abaixo LPU"][
         [
             "cod_item",
@@ -893,35 +896,35 @@ def generate_complete_excel_report(
         ]
     ].sort_values("dif_total")
 
-    # Save as Excel
+    # Salva como Excel
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        # Sheet 1: General Statistics
+        # Planilha 1: Estatísticas Gerais
         df_stats.to_excel(writer, sheet_name="Statistics", index=False)
 
-        # Sheet 2: Status Summary
+        # Planilha 2: Resumo por Status
         status_summary.to_excel(writer, sheet_name="Status Summary", index=False)
 
-        # Sheet 3: Top 10 Divergences (Value)
+        # Planilha 3: Top 10 Divergências (Valor)
         top_10_abs.to_excel(writer, sheet_name="Top 10 Absolute Divergence", index=False)
 
-        # Sheet 4: Top 20 Divergences (Value)
+        # Planilha 4: Top 20 Divergências (Valor)
         top_20_abs.to_excel(writer, sheet_name="Top 20 Absolute Divergence", index=False)
 
-        # Sheet 5: Top 10 Divergences (%)
+        # Planilha 5: Top 10 Divergências (%)
         top_10_perc.to_excel(writer, sheet_name="Top 10 Percentual Divergence", index=False)
 
-        # Sheet 6: Top 20 Divergences (%)
+        # Planilha 6: Top 20 Divergências (%)
         top_20_perc.to_excel(writer, sheet_name="Top 20 Percentual Divergence", index=False)
 
-        # Sheet 7: Items for Refund
+        # Planilha 7: Itens para Ressarcimento
         items_for_refund.to_excel(
             writer, sheet_name="Items For Refund", index=False
         )
 
-        # Sheet 8: Items Below LPU
+        # Planilha 8: Itens Abaixo LPU
         items_below_lpu.to_excel(writer, sheet_name="Items Below LPU", index=False)
 
-        # Sheet 9: Category Summary (if exists)
+        # Planilha 9: Resumo por Categoria (se existir)
         if "categoria" in df.columns:
             category_summary = (
                 df.groupby(["categoria", "status_conciliacao"])
@@ -931,7 +934,7 @@ def generate_complete_excel_report(
             category_summary.columns = ["Category", "Status", "Item Count", "Total Difference (R$)"]
             category_summary.to_excel(writer, sheet_name="Category Summary", index=False)
 
-            # Total divergence by category
+            # Divergência total por categoria
             divergence_by_category = (
                 df.groupby("categoria")
                 .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
@@ -941,7 +944,7 @@ def generate_complete_excel_report(
             divergence_by_category.columns = ["Category", "Item Count", "Total Difference (R$)", "Total Value (R$)"]
             divergence_by_category.to_excel(writer, sheet_name="Divergence by Category", index=False)
 
-        # Sheet 10: UPE Summary (if exists)
+        # Planilha 10: Resumo por UPE (se existir)
         if "cod_upe" in df.columns:
             upe_summary = (
                 df.groupby(["cod_upe", "status_conciliacao"])
@@ -952,7 +955,7 @@ def generate_complete_excel_report(
             upe_summary.columns = ["UPE Code", "Status", "Item Count", "Total Difference (R$)"]
             upe_summary.to_excel(writer, sheet_name="UPE Summary", index=False)
 
-            # Total divergence by UPE
+            # Divergência total por UPE
             divergence_by_upe = (
                 df.groupby("cod_upe")
                 .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
@@ -962,18 +965,18 @@ def generate_complete_excel_report(
             divergence_by_upe.columns = ["UPE Code", "Item Count", "Total Difference (R$)", "Total Value (R$)"]
             divergence_by_upe.to_excel(writer, sheet_name="Divergence by UPE", index=False)
 
-        # Sheet 11: Complete Data
+        # Planilha 11: Dados Completos
         df.to_excel(writer, sheet_name="Complete Data", index=False)
 
-    logger.success(f"✅ Complete Excel report saved at: {excel_path}")
+    logger.success(f"✅ Relatório Excel completo salvo em: {excel_path}")
 
 
 def get_default_settings(key):
     """
-    Returns the default values of the LPU validator settings.
+    Retorna os valores padrão das configurações do validador LPU.
 
     Returns:
-        Dictionary with default settings
+        Dicionário com configurações padrão
     """
     return {
         "default_budget_path": settings.validador_lpu.caminho_padrao_orcamento,
@@ -997,88 +1000,88 @@ def validate_lpu(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Orchestrator function for LPU validation.
+    Função orquestradora para validação LPU.
 
-    Performs the entire validation flow:
-    1. Loads budget and LPU
-    2. Crosses the data (INNER JOIN on cod_item + unidade)
-    3. Calculates discrepancies with configurable tolerance
-    4. Classifies items (OK, For reimbursement, Below LPU)
-    5. Saves results in Excel, CSV, and HTML formats
+    Realiza todo o fluxo de validação:
+    1. Carrega orçamento e LPU
+    2. Cruza os dados (INNER JOIN em cod_item + unidade)
+    3. Calcula discrepâncias com tolerância configurável
+    4. Classifica itens (OK, Para ressarcimento, Abaixo LPU)
+    5. Salva resultados em formatos Excel, CSV e HTML
 
     Args:
-        file_path_budget: Path to the budget file (default in settings)
-        file_path_lpu: Path to the LPU file (default in settings)
-        output_dir: Directory to save results (default in settings)
-        output_file_name: Base name for the output files (without extension)
-        verbose: If True, displays statistics on the console
+        file_path_budget: Caminho para o arquivo de orçamento (padrão nas configurações)
+        file_path_lpu: Caminho para o arquivo da LPU (padrão nas configurações)
+        output_dir: Diretório para salvar resultados (padrão nas configurações)
+        output_file_name: Nome base para os arquivos de saída (sem extensão)
+        verbose: Se True, exibe estatísticas no console
 
     Returns:
-        DataFrame with complete validation results
+        DataFrame com os resultados completos da validação
 
     Raises:
-        ValidatorLPUError: In case of validation error
+        ValidatorLPUError: Em caso de erro na validação
     """
 
     if verbose:
         print("-" * 50)
-        logger.info("LPU VALIDATOR - Budget vs Price Base Reconciliation")
-        logger.info(f"Configured tolerance: {settings.get('module_validator_lpu.tol_percentile')}%")
+        logger.info("VALIDADOR LPU - Conciliação Orçamento vs Base de Preços")
+        logger.info(f"Tolerância configurada: {settings.get('module_validator_lpu.tol_percentile')}%")
         print("-" * 50)
 
-    # 1. Load data
+    # 1. Carrega dados
     if verbose:
-        logger.info("📂 Loading files...")
+        logger.info("📂 Carregando arquivos...")
 
     try:
-        logger.info(f"Loading budget from: {file_path_budget}")
+        logger.info(f"Carregando orçamento de: {file_path_budget}")
         df_budget = load_budget(file_path_budget)
         if verbose:
-            logger.info(f"   ✅ Budget loaded: {len(df_budget)} items")
+            logger.info(f"   ✅ Orçamento carregado: {len(df_budget)} itens")
     except Exception as e:
-        logger.error(f"Error loading budget: {e}")
-        raise ValidatorLPUError(f"Error loading budget: {e}")
+        logger.error(f"Erro ao carregar orçamento: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
 
     try:
-        logger.debug(f"Loading LPU from: {file_path_lpu}")
+        logger.debug(f"Carregando LPU de: {file_path_lpu}")
         df_lpu = load_lpu(file_path_lpu)
         if verbose:
-            logger.info(f"   ✅ LPU loaded: {len(df_lpu)} items")
+            logger.info(f"   ✅ LPU carregada: {len(df_lpu)} itens")
     except Exception as e:
-        logger.error(f"Error loading LPU: {e}")
-        raise ValidatorLPUError(f"Error loading LPU: {e}")
+        logger.error(f"Erro ao carregar LPU: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar LPU: {e}")
 
-    # 2. Cross data
+    # 2. Cruza dados
     if verbose:
-        logger.info("🔗 Crossing budget with LPU...")
+        logger.info("🔗 Cruzando orçamento com LPU...")
 
     try:
         df_crossed = cross_budget_lpu(df_budget, df_lpu)
         if verbose:
-            logger.info(f"   ✅ Crossed items: {len(df_crossed)}")
+            logger.info(f"   ✅ Itens cruzados: {len(df_crossed)}")
     except Exception as e:
-        logger.error(f"Error crossing data: {e}")
-        raise ValidatorLPUError(f"Error crossing data: {e}")
+        logger.error(f"Erro ao cruzar dados: {e}")
+        raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
 
     if verbose:
         logger.info("")
 
-    # 3. Calculate discrepancies
+    # 3. Calcula discrepâncias
     if verbose:
         logger.info(
-            f"🧮 Calculating discrepancies (tolerance {settings.validador_lpu.tolerancia_percentual}%)..."
+            f"🧮 Calculando discrepâncias (tolerância {settings.validador_lpu.tolerancia_percentual}%)..."
         )
 
     try:
         df_result = calculate_discrepancies(df_crossed)
     except Exception as e:
-        logger.error(f"Error calculating discrepancies: {e}")
-        raise ValidatorLPUError(f"Error calculating discrepancies: {e}")
+        logger.error(f"Erro ao calcular discrepâncias: {e}")
+        raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
 
-    # Statistics
+    # Estatísticas
     if verbose:
         logger.info("")
-        logger.info("📊 VALIDATION STATISTICS")
+        logger.info("📊 ESTATÍSTICAS DA VALIDAÇÃO")
         logger.info("-" * 80)
 
         total_items = len(df_result)
@@ -1086,12 +1089,12 @@ def validate_lpu(
         items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
         items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
 
-        logger.info(f"   Total items validated: {total_items}")
+        logger.info(f"   Total de itens validados: {total_items}")
         logger.info(f"   ✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
         logger.info(
-            f"   ⚠️  For reimbursement: {items_refund} ({items_refund/total_items*100:.1f}%)"
+            f"   ⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)"
         )
-        logger.info(f"   📉 Below LPU: {items_below} ({items_below/total_items*100:.1f}%)")
+        logger.info(f"   📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
         logger.info("")
 
         total_budgeted_value = df_result["valor_total_orcado"].sum()
@@ -1100,24 +1103,24 @@ def validate_lpu(
             df_result["status_conciliacao"] == "Para ressarcimento"
         ]["dif_total"].sum()
 
-        logger.info(f"   💰 Total budgeted value: R$ {total_budgeted_value:,.2f}")
-        logger.info(f"   💵 Total divergence: R$ {total_divergence:,.2f}")
-        logger.info(f"   💸 Potential refund: R$ {refund_divergence:,.2f}")
+        logger.info(f"   💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
+        logger.info(f"   💵 Divergência total: R$ {total_divergence:,.2f}")
+        logger.info(f"   💸 Ressarcimento potencial: R$ {refund_divergence:,.2f}")
         logger.info("")
 
-    # Register statistics in logger
-    logger.debug("📊 VALIDATION STATISTICS")
+    # Registra estatísticas no logger
+    logger.debug("📊 ESTATÍSTICAS DA VALIDAÇÃO")
     total_items = len(df_result)
     items_ok = (df_result["status_conciliacao"] == "OK").sum()
     items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
     items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
 
-    logger.debug(f"Total items validated: {total_items}")
+    logger.debug(f"Total de itens validados: {total_items}")
     logger.debug(f"✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
     logger.debug(
-        f"⚠️  For reimbursement: {items_refund} ({items_refund/total_items*100:.1f}%)"
+        f"⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)"
     )
-    logger.debug(f"📉 Below LPU: {items_below} ({items_below/total_items*100:.1f}%)")
+    logger.debug(f"📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
 
     total_budgeted_value = df_result["valor_total_orcado"].sum()
     total_divergence = df_result["dif_total"].sum()
@@ -1125,37 +1128,37 @@ def validate_lpu(
         "dif_total"
     ].sum()
 
-    logger.debug(f"💰 Total budgeted value: R$ {total_budgeted_value:,.2f}")
-    logger.debug(f"💵 Total divergence: R$ {total_divergence:,.2f}")
-    logger.debug(f"💸 Potential refund: R$ {refund_divergence:,.2f}")
+    logger.debug(f"💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
+    logger.debug(f"💵 Divergência total: R$ {total_divergence:,.2f}")
+    logger.debug(f"💸 Ressarcimento potencial: R$ {refund_divergence:,.2f}")
 
-    # 4. Save results
+    # 4. Salva resultados
     if verbose:
         logger.info("")
-        logger.info("💾 Saving results...")
+        logger.info("💾 Salvando resultados...")
 
     try:
-        # Save basic format (4 sheets)
+        # Salva formato básico (4 planilhas)
         save_results(df_result, output_dir)
 
-        # Save complete report in Excel (11+ sheets)
+        # Salva relatório completo em Excel (11+ planilhas)
         generate_complete_excel_report(df_result, output_dir)
 
-        # Save HTML report
+        # Salva relatório HTML
         generate_html_report(df_result, output_dir)
 
     except Exception as e:
-        logger.error(f"Error saving results: {e}")
-        raise ValidatorLPUError(f"Error saving results: {e}")
+        logger.error(f"Erro ao salvar resultados: {e}")
+        raise ValidatorLPUError(f"Erro ao salvar resultados: {e}")
 
     if verbose:
         logger.info("")
         logger.info("=" * 80)
-        logger.success("✅ VALIDATION COMPLETED SUCCESSFULLY!")
+        logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
         logger.info("=" * 80)
 
     logger.debug("=" * 80)
-    logger.success("✅ VALIDATION COMPLETED SUCCESSFULLY!")
+    logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
     logger.debug("=" * 80)
 
     return df_result
@@ -1169,28 +1172,28 @@ def orchestrate_validate_lpu(
     verbose: bool = True,
 ) -> int:
     """
-    Main function for direct module execution or external calling.
+    Função principal para execução direta do módulo ou chamada externa.
 
     Args:
-        file_path_budget: Path to the budget file (default in settings if None).
-        file_path_lpu: Path to the LPU file (default in settings if None).
-        output_dir: Directory to save results (default in settings if None).
-        output_file: Base name for the output files (default in settings if None).
-        verbose: If True, displays statistics on the console.
+        file_path_budget: Caminho para o arquivo de orçamento (padrão nas configurações se None).
+        file_path_lpu: Caminho para o arquivo da LPU (padrão nas configurações se None).
+        output_dir: Diretório para salvar resultados (padrão nas configurações se None).
+        output_file: Nome base para os arquivos de saída (padrão nas configurações se None).
+        verbose: Se True, exibe estatísticas no console.
 
     Returns:
-        int: Status code (0 for success, 1 for error).
+        int: Código de status (0 para sucesso, 1 para erro).
     """
-    # Configure default paths if not provided
+    # Configura caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
     path_file_budget = Path(base_dir, file_path_budget or settings.get("module_validator_lpu.file_path_budget"))
     path_file_lpu = Path(base_dir, file_path_lpu or settings.get("module_validator_lpu.file_path_lpu"))
     output_dir = Path(base_dir, output_dir or settings.get("module_validator_lpu.output_dir"))
     output_file = output_file or settings.get("module_validator_lpu.file_path_output")
 
-    logger.debug(f"Budget: {path_file_budget}")
+    logger.debug(f"Orçamento: {path_file_budget}")
     logger.debug(f"LPU: {path_file_lpu}")
-    logger.debug(f"Output: {output_dir}")
+    logger.debug(f"Saída: {output_dir}")
 
     try:
         df_result = validate_lpu(
@@ -1201,9 +1204,9 @@ def orchestrate_validate_lpu(
             verbose=verbose,
         )
 
-        # Display first rows
+        # Exibe primeiras linhas
         if verbose:
-            logger.info("\n📋 RESULTS PREVIEW:")
+            logger.info("\n📋 VISUALIZAÇÃO DOS RESULTADOS:")
             logger.info("-" * 80)
             preview_columns = [
                 "cod_item",
@@ -1219,14 +1222,14 @@ def orchestrate_validate_lpu(
             preview_columns = [col for col in preview_columns if col in df_result.columns]
             logger.info(f"\n{df_result[preview_columns].head(10).to_string(index=False)}")
 
-        logger.success("Main execution completed successfully!")
+        logger.success("Execução principal concluída com sucesso!")
         return 0
 
     except ValidatorLPUError as e:
-        logger.error(f"ERROR: {e}")
+        logger.error(f"ERRO: {e}")
         return 1
     except Exception as e:
-        logger.error(f"UNEXPECTED ERROR: {e}")
+        logger.error(f"ERRO INESPERADO: {e}")
         return 1
 
 

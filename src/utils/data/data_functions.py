@@ -422,3 +422,29 @@ if __name__ == "__main__":
         print("Data exported to JSON successfully")
     except Exception as e:
         print(f"Error exporting to JSON: {e}")
+
+
+def cast_columns(df: pd.DataFrame, column_types: Dict[str, str]) -> pd.DataFrame:
+    """
+    Tenta converter as colunas de um DataFrame para os tipos especificados.
+
+    Args:
+        df (pd.DataFrame): O DataFrame a ser convertido.
+        column_types (Dict[str, str]): Um dicionário onde as chaves são os nomes das colunas
+                                       e os valores são os tipos esperados (ex.: "float64", "object").
+
+    Returns:
+        pd.DataFrame: O DataFrame com as colunas convertidas.
+
+    Raises:
+        ValueError: Se uma coluna especificada não existir no DataFrame.
+    """
+    for column, col_type in column_types.items():
+        if column in df.columns:
+            try:
+                df[column] = df[column].astype(col_type)
+            except Exception as e:
+                raise ValueError(f"Erro ao converter a coluna '{column}' para o tipo '{col_type}': {e}")
+        else:
+            raise ValueError(f"A coluna '{column}' não existe no DataFrame.")
+    return df
