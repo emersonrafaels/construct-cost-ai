@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
-from utils.data.data_functions import read_data, export_data, cast_columns
+from utils.data.data_functions import read_data, export_data, cast_columns, transform_case
 
 settings = get_settings()
 
@@ -70,14 +70,14 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
         raise FileNotFoundError(f"Arquivo de orçamento não encontrado: {file_path}")
 
     # Colunas obrigatórias
-    required_columns = settings.get("module_validator_lpu.required_columns_with_types", [])
+    required_columns = settings.get("module_validator_lpu.budget_data.required_columns_with_types", [])
 
     # Coluna valor total
     column_total_value = settings.get("module_validator_lpu.column_total_value", "VALOR TOTAL")
 
     try:
         df = read_data(file_path=file_path, 
-                       sheet_name=settings.get("module_validator_lpu.sheet_name_budget_table", 
+                       sheet_name=settings.get("module_validator_lpu.budget_data.sheet_name_budget_table", 
                                                "Tables"))
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -96,20 +96,20 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
         raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
     # Se total_orcado não existir, calcula
-    if column_total_value not in df.columns:
-        df[column_total_value] = df[settings.get("module_validator_lpu.column_quantity", "qtde")] * df[settings.get("module_validator_lpu.column_unit_price", "unitario_orcado")]
-    else:
-        df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
+    df = calculate_total_item(df=df, 
+                                column_total_value=column_total_value, 
+                                column_quantity=settings.get("module_validator_lpu.budget_data.column_quantity", "qtde"), 
+                                column_unit_price=settings.get("module_validator_lpu.budget_data.column_unit_price", "unitario_orcado"))
 
     return df
 
 
-def load_lpu(path: Union[str, Path]) -> pd.DataFrame:
+def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     """
     Carrega o arquivo base da LPU.
 
     Args:
-        path: Caminho para o arquivo da LPU (Excel ou CSV)
+        file_path: Caminho para o arquivo da LPU
 
     Returns:
         DataFrame com a base da LPU carregada
@@ -118,41 +118,37 @@ def load_lpu(path: Union[str, Path]) -> pd.DataFrame:
         FileNotFoundError: Se o arquivo não for encontrado
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes
     """
-    path = Path(path)
+    file_path = Path(file_path)
 
-    if not path.exists():
-        raise FileNotFoundError(f"Arquivo LPU não encontrado: {path}")
+    if not file_path.exists():
+        raise FileNotFoundError(f"Arquivo LPU não encontrado: {file_path}")
 
     # Colunas obrigatórias
-    mandatory_columns = [
-        "cod_item",
-        "descricao",
-        "unidade",
-        "unitario_lpu",
-        "fonte",
-    ]
+    required_columns = settings.get("module_validator_lpu.lpu_data.required_columns_with_types", [
+        "CÓD ITEM",
+        "ITEM",
+        "UN",
+    ])
 
     try:
-        if path.suffix in [".xlsx", ".xls"]:
-            df = pd.read_excel(path)
-        elif path.suffix == ".csv":
-            df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
-        else:
-            raise ValidatorLPUError(f"Formato não suportado: {path.suffix}")
+        df = transform_case(read_data(file_path=file_path, 
+                                      sheet_name=settings.get("module_validator_lpu.lpu_data.sheet_name_budget_lpu", 
+                                                              "sheet_name_budget_lpu")), 
+                            to_upper=True, columns=True)
     except Exception as e:
-        raise ValidatorLPUError(f"Erro ao carregar LPU: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
 
     # Valida colunas obrigatórias
-    missing_columns = set(mandatory_columns) - set(df.columns)
+    missing_columns = set(required_columns) - set(df.columns)
     if missing_columns:
         raise MissingColumnsError(
             f"Colunas obrigatórias ausentes na LPU: {', '.join(missing_columns)}"
         )
 
-    # Garante tipos corretos
-    df["cod_item"] = df["cod_item"].astype(str)
-    df["unidade"] = df["unidade"].astype(str)
-    df["unitario_lpu"] = pd.to_numeric(df["unitario_lpu"], errors="coerce")
+    try:
+        df = cast_columns(df, required_columns)
+    except ValueError as e:
+        raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
     return df
 
@@ -971,6 +967,27 @@ def generate_complete_excel_report(
     logger.success(f"✅ Relatório Excel completo salvo em: {excel_path}")
 
 
+def calculate_total_item(df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str) -> pd.DataFrame:
+    """
+    Calcula o valor total orçado em um DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados.
+        column_total_value (str): Nome da coluna de valor total orçado.
+        column_quantity (str): Nome da coluna de quantidade.
+        column_unit_price (str): Nome da coluna de preço unitário.
+
+    Returns:
+        pd.DataFrame: DataFrame atualizado com a coluna de valor total orçado calculada ou convertida.
+    """
+    if column_total_value not in df.columns:
+        df[column_total_value] = df[column_quantity] * df[column_unit_price]
+    else:
+        df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
+
+    return df
+
+
 def get_default_settings(key):
     """
     Retorna os valores padrão das configurações do validador LPU.
@@ -1186,10 +1203,10 @@ def orchestrate_validate_lpu(
     """
     # Configura caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
-    path_file_budget = Path(base_dir, file_path_budget or settings.get("module_validator_lpu.file_path_budget"))
-    path_file_lpu = Path(base_dir, file_path_lpu or settings.get("module_validator_lpu.file_path_lpu"))
-    output_dir = Path(base_dir, output_dir or settings.get("module_validator_lpu.output_dir"))
-    output_file = output_file or settings.get("module_validator_lpu.file_path_output")
+    path_file_budget = Path(base_dir, file_path_budget or settings.get("module_validator_lpu.budget_data.file_path_budget"))
+    path_file_lpu = Path(base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path_lpu"))
+    output_dir = Path(base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir"))
+    output_file = output_file or settings.get("module_validator_lpu.output_settings.file_path_output")
 
     logger.debug(f"Orçamento: {path_file_budget}")
     logger.debug(f"LPU: {path_file_lpu}")

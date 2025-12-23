@@ -252,7 +252,7 @@ def transform_case(
     elif columns:
         if columns is True:
             # Transforma todas as colunas do DataFrame
-            df = df.map(transform_value)
+            df.columns = [str(column).upper() for column in df.columns]
         else:
             # Transforma apenas as colunas especificadas
             for col in columns:
