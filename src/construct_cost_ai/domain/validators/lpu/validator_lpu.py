@@ -146,7 +146,6 @@ def identify_lpu_format(
 
 def wide_to_long(
     df_wide: pd.DataFrame,
-    *,
     id_col: str = "CÓD ITEM",
     item_col: str = "ITEM",
     unit_col: str = "UN",
@@ -290,8 +289,10 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     report = identify_lpu_format(df)
     if report.format == "wide":
         df = wide_to_long(df)
+        logger.info("Convertido LPU de WIDE para LONG.")
     elif report.format == "long":
-        df = long_to_wide(df)
+        # df = long_to_wide(df)
+        logger.info("Mantido LPU no formato LONG.")
     else:
         raise ValidatorLPUError(f"Formato desconhecido: {report.format}")
 
