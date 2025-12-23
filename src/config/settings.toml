@@ -30,6 +30,10 @@ sheet_name_budget_lpu = "LPU"
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"CÓD ITEM" = "object", "ITEM" = "object", "UN" = "object"}
 
+# Adiciona as variáveis necessárias para regiões e grupos
+regions = ["NORTE", "SUDESTE/SUL", "CENTRO-OESTE/NORDESTE",]
+groups = ["GRUPO1", "GRUPO2", "GRUPO3"]
+
 [default.module_validator_lpu.output_settings]
 
 # Nomes dos arquivos de saída

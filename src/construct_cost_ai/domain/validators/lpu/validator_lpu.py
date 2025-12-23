@@ -16,7 +16,7 @@ __email__ = "emersonssmile@gmail.com"
 __status__ = "Development"
 
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple, List, Optional, Literal, NamedTuple
 import sys
 
 import pandas as pd
@@ -104,6 +104,147 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
     return df
 
 
+class LPUFormatReport(NamedTuple):
+    """
+    Representa o formato detectado de uma base LPU (Lista de Preços Unitários).
+
+    Attributes:
+        format (str): O formato detectado da base, podendo ser "wide", "long" ou "unknown".
+    """
+    format: str
+    def __str__(self):
+        return f"LPUFormatReport(format={self.format})"
+
+
+def identify_lpu_format(
+    df: pd.DataFrame,
+    *,
+    expected_core_cols: Tuple[str, str, str] = ("CÓD ITEM", "ITEM", "UN"),
+    long_required_cols: Tuple[str, str, str] = ("regiao", "grupo", "preco"),
+) -> "LPUFormatReport":
+    """
+    Identifica se a base está no formato:
+      - wide: colunas de preço por REGIAO/GRUPO (ex: 'NORTE-GRUPO1', ...)
+      - long: colunas explícitas 'regiao', 'grupo', 'preco' (nomes flexíveis)
+      - unknown: não dá pra inferir com confiança
+    """
+    # Colunas esperadas no formato "wide"
+    expected_wide_cols = [f"{r}-{g}" for r in settings.get("module_validator_lpu.lpu_data.regions", []) for g in settings.get("module_validator_lpu.lpu_data.groups", [])]
+    
+    # Verifica se todas as colunas principais estão presentes
+    if all(col in df.columns for col in expected_core_cols):
+        # Se as colunas de preço seguem o padrão esperado, é wide
+        if all(col in df.columns for col in expected_wide_cols):
+            return LPUFormatReport(format="wide")
+        # Se as colunas 'regiao', 'grupo' e 'preco' estão presentes, é long
+        elif all(col in df.columns for col in long_required_cols):
+            return LPUFormatReport(format="long")
+    
+    # Se chegou aqui, o formato é desconhecido
+    return LPUFormatReport(format="unknown")
+
+
+def wide_to_long(
+    df_wide: pd.DataFrame,
+    *,
+    id_col: str = "CÓD ITEM",
+    item_col: str = "ITEM",
+    unit_col: str = "UN",
+    keep_cols: Optional[List[str]] = None,
+    col_to_regiao_grupo: Optional[callable] = None,
+    value_name: str = "preco",
+) -> pd.DataFrame:
+    """
+    Converte LPU WIDE -> LONG.
+    """
+    # Identifica colunas de região/grupo
+    region_group_cols = [col for col in df_wide.columns if "-" in col]
+    
+    # Deriva regiões e grupos se função fornecida
+    if col_to_regiao_grupo:
+        df_wide = df_wide.copy()
+        df_wide["regiao"], df_wide["grupo"] = zip(*df_wide[region_group_cols].apply(col_to_regiao_grupo, axis=1))
+        region_group_cols = ["regiao", "grupo"]
+
+    # Transforma para formato longo
+    df_long = df_wide.melt(
+        id_vars=[id_col, item_col, unit_col] + (keep_cols or []),
+        value_vars=region_group_cols,
+        var_name="regiao_grupo",
+        value_name=value_name,
+    )
+
+    return df_long
+
+
+def long_to_wide(
+    df_long: pd.DataFrame,
+    *,
+    id_col: str = "cod_item",
+    item_col: str = "item",
+    unit_col: str = "unidade",
+    regiao_col: str = "regiao",
+    grupo_col: str = "grupo",
+    value_col: str = "preco",
+    wide_col_formatter: Optional[callable] = None,
+    aggfunc: str = "first",
+) -> pd.DataFrame:
+    """
+    Converte LPU LONG -> WIDE.
+    """
+    # Cria coluna única para região-grupo se não existir
+    if regiao_col in df_long.columns and grupo_col in df_long.columns:
+        df_long["regiao_grupo"] = df_long[regiao_col] + "-" + df_long[grupo_col]
+    else:
+        df_long["regiao_grupo"] = df_long.get(regiao_col, df_long.get(grupo_col))
+
+    # Agrega dados se necessário
+    df_agg = df_long.groupby([id_col, item_col, unit_col, "regiao_grupo"]).agg({value_col: aggfunc}).reset_index()
+
+    # Transforma para formato largo
+    df_wide = df_agg.pivot_table(
+        index=[id_col, item_col, unit_col],
+        columns="regiao_grupo",
+        values=value_col,
+        aggfunc=aggfunc,
+    ).reset_index()
+
+    # Formata colunas largas se função fornecida
+    if wide_col_formatter:
+        df_wide.columns = [wide_col_formatter(col) if col not in [id_col, item_col, unit_col] else col for col in df_wide.columns]
+
+    return df_wide
+
+
+def convert_lpu(
+    df: pd.DataFrame,
+    target: Literal["wide", "long"],
+    *,
+    detect: bool = True,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Converte a LPU para o formato desejado.
+    """
+    if detect:
+        report = identify_lpu_format(df)
+        if report.format == "wide" and target == "long":
+            df = wide_to_long(df, **kwargs)
+        elif report.format == "long" and target == "wide":
+            df = long_to_wide(df, **kwargs)
+        else:
+            raise ValidatorLPUError(f"Conversão de {report.format} para {target} não suportada ou formato desconhecido.")
+    else:
+        if target == "long":
+            df = wide_to_long(df, **kwargs)
+        elif target == "wide":
+            df = long_to_wide(df, **kwargs)
+        else:
+            raise ValidatorLPUError(f"Formato alvo desconhecido: {target}")
+
+    return df
+
+
 def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     """
     Carrega o arquivo base da LPU.
@@ -144,6 +285,15 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
         raise MissingColumnsError(
             f"Colunas obrigatórias ausentes na LPU: {', '.join(missing_columns)}"
         )
+
+    # Detecta formato e converte se necessário
+    report = identify_lpu_format(df)
+    if report.format == "wide":
+        df = wide_to_long(df)
+    elif report.format == "long":
+        df = long_to_wide(df)
+    else:
+        raise ValidatorLPUError(f"Formato desconhecido: {report.format}")
 
     try:
         df = cast_columns(df, required_columns)
