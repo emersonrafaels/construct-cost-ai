@@ -15,9 +15,10 @@ __maintainer__ = "Emerson V. Rafael"
 __email__ = "emersonssmile@gmail.com"
 __status__ = "Development"
 
+import sys
 from pathlib import Path
 from typing import Union, Tuple, List, Optional, Literal, NamedTuple
-import sys
+from itertools import product
 
 import pandas as pd
 
@@ -120,22 +121,31 @@ def identify_lpu_format(
     df: pd.DataFrame,
     *,
     expected_core_cols: Tuple[str, str, str] = ("CÓD ITEM", "ITEM", "UN"),
-    long_required_cols: Tuple[str, str, str] = ("regiao", "grupo", "preco"),
+    long_required_cols: Tuple[str, str, str] = ("REGIAO", "GRUPO", "PRECO"),
 ) -> "LPUFormatReport":
     """
     Identifica se a base está no formato:
       - wide: colunas de preço por REGIAO/GRUPO (ex: 'NORTE-GRUPO1', ...)
       - long: colunas explícitas 'regiao', 'grupo', 'preco' (nomes flexíveis)
       - unknown: não dá pra inferir com confiança
+
+    Retorna também as colunas que seguem o padrão de região-grupo no formato wide.
     """
     # Colunas esperadas no formato "wide"
-    expected_wide_cols = [f"{r}-{g}" for r in settings.get("module_validator_lpu.lpu_data.regions", []) for g in settings.get("module_validator_lpu.lpu_data.groups", [])]
+    regions = settings.get("module_validator_lpu.lpu_data.regions", [])
+    groups = settings.get("module_validator_lpu.lpu_data.groups", [])
     
+    # Gera todas as combinações possíveis entre regiões e grupos
+expected_wide_cols = [f"{r1}/{r2}-{g}" for r1, r2 in product(regions, regions) if r1 != r2 for g in groups]
+    
+    # Identifica colunas que seguem o padrão de região-grupo
+    found_wide_cols = [col for col in df.columns if col in expected_wide_cols]
+
     # Verifica se todas as colunas principais estão presentes
     if all(col in df.columns for col in expected_core_cols):
         # Se as colunas de preço seguem o padrão esperado, é wide
-        if all(col in df.columns for col in expected_wide_cols):
-            return LPUFormatReport(format="wide")
+        if found_wide_cols:
+            return LPUFormatReport(format="wide", reasons=found_wide_cols)
         # Se as colunas 'regiao', 'grupo' e 'preco' estão presentes, é long
         elif all(col in df.columns for col in long_required_cols):
             return LPUFormatReport(format="long")
