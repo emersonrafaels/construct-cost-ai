@@ -36,11 +36,11 @@ from utils.data.data_functions import export_to_json
 
 
 def benchmark_fuzzy_match(
-    budget_file: str, 
-    lpu_file: str, 
-    budget_column: str, 
-    lpu_column: str, 
-    threshold: int = 80, 
+    budget_file: str,
+    lpu_file: str,
+    budget_column: str,
+    lpu_column: str,
+    threshold: int = 80,
     samples: int = None,
 ):
     """
@@ -67,11 +67,7 @@ def benchmark_fuzzy_match(
     start_time = time.time()
     result_fuzzywuzzy = budget_df[budget_column].apply(
         lambda x: fuzzy_match(
-            value=x, 
-            choices=choices, 
-            top_matches=1, 
-            threshold=threshold, 
-            library="fuzzywuzzy"
+            value=x, choices=choices, top_matches=1, threshold=threshold, library="fuzzywuzzy"
         )
     )
     time_fuzzywuzzy = time.time() - start_time
@@ -80,11 +76,7 @@ def benchmark_fuzzy_match(
     start_time = time.time()
     result_rapidfuzz = budget_df[budget_column].apply(
         lambda x: fuzzy_match(
-            value=x, 
-            choices=choices, 
-            top_matches=1, 
-            threshold=threshold, 
-            library="rapidfuzz"
+            value=x, choices=choices, top_matches=1, threshold=threshold, library="rapidfuzz"
         )
     )
     time_rapidfuzz = time.time() - start_time
@@ -100,8 +92,7 @@ def benchmark_fuzzy_match(
     print(f"Difference in Execution Time: {time_fuzzywuzzy - time_rapidfuzz:.6f} seconds")
 
     # Salvar os resultados em um arquivo JSON
-    output_file = Path(Path(__file__).parent, 
-                       "data/outputs/benchmark_results.json")
+    output_file = Path(Path(__file__).parent, "data/outputs/benchmark_results.json")
     results = {
         "fuzzywuzzy": {
             "results": result_fuzzywuzzy.to_dict(),
@@ -125,7 +116,7 @@ if __name__ == "__main__":
     budget_column = "NOME"
     lpu_column = "Item"
     threshold = 85
-    samples = None # Defina o número de amostras para o benchmark, ou None para usar todas
+    samples = None  # Defina o número de amostras para o benchmark, ou None para usar todas
 
     benchmark_fuzzy_match(
         budget_file=budget_file,

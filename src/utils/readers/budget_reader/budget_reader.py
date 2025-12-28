@@ -95,7 +95,9 @@ settings = get_settings()
 
 # Substituí as constantes centralizadas por chamadas ao Dynaconf
 DEFAULT_SHEET_NAME = settings.get("default_budget_reader.default_sheet.name", None)
-SHEET_NAMES_TRY = settings.get("default_budget_reader.default_sheet.sheet_candidates", ["LPU", "01"])
+SHEET_NAMES_TRY = settings.get(
+    "default_budget_reader.default_sheet.sheet_candidates", ["LPU", "01"]
+)
 PATTERN_DEFAULT = settings.get("default_budget_reader.default_sheet.pattern_default", "default01")
 
 # Colunas mínimas esperadas
@@ -123,10 +125,13 @@ DEFAULT_METADATA_KEYS = get_metadata_keys()
 SELECTED_COLUMNS = settings.get("default_budget_reader.result.list_result_columns", [])
 
 # Filtros no pós processamento
-FILTROS = settings.get("default_budget_reader.filtros.dict_filtros", {})  # Nome da coluna usada para filtragem
+FILTROS = settings.get(
+    "default_budget_reader.filtros.dict_filtros", {}
+)  # Nome da coluna usada para filtragem
 
 # Diretório de saída padrão
 DIR_OUTPUTS = settings.get("default_budget_reader.dir_outputs.path", "outputs")
+
 
 @dataclass
 class FileInput:
@@ -661,11 +666,19 @@ def append_and_save_results(
 
     try:
         # Salva os dados no arquivo de saída em abas separadas usando export_data
-        export_data({settings.get("default_budget_reader.result.name_sheet_output_tables", "Tables"): data_result, 
-                    settings.get("default_budget_reader.result.name_sheet_output_metadata", "Metadata"): metadata_result}, 
-                    output_path,
-                    create_dirs=True,
-                    index=False)
+        export_data(
+            {
+                settings.get(
+                    "default_budget_reader.result.name_sheet_output_tables", "Tables"
+                ): data_result,
+                settings.get(
+                    "default_budget_reader.result.name_sheet_output_metadata", "Metadata"
+                ): metadata_result,
+            },
+            output_path,
+            create_dirs=True,
+            index=False,
+        )
 
         # Loga o sucesso na exportação
         logger.success(f"Resultados salvos com sucesso em {output_path}")
@@ -709,9 +722,17 @@ def append_and_save_results_json(
 
     try:
         # Salva os dados no arquivo de saída em abas separadas usando export_data
-        export_to_json({settings.get("default_budget_reader.result.name_sheet_output_tables", "Tables"): data_result.to_dict(orient='records'),
-                        settings.get("default_budget_reader.result.name_sheet_output_metadata", "Metadata"): metadata_result.to_dict(orient='records')},
-                       file_path=output_path)
+        export_to_json(
+            {
+                settings.get(
+                    "default_budget_reader.result.name_sheet_output_tables", "Tables"
+                ): data_result.to_dict(orient="records"),
+                settings.get(
+                    "default_budget_reader.result.name_sheet_output_metadata", "Metadata"
+                ): metadata_result.to_dict(orient="records"),
+            },
+            file_path=output_path,
+        )
 
         print("-" * 50)
 
@@ -744,10 +765,14 @@ def append_data(list_all_tables, list_all_metadata, file_input, table, metadata)
     list_all_metadata.append(metadata_with_source)
 
     # Adiciona o nome do arquivo como coluna na tabela
-    table[settings.get("default_budget_reader.SOURCE_FILE_COLUMN_NAME", "SOURCE_FILE")] = Path(file_input.file_path).name
+    table[settings.get("default_budget_reader.SOURCE_FILE_COLUMN_NAME", "SOURCE_FILE")] = Path(
+        file_input.file_path
+    ).name
 
     # Adiciona o nome da aba como coluna na tabela
-    table[settings.get("default_budget_reader.SHEET_NAME_COLUMN_NAME", "SHEET_NAME")] = file_input.sheet_name
+    table[settings.get("default_budget_reader.SHEET_NAME_COLUMN_NAME", "SHEET_NAME")] = (
+        file_input.sheet_name
+    )
 
     # Resetando o index da tabela
     table.reset_index(drop=True, inplace=True)
@@ -871,7 +896,9 @@ def orchestrate_budget_reader(
         append_and_save_results(
             all_tables=all_tables,
             all_metadatas=all_metadata,
-            output_file=settings.get("default_budget_reader.result.file_name_output", "budget_reader_output.xlsx"),
+            output_file=settings.get(
+                "default_budget_reader.result.file_name_output", "budget_reader_output.xlsx"
+            ),
         )
 
     # Retorna os dados consolidados

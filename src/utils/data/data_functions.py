@@ -73,16 +73,16 @@ def read_data(
     """
     Lê dados de vários formatos de arquivo usando a extensão do arquivo para determinar o método apropriado.
     Se a aba especificada (sheet_name) não existir, utiliza a aba padrão (default_sheet).
-    
+
     Args:
         file_path (Union[str, Path]): Caminho para o arquivo a ser lido.
         sheet_name (Optional[Union[str, int]]): Nome ou índice da aba a ser lida (para arquivos Excel). Padrão é None.
         header (Optional[Union[int, List[int]]]): Número(s) da(s) linha(s) a ser(em) usada(s) como nomes das colunas. Padrão é 0.
         default_sheet (Optional[Union[str, List[str]]]): Nome ou lista de nomes das abas padrão a serem lidas se a aba especificada não for encontrada.
-    
+
     Returns:
         pd.DataFrame: DataFrame contendo os dados lidos.
-    
+
     Raises:
         ValueError: Se a extensão do arquivo não for suportada.
         FileNotFoundError: Se o arquivo não existir.
@@ -359,6 +359,7 @@ def export_to_json(
         ValueError: Se o tipo de dado não for suportado.
         RuntimeError: Se ocorrer um erro durante a exportação.
     """
+
     def default_serializer(obj):
         """Serializador padrão para objetos não serializáveis pelo JSON."""
         if hasattr(obj, "__dict__"):
@@ -383,7 +384,9 @@ def export_to_json(
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, ensure_ascii=False, indent=4, default=default_serializer)
         else:
-            raise ValueError("O tipo de dado fornecido não é suportado. Use um DataFrame ou um dicionário de DataFrames/dados.")
+            raise ValueError(
+                "O tipo de dado fornecido não é suportado. Use um DataFrame ou um dicionário de DataFrames/dados."
+            )
     except Exception as e:
         raise RuntimeError(f"Erro ao exportar para JSON em {file_path}: {str(e)}")
 
@@ -444,7 +447,9 @@ def cast_columns(df: pd.DataFrame, column_types: Dict[str, str]) -> pd.DataFrame
             try:
                 df[column] = df[column].astype(col_type)
             except Exception as e:
-                raise ValueError(f"Erro ao converter a coluna '{column}' para o tipo '{col_type}': {e}")
+                raise ValueError(
+                    f"Erro ao converter a coluna '{column}' para o tipo '{col_type}': {e}"
+                )
         else:
             raise ValueError(f"A coluna '{column}' não existe no DataFrame.")
     return df

@@ -106,7 +106,9 @@ def example_fuzzy_match_with_dataframes():
 
     # Aplicar fuzzy_match para encontrar o melhor match para cada valor
     df_values["Melhor Match"] = df_values["Valores"].apply(
-        lambda x: fuzzy_match(x, df_choices["Choices"].tolist(), top_matches=1, threshold=80, library="rapidfuzz")
+        lambda x: fuzzy_match(
+            x, df_choices["Choices"].tolist(), top_matches=1, threshold=80, library="rapidfuzz"
+        )
     )
 
     print("DataFrame com os melhores matches:")

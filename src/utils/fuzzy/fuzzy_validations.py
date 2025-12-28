@@ -134,7 +134,7 @@ def normalize_text(value: Optional[str]) -> str:
 class MatchResult:
     """
     Resultado estruturado de um match fuzzy.
-    
+
     Frozen = Dataclass imutável (read-only).
 
     Campos:

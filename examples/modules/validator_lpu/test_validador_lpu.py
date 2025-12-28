@@ -43,7 +43,7 @@ def executar_validacao(
     caminho_orcamento: Optional[str] = None,
     caminho_lpu: Optional[str] = None,
     output_dir: Optional[str] = None,
-    nome_arquivo_saida: Optional[str] = None,   
+    nome_arquivo_saida: Optional[str] = None,
     verbose: bool = True,
     gerar_estatisticas: bool = True,
     gerar_top_divergencias: bool = False,
@@ -80,18 +80,13 @@ def executar_validacao(
     """
     # Configurar caminhos padrão
     if caminho_orcamento is None:
-        caminho_orcamento = Path(base_dir, 
-                                 settings.get("module_validator_lpu.file_path_budget"))
+        caminho_orcamento = Path(base_dir, settings.get("module_validator_lpu.file_path_budget"))
     if caminho_lpu is None:
-        caminho_lpu = Path(base_dir, 
-                         settings.get("module_validator_lpu.file_path_lpu"))
+        caminho_lpu = Path(base_dir, settings.get("module_validator_lpu.file_path_lpu"))
     if output_dir is None:
-        output_dir = Path(base_dir, 
-                          settings.get("module_validator_lpu.output_dir"))
+        output_dir = Path(base_dir, settings.get("module_validator_lpu.output_dir"))
     if nome_arquivo_saida is None:
-        output_file = Path(base_dir, 
-                            settings.get("module_validator_lpu.file_path_output"))
-
+        output_file = Path(base_dir, settings.get("module_validator_lpu.file_path_output"))
 
     logger.debug("=" * 80)
     logger.info("VALIDADOR LPU - ANÁLISE CONFIGURÁVEL")

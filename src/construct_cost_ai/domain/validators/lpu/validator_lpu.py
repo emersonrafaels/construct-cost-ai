@@ -71,15 +71,20 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
         raise FileNotFoundError(f"Arquivo de orçamento não encontrado: {file_path}")
 
     # Colunas obrigatórias
-    required_columns = settings.get("module_validator_lpu.budget_data.required_columns_with_types", [])
+    required_columns = settings.get(
+        "module_validator_lpu.budget_data.required_columns_with_types", []
+    )
 
     # Coluna valor total
     column_total_value = settings.get("module_validator_lpu.column_total_value", "VALOR TOTAL")
 
     try:
-        df = read_data(file_path=file_path, 
-                       sheet_name=settings.get("module_validator_lpu.budget_data.sheet_name_budget_table", 
-                                               "Tables"))
+        df = read_data(
+            file_path=file_path,
+            sheet_name=settings.get(
+                "module_validator_lpu.budget_data.sheet_name_budget_table", "Tables"
+            ),
+        )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
 
@@ -97,10 +102,14 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
         raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
     # Se total_orcado não existir, calcula
-    df = calculate_total_item(df=df, 
-                                column_total_value=column_total_value, 
-                                column_quantity=settings.get("module_validator_lpu.budget_data.column_quantity", "qtde"), 
-                                column_unit_price=settings.get("module_validator_lpu.budget_data.column_unit_price", "unitario_orcado"))
+    df = calculate_total_item(
+        df=df,
+        column_total_value=column_total_value,
+        column_quantity=settings.get("module_validator_lpu.budget_data.column_quantity", "qtde"),
+        column_unit_price=settings.get(
+            "module_validator_lpu.budget_data.column_unit_price", "unitario_orcado"
+        ),
+    )
 
     return df
 
@@ -112,7 +121,9 @@ class LPUFormatReport(NamedTuple):
     Attributes:
         format (str): O formato detectado da base, podendo ser "wide", "long" ou "unknown".
     """
+
     format: str
+
     def __str__(self):
         return f"LPUFormatReport(format={self.format})"
 
@@ -134,10 +145,12 @@ def identify_lpu_format(
     # Colunas esperadas no formato "wide"
     regions = settings.get("module_validator_lpu.lpu_data.regions", [])
     groups = settings.get("module_validator_lpu.lpu_data.groups", [])
-    
+
     # Gera todas as combinações possíveis entre regiões e grupos
-expected_wide_cols = [f"{r1}/{r2}-{g}" for r1, r2 in product(regions, regions) if r1 != r2 for g in groups]
-    
+    expected_wide_cols = [
+        f"{r1}/{r2}-{g}" for r1, r2 in product(regions, regions) if r1 != r2 for g in groups
+    ]
+
     # Identifica colunas que seguem o padrão de região-grupo
     found_wide_cols = [col for col in df.columns if col in expected_wide_cols]
 
@@ -145,11 +158,16 @@ expected_wide_cols = [f"{r1}/{r2}-{g}" for r1, r2 in product(regions, regions) i
     if all(col in df.columns for col in expected_core_cols):
         # Se as colunas de preço seguem o padrão esperado, é wide
         if found_wide_cols:
-            return LPUFormatReport(format="wide", reasons=found_wide_cols)
+            return LPUFormatReport(format="wide", columns=found_wide_cols)
         # Se as colunas 'regiao', 'grupo' e 'preco' estão presentes, é long
         elif all(col in df.columns for col in long_required_cols):
-            return LPUFormatReport(format="long")
-    
+            return LPUFormatReport(
+                format="long",
+                columns=settings.get(
+                    "module_validator_lpu.lpu_data.long_format_columns", {}
+                ).keys(),
+            )
+
     # Se chegou aqui, o formato é desconhecido
     return LPUFormatReport(format="unknown")
 
@@ -168,11 +186,13 @@ def wide_to_long(
     """
     # Identifica colunas de região/grupo
     region_group_cols = [col for col in df_wide.columns if "-" in col]
-    
+
     # Deriva regiões e grupos se função fornecida
     if col_to_regiao_grupo:
         df_wide = df_wide.copy()
-        df_wide["regiao"], df_wide["grupo"] = zip(*df_wide[region_group_cols].apply(col_to_regiao_grupo, axis=1))
+        df_wide["regiao"], df_wide["grupo"] = zip(
+            *df_wide[region_group_cols].apply(col_to_regiao_grupo, axis=1)
+        )
         region_group_cols = ["regiao", "grupo"]
 
     # Transforma para formato longo
@@ -208,7 +228,11 @@ def long_to_wide(
         df_long["regiao_grupo"] = df_long.get(regiao_col, df_long.get(grupo_col))
 
     # Agrega dados se necessário
-    df_agg = df_long.groupby([id_col, item_col, unit_col, "regiao_grupo"]).agg({value_col: aggfunc}).reset_index()
+    df_agg = (
+        df_long.groupby([id_col, item_col, unit_col, "regiao_grupo"])
+        .agg({value_col: aggfunc})
+        .reset_index()
+    )
 
     # Transforma para formato largo
     df_wide = df_agg.pivot_table(
@@ -220,7 +244,10 @@ def long_to_wide(
 
     # Formata colunas largas se função fornecida
     if wide_col_formatter:
-        df_wide.columns = [wide_col_formatter(col) if col not in [id_col, item_col, unit_col] else col for col in df_wide.columns]
+        df_wide.columns = [
+            wide_col_formatter(col) if col not in [id_col, item_col, unit_col] else col
+            for col in df_wide.columns
+        ]
 
     return df_wide
 
@@ -242,7 +269,9 @@ def convert_lpu(
         elif report.format == "long" and target == "wide":
             df = long_to_wide(df, **kwargs)
         else:
-            raise ValidatorLPUError(f"Conversão de {report.format} para {target} não suportada ou formato desconhecido.")
+            raise ValidatorLPUError(
+                f"Conversão de {report.format} para {target} não suportada ou formato desconhecido."
+            )
     else:
         if target == "long":
             df = wide_to_long(df, **kwargs)
@@ -274,17 +303,26 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
         raise FileNotFoundError(f"Arquivo LPU não encontrado: {file_path}")
 
     # Colunas obrigatórias
-    required_columns = settings.get("module_validator_lpu.lpu_data.required_columns_with_types", [
-        "CÓD ITEM",
-        "ITEM",
-        "UN",
-    ])
+    required_columns = settings.get(
+        "module_validator_lpu.lpu_data.required_columns_with_types",
+        [
+            "CÓD ITEM",
+            "ITEM",
+            "UN",
+        ],
+    )
 
     try:
-        df = transform_case(read_data(file_path=file_path, 
-                                      sheet_name=settings.get("module_validator_lpu.lpu_data.sheet_name_budget_lpu", 
-                                                              "sheet_name_budget_lpu")), 
-                            to_upper=True, columns=True)
+        df = transform_case(
+            read_data(
+                file_path=file_path,
+                sheet_name=settings.get(
+                    "module_validator_lpu.lpu_data.sheet_name_budget_lpu", "sheet_name_budget_lpu"
+                ),
+            ),
+            to_upper=True,
+            columns=True,
+        )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
 
@@ -489,7 +527,12 @@ def save_results(df: pd.DataFrame, output_dir: Union[str, Path], base_name: str 
             .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
             .reset_index()
         )
-        status_summary.columns = ["Status", "Item Count", "Total Difference (R$)", "Total Budgeted Value (R$)"]
+        status_summary.columns = [
+            "Status",
+            "Item Count",
+            "Total Difference (R$)",
+            "Total Budgeted Value (R$)",
+        ]
         status_summary.to_excel(writer, sheet_name="Status Summary", index=False)
 
         # Planilha de resumo por categoria
@@ -584,7 +627,12 @@ def generate_html_report(
         .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
         .reset_index()
     )
-    status_summary.columns = ["Status", "Item Count", "Total Difference (R$)", "Total Budgeted Value (R$)"]
+    status_summary.columns = [
+        "Status",
+        "Item Count",
+        "Total Difference (R$)",
+        "Total Budgeted Value (R$)",
+    ]
 
     # Resumo por categoria
     category_summary = None
@@ -1019,7 +1067,12 @@ def generate_complete_excel_report(
         .agg({"cod_item": "count", "dif_total": "sum", "valor_total_orcado": "sum"})
         .reset_index()
     )
-    status_summary.columns = ["Status", "Item Count", "Total Difference (R$)", "Total Budgeted Value (R$)"]
+    status_summary.columns = [
+        "Status",
+        "Item Count",
+        "Total Difference (R$)",
+        "Total Budgeted Value (R$)",
+    ]
 
     # Itens para ressarcimento
     items_for_refund = df[df["status_conciliacao"] == "Para ressarcimento"][
@@ -1074,9 +1127,7 @@ def generate_complete_excel_report(
         top_20_perc.to_excel(writer, sheet_name="Top 20 Percentual Divergence", index=False)
 
         # Planilha 7: Itens para Ressarcimento
-        items_for_refund.to_excel(
-            writer, sheet_name="Items For Refund", index=False
-        )
+        items_for_refund.to_excel(writer, sheet_name="Items For Refund", index=False)
 
         # Planilha 8: Itens Abaixo LPU
         items_below_lpu.to_excel(writer, sheet_name="Items Below LPU", index=False)
@@ -1098,8 +1149,15 @@ def generate_complete_excel_report(
                 .reset_index()
                 .sort_values("dif_total", ascending=False)
             )
-            divergence_by_category.columns = ["Category", "Item Count", "Total Difference (R$)", "Total Value (R$)"]
-            divergence_by_category.to_excel(writer, sheet_name="Divergence by Category", index=False)
+            divergence_by_category.columns = [
+                "Category",
+                "Item Count",
+                "Total Difference (R$)",
+                "Total Value (R$)",
+            ]
+            divergence_by_category.to_excel(
+                writer, sheet_name="Divergence by Category", index=False
+            )
 
         # Planilha 10: Resumo por UPE (se existir)
         if "cod_upe" in df.columns:
@@ -1119,7 +1177,12 @@ def generate_complete_excel_report(
                 .reset_index()
                 .sort_values("dif_total", ascending=False)
             )
-            divergence_by_upe.columns = ["UPE Code", "Item Count", "Total Difference (R$)", "Total Value (R$)"]
+            divergence_by_upe.columns = [
+                "UPE Code",
+                "Item Count",
+                "Total Difference (R$)",
+                "Total Value (R$)",
+            ]
             divergence_by_upe.to_excel(writer, sheet_name="Divergence by UPE", index=False)
 
         # Planilha 11: Dados Completos
@@ -1128,7 +1191,9 @@ def generate_complete_excel_report(
     logger.success(f"✅ Relatório Excel completo salvo em: {excel_path}")
 
 
-def calculate_total_item(df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str) -> pd.DataFrame:
+def calculate_total_item(
+    df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str
+) -> pd.DataFrame:
     """
     Calcula o valor total orçado em um DataFrame.
 
@@ -1204,7 +1269,9 @@ def validate_lpu(
     if verbose:
         print("-" * 50)
         logger.info("VALIDADOR LPU - Conciliação Orçamento vs Base de Preços")
-        logger.info(f"Tolerância configurada: {settings.get('module_validator_lpu.tol_percentile')}%")
+        logger.info(
+            f"Tolerância configurada: {settings.get('module_validator_lpu.tol_percentile')}%"
+        )
         print("-" * 50)
 
     # 1. Carrega dados
@@ -1277,9 +1344,9 @@ def validate_lpu(
 
         total_budgeted_value = df_result["valor_total_orcado"].sum()
         total_divergence = df_result["dif_total"].sum()
-        refund_divergence = df_result[
-            df_result["status_conciliacao"] == "Para ressarcimento"
-        ]["dif_total"].sum()
+        refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
+            "dif_total"
+        ].sum()
 
         logger.info(f"   💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
         logger.info(f"   💵 Divergência total: R$ {total_divergence:,.2f}")
@@ -1295,9 +1362,7 @@ def validate_lpu(
 
     logger.debug(f"Total de itens validados: {total_items}")
     logger.debug(f"✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-    logger.debug(
-        f"⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)"
-    )
+    logger.debug(f"⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)")
     logger.debug(f"📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
 
     total_budgeted_value = df_result["valor_total_orcado"].sum()
@@ -1364,10 +1429,19 @@ def orchestrate_validate_lpu(
     """
     # Configura caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
-    path_file_budget = Path(base_dir, file_path_budget or settings.get("module_validator_lpu.budget_data.file_path_budget"))
-    path_file_lpu = Path(base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path_lpu"))
-    output_dir = Path(base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir"))
-    output_file = output_file or settings.get("module_validator_lpu.output_settings.file_path_output")
+    path_file_budget = Path(
+        base_dir,
+        file_path_budget or settings.get("module_validator_lpu.budget_data.file_path_budget"),
+    )
+    path_file_lpu = Path(
+        base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path_lpu")
+    )
+    output_dir = Path(
+        base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir")
+    )
+    output_file = output_file or settings.get(
+        "module_validator_lpu.output_settings.file_path_output"
+    )
 
     logger.debug(f"Orçamento: {path_file_budget}")
     logger.debug(f"LPU: {path_file_lpu}")

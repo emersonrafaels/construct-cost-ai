@@ -35,11 +35,13 @@ from utils.python_functions import measure_execution_time
 
 
 @measure_execution_time
-def process_match_value_and_lpu(budget_item: str, 
-                                lpu_file: str, 
-                                lpu_column: str, 
-                                threshold: int = 80, 
-                                library: str = "rapidfuzz"):
+def process_match_value_and_lpu(
+    budget_item: str,
+    lpu_file: str,
+    lpu_column: str,
+    threshold: int = 80,
+    library: str = "rapidfuzz",
+):
     """
     Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
 
@@ -64,25 +66,25 @@ def process_match_value_and_lpu(budget_item: str,
     choices = lpu_df[lpu_column].dropna().tolist()
 
     # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
-    matches = fuzzy_match(value=budget_item, 
-                          choices=choices, 
-                          top_matches=1, 
-                          threshold=threshold, 
-                          library=library)
+    matches = fuzzy_match(
+        value=budget_item, choices=choices, top_matches=1, threshold=threshold, library=library
+    )
 
     # Atribuir os valores às colunas do DataFrame
     pprint(matches)
-    
+
     return matches
 
 
 @measure_execution_time
-def process_budget_and_lpu(budget_file: str, 
-                           lpu_file: str, 
-                           budget_column: str, 
-                           lpu_column: str, 
-                           threshold: int = 80, 
-                           library: str = "rapidfuzz"):
+def process_budget_and_lpu(
+    budget_file: str,
+    lpu_file: str,
+    budget_column: str,
+    lpu_column: str,
+    threshold: int = 80,
+    library: str = "rapidfuzz",
+):
     """
     Processa os dados de orçamentos e LPU, realizando uma busca fuzzy entre as colunas especificadas.
 
@@ -112,16 +114,14 @@ def process_budget_and_lpu(budget_file: str,
 
     # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     matches = budget_df[budget_column].apply(
-        lambda x: fuzzy_match(value=x, 
-                              choices=choices, 
-                              top_matches=1, 
-                              threshold=threshold, 
-                              library=library)
+        lambda x: fuzzy_match(
+            value=x, choices=choices, top_matches=1, threshold=threshold, library=library
+        )
     )
 
     # Atribuir os valores às colunas do DataFrame
-    budget_df['Melhor Match'] = matches.apply(lambda x: x.choice if x else None)
-    budget_df['Percentual Match'] = matches.apply(lambda x: x.score if x else None)
+    budget_df["Melhor Match"] = matches.apply(lambda x: x.choice if x else None)
+    budget_df["Percentual Match"] = matches.apply(lambda x: x.score if x else None)
 
     # Salvar o resultado em um arquivo Excel
     output_file = "data/outputs/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
@@ -130,8 +130,9 @@ def process_budget_and_lpu(budget_file: str,
 
     return budget_df
 
+
 if __name__ == "__main__":
-    
+
     # Exemplo de uso
     budget_file = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
     lpu_file = "data/inputs/lpu/BASE_LPU.xlsx"
@@ -139,16 +140,17 @@ if __name__ == "__main__":
     lpu_column = "Item"
     threshold = 85
 
-    result_df = process_budget_and_lpu(budget_file=budget_file, 
-                                       lpu_file=lpu_file, 
-                                       budget_column=budget_column, 
-                                       lpu_column=lpu_column, 
-                                       threshold=threshold)
-    print("-"*50)
-    
+    result_df = process_budget_and_lpu(
+        budget_file=budget_file,
+        lpu_file=lpu_file,
+        budget_column=budget_column,
+        lpu_column=lpu_column,
+        threshold=threshold,
+    )
+    print("-" * 50)
+
     # Executando o teste para um único valor
-    result_value = process_match_value_and_lpu(budget_item="Cabo de Aço", 
-                                               lpu_file=lpu_file, 
-                                               lpu_column=lpu_column,
-                                               threshold=threshold)
-    print("-"*50)
+    result_value = process_match_value_and_lpu(
+        budget_item="Cabo de Aço", lpu_file=lpu_file, lpu_column=lpu_column, threshold=threshold
+    )
+    print("-" * 50)
