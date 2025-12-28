@@ -123,9 +123,10 @@ class LPUFormatReport(NamedTuple):
     """
 
     format: str
+    columns: list = []
 
     def __str__(self):
-        return f"LPUFormatReport(format={self.format})"
+        return f"LPUFormatReport(format={self.format}, columns={self.columns})"
 
 
 def identify_lpu_format(
@@ -313,6 +314,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     )
 
     try:
+        # Ler os dados de LPU e realizar pré processing
         df = transform_case(
             read_data(
                 file_path=file_path,
@@ -326,7 +328,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
 
-    # Valida colunas obrigatórias
+    # Valida colunas obrigatórias na base de LPU
     missing_columns = set(required_columns) - set(df.columns)
     if missing_columns:
         raise MissingColumnsError(
