@@ -37,6 +37,17 @@ long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "flo
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
 groups = ["GRUPO1", "GRUPO2", "GRUPO3"]
 
+[default.module_validator_lpu.merge_budget_lpu]
+
+# Configurações de merge
+how_merge = "left"
+
+# Colunas do orçamento (df_budget)
+columns_on_budget = ["ID", "NOME"]
+
+# Colunas da LPU (df_lpu)
+columns_on_lpu = ["CÓD ITEM", "ITEM"]
+
 [default.module_validator_lpu.output_settings]
 
 # Nomes dos arquivos de saída

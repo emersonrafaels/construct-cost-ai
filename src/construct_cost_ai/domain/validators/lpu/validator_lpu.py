@@ -155,8 +155,9 @@ def identify_lpu_format(
     # Colunas esperadas no formato "wide"
     regions = settings.get("module_validator_lpu.lpu_data.regions", [])
     groups = settings.get("module_validator_lpu.lpu_data.groups", [])
-    expected_wide_cols = generate_region_group_combinations(regions, groups, combine_regions=False) + generate_region_group_combinations(
-        regions, groups, combine_regions=True)
+    expected_wide_cols = generate_region_group_combinations(
+        regions, groups, combine_regions=False
+    ) + generate_region_group_combinations(regions, groups, combine_regions=True)
 
     # Identifica colunas que seguem o padrão de região-grupo
     found_wide_cols = [col for col in df.columns if col in expected_wide_cols]
@@ -383,7 +384,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     try:
         # Adiciona as colunas detectadas ao required_columns
         required_columns.update({column: float for column in report.columns})
-        
+
         # Converter as colunas do dataframe para os tipos corretos
         df_wide = cast_columns(df_wide, required_columns)
     except ValueError as e:
@@ -392,33 +393,45 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     return df_wide
 
 
-def cross_budget_lpu(budget: pd.DataFrame, lpu: pd.DataFrame) -> pd.DataFrame:
+def cross_budget_lpu(
+    df_budget: pd.DataFrame,
+    df_lpu: pd.DataFrame,
+    columns_on_budget: List[str],
+    columns_on_lpu: List[str],
+) -> pd.DataFrame:
     """
-    Mescla orçamento e LPU usando cod_item + unidade.
+    Mescla orçamento e LPU usando colunas especificadas.
 
     Args:
-        budget: DataFrame do orçamento
-        lpu: DataFrame da base LPU
+        df_budget: DataFrame do orçamento.
+        df_lpu: DataFrame da base LPU.
+        columns_on_budget: Lista de colunas do df_budget para usar na mesclagem.
+        columns_on_lpu: Lista de colunas do df_lpu para usar na mesclagem.
 
     Returns:
-        DataFrame combinado com INNER JOIN
+        DataFrame combinado com INNER JOIN.
 
     Raises:
-        ValidatorLPUError: Se a mesclagem resultar em um DataFrame vazio
+        ValidatorLPUError: Se a mesclagem resultar em um DataFrame vazio.
     """
-    # Mescla em cod_item + unidade
+    # Mescla os DataFrames usando INNER JOIN
     merged_df = pd.merge(
-        budget, lpu, on=["cod_item", "unidade"], how="inner", suffixes=("_orc", "_lpu")
+        df_budget,
+        df_lpu,
+        left_on=columns_on_budget,
+        right_on=columns_on_lpu,
+        how="inner",
+        suffixes=("_orc", "_lpu"),
     )
 
     if merged_df.empty:
         raise ValidatorLPUError(
             "Nenhuma correspondência encontrada entre orçamento e LPU. "
-            "Verifique se cod_item e unidade estão consistentes."
+            "Verifique se as colunas especificadas estão consistentes."
         )
 
     # Calcula itens não encontrados na LPU
-    items_not_in_lpu = len(budget) - len(merged_df)
+    items_not_in_lpu = len(df_budget) - len(merged_df)
     if items_not_in_lpu > 0:
         logger.warning(f"⚠️  Atenção: {items_not_in_lpu} itens do orçamento não encontrados na LPU")
 
@@ -1342,9 +1355,18 @@ def validate_lpu(
 
     try:
         # Realiza o merge entre orçamento e lpu
-        df_crossed = cross_budget_lpu(df_budget, df_lpu)
+        df_budget_lpu = cross_budget_lpu(
+            df_budget=df_budget,
+            df_lpu=df_lpu,
+            columns_on_budget=settings.get(
+                "module_validator_lpu.merge_budget_lpu.columns_on_budget"
+            ),  # Colunas do df_budget
+            columns_on_lpu=settings.get(
+                "module_validator_lpu.merge_budget_lpu.columns_on_lpu"
+            ),  # Colunas do df_lpu
+        )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_crossed)}")
+            logger.info(f"   ✅ Itens cruzados: {len(df_budget_lpu)}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -1355,11 +1377,11 @@ def validate_lpu(
     # 3. Calcula discrepâncias
     if verbose:
         logger.info(
-            f"🧮 Calculando discrepâncias (tolerância {settings.validador_lpu.tolerancia_percentual}%)..."
+            f"🧮 Calculando discrepâncias (tolerância {settings.get("validador_lpu.tolerancia_percentual")}%)..."
         )
 
     try:
-        df_result = calculate_discrepancies(df_crossed)
+        df_result = calculate_discrepancies(df_budget_lpu)
     except Exception as e:
         logger.error(f"Erro ao calcular discrepâncias: {e}")
         raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
