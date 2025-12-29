@@ -18,7 +18,6 @@ __status__ = "Development"
 import sys
 from pathlib import Path
 from typing import Union, Tuple, List, Optional, Literal, NamedTuple
-from itertools import product
 
 import pandas as pd
 
@@ -29,6 +28,7 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
 from utils.data.data_functions import read_data, export_data, cast_columns, transform_case
+from utils.lpu.lpu_functions import generate_region_group_combinations, split_regiao_grupo
 
 settings = get_settings()
 
@@ -141,16 +141,22 @@ def identify_lpu_format(
       - long: colunas explícitas 'regiao', 'grupo', 'preco' (nomes flexíveis)
       - unknown: não dá pra inferir com confiança
 
-    Retorna também as colunas que seguem o padrão de região-grupo no formato wide.
+    Args:
+        df (pd.DataFrame): DataFrame a ser analisado.
+        expected_core_cols (Tuple[str, str, str]): Colunas principais esperadas no DataFrame.
+        long_required_cols (Tuple[str, str, str]): Colunas esperadas no formato long.
+
+    Returns:
+        LPUFormatReport: Relatório contendo o formato identificado e as colunas encontradas.
+
+    Observação:
+        O argumento `col_to_regiao_grupo` pode ser enviado como `report.columns` para reutilizar as colunas detectadas.
     """
     # Colunas esperadas no formato "wide"
     regions = settings.get("module_validator_lpu.lpu_data.regions", [])
     groups = settings.get("module_validator_lpu.lpu_data.groups", [])
-
-    # Gera todas as combinações possíveis entre regiões e grupos
-    expected_wide_cols = [
-        f"{r1}/{r2}-{g}" for r1, r2 in product(regions, regions) if r1 != r2 for g in groups
-    ]
+    expected_wide_cols = generate_region_group_combinations(regions, groups, combine_regions=False) + generate_region_group_combinations(
+        regions, groups, combine_regions=True)
 
     # Identifica colunas que seguem o padrão de região-grupo
     found_wide_cols = [col for col in df.columns if col in expected_wide_cols]
@@ -170,7 +176,7 @@ def identify_lpu_format(
             )
 
     # Se chegou aqui, o formato é desconhecido
-    return LPUFormatReport(format="unknown")
+    return LPUFormatReport(format="unknown", columns=[])
 
 
 def wide_to_long(
@@ -179,31 +185,59 @@ def wide_to_long(
     item_col: str = "ITEM",
     unit_col: str = "UN",
     keep_cols: Optional[List[str]] = None,
-    col_to_regiao_grupo: Optional[callable] = None,
+    col_to_regiao_grupo: List[str] = None,  # Agora espera uma lista de colunas já filtradas
     value_name: str = "preco",
 ) -> pd.DataFrame:
     """
-    Converte LPU WIDE -> LONG.
+    Converte uma base LPU no formato WIDE para LONG.
+
+    No formato WIDE, os preços são organizados em colunas que representam combinações de regiões e grupos,
+    como 'NORTE-GRUPO1', 'SUDESTE-GRUPO2', etc. No formato LONG, essas informações são transformadas em
+    linhas, com colunas explícitas para 'regiao', 'grupo' e 'preco'.
+
+    Args:
+        df_wide (pd.DataFrame): DataFrame no formato WIDE.
+        id_col (str): Nome da coluna que identifica o item (ex.: 'CÓD ITEM').
+        item_col (str): Nome da coluna que descreve o item (ex.: 'ITEM').
+        unit_col (str): Nome da coluna que indica a unidade (ex.: 'UN').
+        keep_cols (Optional[List[str]]): Lista de colunas adicionais a serem mantidas no formato LONG.
+        col_to_regiao_grupo (List[str]): Lista de colunas de região/grupo já filtradas no DataFrame.
+        value_name (str): Nome da coluna que conterá os valores (ex.: 'preco').
+
+    Returns:
+        pd.DataFrame: DataFrame convertido para o formato LONG.
+
+    Raises:
+        ValueError: Se as colunas necessárias não forem encontradas ou se a conversão falhar.
     """
-    # Identifica colunas de região/grupo
-    region_group_cols = [col for col in df_wide.columns if "-" in col]
 
-    # Deriva regiões e grupos se função fornecida
-    if col_to_regiao_grupo:
-        df_wide = df_wide.copy()
-        df_wide["regiao"], df_wide["grupo"] = zip(
-            *df_wide[region_group_cols].apply(col_to_regiao_grupo, axis=1)
+    # Definindo as regiões e grupos esperados
+    regions = settings.get("module_validator_lpu.lpu_data.regions", [])
+    groups = settings.get("module_validator_lpu.lpu_data.groups", [])
+
+    # Copia o DataFrame para evitar alterações no original
+    df_wide = df_wide.copy()
+
+    # Verifica se col_to_regiao_grupo foi fornecido
+    if not col_to_regiao_grupo:
+        raise ValueError(
+            "A lista de colunas de região/grupo (col_to_regiao_grupo) não foi fornecida."
         )
-        region_group_cols = ["regiao", "grupo"]
 
-    # Transforma para formato longo
+    # Transforma o DataFrame para o formato LONG usando a função melt
     df_long = df_wide.melt(
-        id_vars=[id_col, item_col, unit_col] + (keep_cols or []),
-        value_vars=region_group_cols,
-        var_name="regiao_grupo",
-        value_name=value_name,
+        id_vars=[id_col, item_col, unit_col] + (keep_cols or []),  # Colunas que permanecem fixas
+        value_vars=col_to_regiao_grupo,  # Colunas que serão transformadas em linhas
+        var_name="regiao_grupo",  # Nome da coluna que conterá os nomes das colunas originais
+        value_name=value_name,  # Nome da coluna que conterá os valores
     )
 
+    # Divide regiao_grupo em 'regiao' e 'grupo' usando a função split_regiao_grupo
+    df_long["regiao"], df_long["grupo"] = zip(
+        *df_long["regiao_grupo"].apply(lambda col: split_regiao_grupo(col, regions, groups))
+    )
+
+    # Retorna o DataFrame no formato LONG
     return df_long
 
 
@@ -266,7 +300,7 @@ def convert_lpu(
     if detect:
         report = identify_lpu_format(df)
         if report.format == "wide" and target == "long":
-            df = wide_to_long(df, **kwargs)
+            df = wide_to_long(df, col_to_regiao_grupo=report.columns, **kwargs)
         elif report.format == "long" and target == "wide":
             df = long_to_wide(df, **kwargs)
         else:
@@ -338,7 +372,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     # Detecta formato e converte se necessário
     report = identify_lpu_format(df)
     if report.format == "wide":
-        df = wide_to_long(df)
+        df = wide_to_long(df, col_to_regiao_grupo=report.columns)
         logger.info("Convertido LPU de WIDE para LONG.")
     elif report.format == "long":
         # df = long_to_wide(df)
