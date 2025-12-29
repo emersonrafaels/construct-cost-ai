@@ -119,6 +119,51 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
 
     return df
 
+def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
+    """
+    Carrega o arquivo de metadados.
+
+    Args:
+        file_path: Caminho para o arquivo de metadados (Excel ou CSV). Se não for fornecido, usa o caminho padrão.
+
+    Returns:
+        DataFrame com a base de metadados carregada.
+
+    Raises:
+        FileNotFoundError: Se o arquivo não for encontrado.
+        MissingColumnsError: Se colunas obrigatórias estiverem ausentes.
+        ValueError: Se houver erro ao converter os tipos de colunas.
+    """
+    # Obtém o caminho e a aba do arquivo a partir das configurações
+    file_path = file_path or settings.get("module_validator_lpu.budget_metadados.file_path")
+    sheet_name = settings.get("module_validator_lpu.budget_metadados.sheet_name", "Metadata")
+
+    # Colunas obrigatórias e seus tipos
+    required_columns = settings.get("module_validator_lpu.budget_metadados.required_columns_with_types", {})
+
+    file_path = Path(file_path)
+
+    # Verifica se o arquivo existe
+    if not file_path.exists():
+        raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
+
+    try:
+        # Lê os dados e realiza o pré-processamento
+        df = transform_case(
+            read_data(file_path=file_path, sheet_name=sheet_name),
+            to_upper=True,
+            columns=True,
+            cells=True,
+        )
+
+        # Converte as colunas para os tipos corretos
+        df = cast_columns(df, required_columns)
+    except ValueError as e:
+        logger.error(f"Erro ao converter tipos de colunas na base de metadados: {e}")
+        raise
+
+    return df
+
 
 class LPUFormatReport(NamedTuple):
     """
@@ -696,6 +741,7 @@ def merge_budget_lpu(
 
 def validate_lpu(
     file_path_budget: Union[str, Path] = None,
+    file_path_metadata: Union[str, Path] = None,
     file_path_lpu: Union[str, Path] = None,
     file_path_agencies: Union[str, Path] = None,
     file_path_constructors: Union[str, Path] = None,
@@ -715,6 +761,7 @@ def validate_lpu(
 
     Args:
         file_path_budget: Caminho para o arquivo de orçamento (padrão nas configurações).
+        file_path_metadata: Caminho para o arquivo de metadados (padrão nas configurações).
         file_path_lpu: Caminho para o arquivo da LPU (padrão nas configurações).
         file_path_agencies: Caminho para o arquivo de agências (padrão nas configurações).
         file_path_constructors: Caminho para o arquivo de construtoras (padrão nas configurações).
@@ -751,13 +798,13 @@ def validate_lpu(
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
     
     try:
-        logger.info(f"Carregando metadados de orçamentos de: {file_path_budget}")
-        df_budget = load_budget(file_path_budget)
+        logger.info(f"Carregando metadados de orçamentos de: {file_path_metadata}")
+        df_budget_metadata = load_metadata(file_path_metadata)
         if verbose:
-            logger.info(f"   ✅ Orçamento carregado: {len(df_budget)} itens")
+            logger.info(f"   ✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens")
     except Exception as e:
-        logger.error(f"Erro ao carregar orçamento: {e}")
-        raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
+        logger.error(f"Erro ao carregar metadados dos orçamentos: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar metadados dos orçamentos: {e}")
 
     try:
         logger.debug(f"Carregando LPU de: {file_path_lpu}")
@@ -915,6 +962,7 @@ def validate_lpu(
 
 def orchestrate_validate_lpu(
     file_path_budget: Union[str, Path] = None,
+    file_path_metadata: Union[str, Path] = None,
     file_path_lpu: Union[str, Path] = None,
     file_path_agencies: Union[str, Path] = None,
     file_path_constructors: Union[str, Path] = None,
@@ -927,6 +975,7 @@ def orchestrate_validate_lpu(
 
     Args:
         file_path_budget: Caminho para o arquivo de orçamento (padrão nas configurações se None).
+        file_path_metadata: Caminho para o arquivo de metadados dos orçamentos (padrão nas configurações se None).
         file_path_lpu: Caminho para o arquivo da LPU (padrão nas configurações se None).
         file_path_agencies: Caminho para o arquivo de agências (padrão nas configurações se None).
         file_path_constructors: Caminho para o arquivo de construtoras (padrão nas configurações se None).
@@ -942,6 +991,10 @@ def orchestrate_validate_lpu(
     path_file_budget = Path(
         base_dir,
         file_path_budget or settings.get("module_validator_lpu.budget_data.file_path"),
+    )
+    path_file_metadata = Path(
+        base_dir,
+        file_path_metadata or settings.get("module_validator_lpu.budget_metadados.file_path"),
     )
     path_file_lpu = Path(
         base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path")
@@ -968,6 +1021,7 @@ def orchestrate_validate_lpu(
     try:
         df_result = validate_lpu(
             file_path_budget=path_file_budget,
+            file_path_metadata=path_file_metadata,
             file_path_lpu=path_file_lpu,
             file_path_agencies=path_file_agencies,
             file_path_constructors=path_file_constructors,
