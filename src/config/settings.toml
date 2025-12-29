@@ -21,14 +21,13 @@ required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "
 # Base de Construtoras
 file_path = "data/inputs/construtoras/BASE_CONSTRUTORAS.xlsx"
 sheet_name = "Sheet1"
-required_columns_with_types = {"CONSTRUTORA" = "object", "REGIAO" = "object", "GRUPO" = "object"}
+required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GRUPO" = "object"}
 
 [default.module_validator_lpu.budget_data]
 
 # Caminhos padrão
 file_path = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
-sheet_name_budget_table = "Tables"
-sheet_name_budget_metadata = "Metadata"
+sheet_name = "Tables"
 
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"ID" = "object", "NOME" = "object", "UNIDADE" = "object", "PREÇO LPU" = "float64", "QUANTIDADE" = "float64", "SOURCE_FILE" = "object", "SHEET_NAME" = "object"}
@@ -36,10 +35,23 @@ column_quantity = "QUANTIDADE"
 column_unit_price = "PREÇO LPU"
 column_total_value = "VALOR TOTAL"
 
+[default.module_validator_lpu.budget_metadados]
+
+# Caminhos padrão
+file_path = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+sheet_name = "Metadata"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"CÓDIGO_UPE" = "int", "CONSTRUTORA" = "object", "SOURCE_FILE = "object"}
+" = "object", "PREÇO LPU" = "float64", "QUANTIDADE" = "float64", "SOURCE_FILE" = "object", "SHEET_NAME" = "object"}
+column_code_upe = "CÓDIGO_UPE"
+column_constructor = "CONSTRUTORA"
+column_source_file = "SOURCE_FILE"
+
 [default.module_validator_lpu.lpu_data]
 
 file_path = "data/inputs/lpu/BASE_LPU.xlsx"
-sheet_name_budget_lpu = "LPU"
+sheet_name = "LPU"
 
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"CÓD ITEM" = "object", "ITEM" = "object", "UN" = "object"}
@@ -49,7 +61,7 @@ long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "flo
 
 # Adiciona as variáveis necessárias para regiões e grupos
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
-groups = ["GRUPO 1", "GRUPO 2", "GRUPO 3"]
+groups = ["GRUPO1", "GRUPO2", "GRUPO3", "GRUPO 1", "GRUPO 2", "GRUPO 3"]
 
 [default.module_validator_lpu.merge_budget_lpu]
 

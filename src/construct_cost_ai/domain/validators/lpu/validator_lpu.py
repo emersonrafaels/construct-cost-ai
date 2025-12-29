@@ -84,7 +84,7 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             read_data(
                 file_path=file_path,
                 sheet_name=settings.get(
-                "module_validator_lpu.budget_data.sheet_name_budget_table", "Tables"
+                "module_validator_lpu.budget_data.sheet_name", "Tables"
             ),
             ),
             to_upper=True,
@@ -360,7 +360,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             read_data(
                 file_path=file_path,
                 sheet_name=settings.get(
-                    "module_validator_lpu.lpu_data.sheet_name_budget_lpu", "sheet_name_budget_lpu"
+                    "module_validator_lpu.lpu_data.sheet_name", "LPU"
                 ),
             ),
             to_upper=True,
@@ -743,6 +743,15 @@ def validate_lpu(
 
     try:
         logger.info(f"Carregando orçamento de: {file_path_budget}")
+        df_budget = load_budget(file_path_budget)
+        if verbose:
+            logger.info(f"   ✅ Orçamento carregado: {len(df_budget)} itens")
+    except Exception as e:
+        logger.error(f"Erro ao carregar orçamento: {e}")
+        raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
+    
+    try:
+        logger.info(f"Carregando metadados de orçamentos de: {file_path_budget}")
         df_budget = load_budget(file_path_budget)
         if verbose:
             logger.info(f"   ✅ Orçamento carregado: {len(df_budget)} itens")
