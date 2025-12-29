@@ -238,7 +238,7 @@ def wide_to_long(
     )
 
     # Retorna o DataFrame no formato LONG
-    return df_long
+    return df_wide, df_long
 
 
 def long_to_wide(
@@ -300,18 +300,18 @@ def convert_lpu(
     if detect:
         report = identify_lpu_format(df)
         if report.format == "wide" and target == "long":
-            df = wide_to_long(df, col_to_regiao_grupo=report.columns, **kwargs)
+            df_wide, df_long = wide_to_long(df, col_to_regiao_grupo=report.columns, **kwargs)
         elif report.format == "long" and target == "wide":
-            df = long_to_wide(df, **kwargs)
+            df_wide, df_long = long_to_wide(df, **kwargs)
         else:
             raise ValidatorLPUError(
                 f"Conversão de {report.format} para {target} não suportada ou formato desconhecido."
             )
     else:
         if target == "long":
-            df = wide_to_long(df, **kwargs)
+            df_wide, df_long = wide_to_long(df, **kwargs)
         elif target == "wide":
-            df = long_to_wide(df, **kwargs)
+            df_wide, df_long = long_to_wide(df, **kwargs)
         else:
             raise ValidatorLPUError(f"Formato alvo desconhecido: {target}")
 
@@ -372,7 +372,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     # Detecta formato e converte se necessário
     report = identify_lpu_format(df)
     if report.format == "wide":
-        df = wide_to_long(df, col_to_regiao_grupo=report.columns)
+        df_wide, df_long = wide_to_long(df, col_to_regiao_grupo=report.columns)
         logger.info("Convertido LPU de WIDE para LONG.")
     elif report.format == "long":
         # df = long_to_wide(df)
@@ -381,11 +381,15 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
         raise ValidatorLPUError(f"Formato desconhecido: {report.format}")
 
     try:
-        df = cast_columns(df, required_columns)
+        # Adiciona as colunas detectadas ao required_columns
+        required_columns.update({column: float for column in report.columns})
+        
+        # Converter as colunas do dataframe para os tipos corretos
+        df_wide = cast_columns(df_wide, required_columns)
     except ValueError as e:
         raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
-    return df
+    return df_wide
 
 
 def cross_budget_lpu(budget: pd.DataFrame, lpu: pd.DataFrame) -> pd.DataFrame:
@@ -1337,6 +1341,7 @@ def validate_lpu(
         logger.info("🔗 Cruzando orçamento com LPU...")
 
     try:
+        # Realiza o merge entre orçamento e lpu
         df_crossed = cross_budget_lpu(df_budget, df_lpu)
         if verbose:
             logger.info(f"   ✅ Itens cruzados: {len(df_crossed)}")
