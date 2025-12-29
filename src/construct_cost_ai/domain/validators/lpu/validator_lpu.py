@@ -393,6 +393,61 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     return df_wide
 
 
+def validate_and_merge(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: List[str],
+    right_on: List[str],
+    how: str = "left",
+    log_message: str = "",
+) -> Tuple[pd.DataFrame, int, int]:
+    """
+    Função genérica para validar tipos, realizar merge e contar os resultados.
+
+    Args:
+        df_left (pd.DataFrame): DataFrame à esquerda.
+        df_right (pd.DataFrame): DataFrame à direita.
+        left_on (List[str]): Colunas do DataFrame à esquerda para o merge.
+        right_on (List[str]): Colunas do DataFrame à direita para o merge.
+        how (str): Tipo de merge (ex.: 'left', 'inner').
+        log_message (str): Mensagem de log para identificar o merge.
+
+    Returns:
+        Tuple[pd.DataFrame, int, int]:
+            - DataFrame resultante do merge.
+            - Quantidade de itens que deram match.
+            - Quantidade total de itens no DataFrame à esquerda.
+    """
+    # Valida se os tipos das colunas são compatíveis
+    for col_left, col_right in zip(left_on, right_on):
+        if df_left[col_left].dtype != df_right[col_right].dtype:
+            logger.warning(
+                f"⚠️ Tipos diferentes nas colunas: {col_left} ({df_left[col_left].dtype}) e {col_right} ({df_right[col_right].dtype})."
+            )
+
+    # Realiza o merge
+    merged_df = pd.merge(
+        df_left,
+        df_right,
+        left_on=left_on,
+        right_on=right_on,
+        how=how,
+        suffixes=("_orc", "_lpu"),
+        indicator=True,
+    )
+
+    # Conta os itens que deram match
+    matched_count = merged_df[merged_df["_merge"] == "both"].shape[0]
+    total_count = df_left.shape[0]
+
+    # Loga a informação do merge
+    logger.info(
+        f"{log_message} - {matched_count} dados de {total_count} ({round((matched_count / total_count) * 100, 2) if total_count > 0 else 0}%)"
+    )
+
+    return merged_df, matched_count, total_count
+
+
 def merge_budget_lpu(
     df_budget: pd.DataFrame,
     df_lpu: pd.DataFrame,
@@ -418,24 +473,14 @@ def merge_budget_lpu(
     Raises:
         ValidatorLPUError: Se a mesclagem resultar em um DataFrame vazio.
     """
-    # Verifica se os tipos das colunas primárias são compatíveis
-    for col_budget, col_lpu in zip(columns_on_budget, columns_on_lpu):
-        if df_budget[col_budget].dtype != df_lpu[col_lpu].dtype:
-            logger.warning(
-                f"⚠️ Tipos diferentes nas colunas primárias: "
-                f"{col_budget} ({df_budget[col_budget].dtype}) e "
-                f"{col_lpu} ({df_lpu[col_lpu].dtype})."
-            )
-
     # Realiza o primeiro merge (colunas primárias)
-    merged_df = pd.merge(
+    merged_df, matched_count, total_count = validate_and_merge(
         df_budget,
         df_lpu,
-        left_on=columns_on_budget,
-        right_on=columns_on_lpu,
+        columns_on_budget,
+        columns_on_lpu,
         how="left",
-        suffixes=("_orc", "_lpu"),
-        indicator=True,  # Adiciona coluna para indicar o status do merge
+        log_message=f"Match realizado usando as colunas primárias: {columns_on_budget} - {columns_on_lpu}",
     )
 
     # Filtra os itens que não foram cruzados no primeiro merge
@@ -443,15 +488,14 @@ def merge_budget_lpu(
 
     # Se houver itens não cruzados e colunas secundárias forem fornecidas, tenta o merge secundário
     if not not_matched.empty and secondary_columns_on_budget and secondary_columns_on_lpu:
-        logger.info("Tentando cruzamento secundário com colunas secundárias...")
-        secondary_merge = pd.merge(
+        # Realiza o segundo merge (colunas secundárias)
+        secondary_merge, matched_secondary_count, not_matched_count = validate_and_merge(
             not_matched,
             df_lpu,
-            left_on=secondary_columns_on_budget,
-            right_on=secondary_columns_on_lpu,
+            secondary_columns_on_budget,
+            secondary_columns_on_lpu,
             how="left",
-            suffixes=("_orc", "_lpu"),
-            indicator=True,
+            log_message=f"Segundo match realizado usando as colunas secundárias: {secondary_columns_on_budget} - {secondary_columns_on_lpu}",
         )
 
         # Atualiza os itens cruzados e não cruzados
@@ -468,6 +512,11 @@ def merge_budget_lpu(
             ignore_index=True,
         )
         not_matched = not_matched_secondary
+    logger.info(
+        "Match realizado usando as colunas: {} - {} - {} dados de {} ({}%)".format(
+            columns_on_budget, columns_on_lpu, matched_count, total_count, round((matched_count / total_count) * 100, 2)
+        )
+    )
 
     # Se ainda houver itens não cruzados, adiciona uma coluna de status
     if not not_matched.empty:
