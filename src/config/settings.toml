@@ -9,10 +9,24 @@ app_version = "0.0.1"
 # Tolerância de divergência para status de conciliação (%)
 tol_percentile = 0.0
 
+[default.module_validator_lpu.agencies_data]
+
+# Base de Agências
+file_path = "data/inputs/agencias/BASE_AGENCIAS.xlsx"
+sheet_name = "Sheet1"
+required_columns_with_types = {"CD_PONTO" = "int", "REGIAO" = "object", "TIPO" = "object", "ARQUÉTIPO" = "object"}
+
+[default.module_validator_lpu.constructors_data]
+
+# Base de Construtoras
+file_path = "data/inputs/construtoras/BASE_CONSTRUTORAS.xlsx"
+sheet_name = "Sheet1"
+required_columns_with_types = {"CONSTRUTORA" = "object", "REGIAO" = "object", "GRUPO" = "object"}
+
 [default.module_validator_lpu.budget_data]
 
 # Caminhos padrão
-file_path_budget = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+file_path = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
 sheet_name_budget_table = "Tables"
 sheet_name_budget_metadata = "Metadata"
 
@@ -24,7 +38,7 @@ column_total_value = "VALOR TOTAL"
 
 [default.module_validator_lpu.lpu_data]
 
-file_path_lpu = "data/inputs/lpu/BASE_LPU.xlsx"
+file_path = "data/inputs/lpu/BASE_LPU.xlsx"
 sheet_name_budget_lpu = "LPU"
 
 # Colunas obrigatórias com tipos

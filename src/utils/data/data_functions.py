@@ -57,18 +57,25 @@ __squad__ = "DataCraft"
 __email__ = "emersonssmile@gmail.com"
 __status__ = "Development"
 
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 import json
 
 import pandas as pd
 
+# Adiciona o diretório src ao path
+base_dir = Path(__file__).parents[5]
+sys.path.insert(0, str(Path(base_dir, "src")))
+
+from config.config_logger import logger
+
 
 def read_data(
     file_path: Union[str, Path],
     sheet_name: Optional[Union[str, int]] = None,
     header: Optional[Union[int, List[int]]] = 0,
-    default_sheet: Optional[Union[str, List[str]]] = ["Sheet1", "Planilha1"],
+    default_sheet: Optional[Union[str, List[str]]] = ["Sheet1", "Planilha1", "Plan1"],
 ) -> pd.DataFrame:
     """
     Lê dados de vários formatos de arquivo usando a extensão do arquivo para determinar o método apropriado.
@@ -249,7 +256,7 @@ def transform_case(
             for row, col in cells:
                 if row < len(df) and col < len(df.columns):
                     df.iat[row, col] = transform_value(df.iat[row, col])
-    elif columns:
+    if columns:
         if columns is True:
             # Transforma todas as colunas do DataFrame
             df.columns = [str(column).upper() for column in df.columns]
