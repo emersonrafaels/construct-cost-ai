@@ -43,10 +43,12 @@ groups = ["GRUPO1", "GRUPO2", "GRUPO3"]
 how_merge = "left"
 
 # Colunas do orçamento (df_budget)
-columns_on_budget = ["ID", "NOME"]
+columns_on_budget_id = "ID"
+columns_on_budget_nome = "NOME"
 
 # Colunas da LPU (df_lpu)
-columns_on_lpu = ["CÓD ITEM", "ITEM"]
+columns_on_lpu_id = "CÓD ITEM"
+columns_on_lpu_nome = "ITEM"
 
 [default.module_validator_lpu.output_settings]
 

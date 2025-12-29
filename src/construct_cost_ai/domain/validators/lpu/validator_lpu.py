@@ -393,20 +393,24 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     return df_wide
 
 
-def cross_budget_lpu(
+def merge_budget_lpu(
     df_budget: pd.DataFrame,
     df_lpu: pd.DataFrame,
     columns_on_budget: List[str],
     columns_on_lpu: List[str],
+    secondary_columns_on_budget: Optional[List[str]] = None,
+    secondary_columns_on_lpu: Optional[List[str]] = None,
 ) -> pd.DataFrame:
     """
-    Mescla orçamento e LPU usando colunas especificadas.
+    Mescla orçamento e LPU usando colunas especificadas, com fallback para colunas secundárias.
 
     Args:
         df_budget: DataFrame do orçamento.
         df_lpu: DataFrame da base LPU.
-        columns_on_budget: Lista de colunas do df_budget para usar na mesclagem.
-        columns_on_lpu: Lista de colunas do df_lpu para usar na mesclagem.
+        columns_on_budget: Colunas primárias do df_budget para usar na mesclagem.
+        columns_on_lpu: Colunas primárias do df_lpu para usar na mesclagem.
+        secondary_columns_on_budget: Colunas secundárias do df_budget para fallback.
+        secondary_columns_on_lpu: Colunas secundárias do df_lpu para fallback.
 
     Returns:
         DataFrame combinado com INNER JOIN.
@@ -414,27 +418,63 @@ def cross_budget_lpu(
     Raises:
         ValidatorLPUError: Se a mesclagem resultar em um DataFrame vazio.
     """
-    # Mescla os DataFrames usando INNER JOIN
+    # Verifica se os tipos das colunas primárias são compatíveis
+    for col_budget, col_lpu in zip(columns_on_budget, columns_on_lpu):
+        if df_budget[col_budget].dtype != df_lpu[col_lpu].dtype:
+            logger.warning(
+                f"⚠️ Tipos diferentes nas colunas primárias: "
+                f"{col_budget} ({df_budget[col_budget].dtype}) e "
+                f"{col_lpu} ({df_lpu[col_lpu].dtype})."
+            )
+
+    # Realiza o primeiro merge (colunas primárias)
     merged_df = pd.merge(
         df_budget,
         df_lpu,
         left_on=columns_on_budget,
         right_on=columns_on_lpu,
-        how="inner",
+        how="left",
         suffixes=("_orc", "_lpu"),
+        indicator=True,  # Adiciona coluna para indicar o status do merge
     )
 
-    if merged_df.empty:
-        raise ValidatorLPUError(
-            "Nenhuma correspondência encontrada entre orçamento e LPU. "
-            "Verifique se as colunas especificadas estão consistentes."
+    # Filtra os itens que não foram cruzados no primeiro merge
+    not_matched = merged_df[merged_df["_merge"] == "left_only"].drop(columns=["_merge"])
+
+    # Se houver itens não cruzados e colunas secundárias forem fornecidas, tenta o merge secundário
+    if not not_matched.empty and secondary_columns_on_budget and secondary_columns_on_lpu:
+        logger.info("Tentando cruzamento secundário com colunas secundárias...")
+        secondary_merge = pd.merge(
+            not_matched,
+            df_lpu,
+            left_on=secondary_columns_on_budget,
+            right_on=secondary_columns_on_lpu,
+            how="left",
+            suffixes=("_orc", "_lpu"),
+            indicator=True,
         )
 
-    # Calcula itens não encontrados na LPU
-    items_not_in_lpu = len(df_budget) - len(merged_df)
-    if items_not_in_lpu > 0:
-        logger.warning(f"⚠️  Atenção: {items_not_in_lpu} itens do orçamento não encontrados na LPU")
+        # Atualiza os itens cruzados e não cruzados
+        matched_secondary = secondary_merge[secondary_merge["_merge"] == "both"].drop(
+            columns=["_merge"]
+        )
+        not_matched_secondary = secondary_merge[secondary_merge["_merge"] == "left_only"].drop(
+            columns=["_merge"]
+        )
 
+        # Concatena os resultados do primeiro e segundo cruzamento
+        merged_df = pd.concat(
+            [merged_df[merged_df["_merge"] == "both"], matched_secondary],
+            ignore_index=True,
+        )
+        not_matched = not_matched_secondary
+
+    # Se ainda houver itens não cruzados, adiciona uma coluna de status
+    if not not_matched.empty:
+        not_matched["status"] = "Não cruzado"
+        logger.warning(f"⚠️ {len(not_matched)} itens não foram cruzados.")
+
+    # Retorna o DataFrame final
     return merged_df
 
 
@@ -1354,16 +1394,22 @@ def validate_lpu(
         logger.info("🔗 Cruzando orçamento com LPU...")
 
     try:
-        # Realiza o merge entre orçamento e lpu
-        df_budget_lpu = cross_budget_lpu(
+        # Realiza o merge entre orçamento e LPU
+        df_budget_lpu = merge_budget_lpu(
             df_budget=df_budget,
             df_lpu=df_lpu,
-            columns_on_budget=settings.get(
-                "module_validator_lpu.merge_budget_lpu.columns_on_budget"
-            ),  # Colunas do df_budget
-            columns_on_lpu=settings.get(
-                "module_validator_lpu.merge_budget_lpu.columns_on_lpu"
-            ),  # Colunas do df_lpu
+            columns_on_budget=[
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_on_budget_id"),
+            ],  # Coluna primária do df_budget
+            columns_on_lpu=[
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_on_lpu_id"),
+            ],  # Coluna primária do df_lpu
+            secondary_columns_on_budget=[
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_on_budget_nome"),
+            ],  # Coluna secundária do df_budget
+            secondary_columns_on_lpu=[
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_on_lpu_nome"),
+            ],  # Coluna secundária do df_lpu
         )
         if verbose:
             logger.info(f"   ✅ Itens cruzados: {len(df_budget_lpu)}")
