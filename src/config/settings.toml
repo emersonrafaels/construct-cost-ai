@@ -14,7 +14,7 @@ tol_percentile = 0.0
 # Base de Agências
 file_path = "data/inputs/agencias/BASE_AGENCIAS.xlsx"
 sheet_name = "Sheet1"
-required_columns_with_types = {"CD_PONTO" = "int", "REGIAO" = "object", "TIPO" = "object", "ARQUÉTIPO" = "object"}
+required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "REGIAO" = "object", "UF" = "object", "CIDADE" = "object"}
 
 [default.module_validator_lpu.constructors_data]
 
@@ -49,7 +49,7 @@ long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "flo
 
 # Adiciona as variáveis necessárias para regiões e grupos
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
-groups = ["GRUPO1", "GRUPO2", "GRUPO3"]
+groups = ["GRUPO 1", "GRUPO 2", "GRUPO 3"]
 
 [default.module_validator_lpu.merge_budget_lpu]
 
