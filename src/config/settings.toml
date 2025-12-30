@@ -19,7 +19,8 @@ sheet_name = "Sheet1"
 required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "REGIAO" = "object", "UF" = "object", "CIDADE" = "object"}
 
 # Colunas para normalização de valores
-normalize_values = []
+columns_to_remove_spaces = []
+columns_to_remove_accents = []
 
 [default.module_validator_lpu.constructors_data]
 
@@ -31,7 +32,8 @@ sheet_name = "Sheet1"
 required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GRUPO" = "object"}
 
 # Colunas para normalização de valores
-normalize_values = ["GRUPO"]
+columns_to_remove_spaces = ["GRUPO"]
+columns_to_remove_accents = []
 
 [default.module_validator_lpu.budget_data]
 
@@ -43,7 +45,8 @@ sheet_name = "Tables"
 required_columns_with_types = {"ID" = "object", "NOME" = "object", "UNIDADE" = "object", "PREÇO LPU" = "float64", "QUANTIDADE" = "float64", "SOURCE_FILE" = "object", "SHEET_NAME" = "object"}
 
 # Colunas para normalização de valores
-normalize_values = []
+columns_to_remove_spaces = []
+columns_to_remove_accents = []
 
 column_quantity = "QUANTIDADE"
 column_unit_price = "PREÇO LPU"
@@ -59,7 +62,8 @@ sheet_name = "Metadata"
 required_columns_with_types = {"CÓDIGO_UPE" = "int", "NUMERO_AGENCIA" = "int", "CONSTRUTORA" = "object", "SOURCE_FILE" = "object"}
 
 # Colunas para normalização de valores
-normalize_values = []
+columns_to_remove_spaces = []
+columns_to_remove_accents = []
 
 column_code_upe = "CÓDIGO_UPE"
 column_constructor = "CONSTRUTORA"
@@ -74,7 +78,8 @@ sheet_name = "LPU"
 required_columns_with_types = {"CÓD ITEM" = "object", "ITEM" = "object", "UN" = "object"}
 
 # Colunas para normalização de valores
-normalize_values = []
+columns_to_remove_spaces = []
+columns_to_remove_accents = []
 
 # Colunas padrões do padrão long
 long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "float64"}

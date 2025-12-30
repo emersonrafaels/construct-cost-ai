@@ -91,10 +91,10 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
                 file_path=file_path,
                 sheet_name=settings.get("module_validator_lpu.budget_data.sheet_name", "Tables"),
             ),
-            to_upper=True,
-            columns=True,
-            cells=True,
-            normalize_values=settings.get("module_validator_lpu.budget_data.normalize_values", []),
+            columns_to_upper=True,
+            cells_to_upper=True,
+            columns_to_remove_spaces=settings.get("module_validator_lpu.budget_data.columns_to_remove_spaces", []),
+            columns_to_remove_accents=settings.get("module_validator_lpu.budget_data.columns_to_remove_accents", []),
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -162,10 +162,10 @@ def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
         # Lê os dados e realiza o pré-processamento
         df = transform_case(
             read_data(file_path=file_path, sheet_name=sheet_name),
-            to_upper=True,
-            columns=True,
-            cells=True,
-            normalize_values=settings.get("module_validator_lpu.budget_metadados.normalize_values", []),
+            columns_to_upper=True,
+            cells_to_upper=True,
+            columns_to_remove_spaces=settings.get("module_validator_lpu.budget_metadados.columns_to_remove_spaces", []),
+            columns_to_remove_accents=settings.get("module_validator_lpu.budget_metadados.columns_to_remove_accents", []),
         )
 
         # Converte as colunas para os tipos corretos
@@ -421,10 +421,10 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
                 file_path=file_path,
                 sheet_name=settings.get("module_validator_lpu.lpu_data.sheet_name", "LPU"),
             ),
-            to_upper=True,
-            columns=True,
-            cells=True,
-            normalize_values=settings.get("module_validator_lpu.lpu_data.normalize_values", []),
+            columns_to_upper=True,
+            cells_to_upper=True,
+            columns_to_remove_spaces=settings.get("module_validator_lpu.lpu_data.columns_to_remove_spaces", []),
+            columns_to_remove_accents=settings.get("module_validator_lpu.lpu_data.columns_to_remove_accents", []),
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
@@ -493,10 +493,10 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
                 file_path=file_path,
                 sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
             ),
-            to_upper=True,
-            columns=True,
-            cells=True,
-            normalize_values=settings.get("module_validator_lpu.agencies_data.normalize_values", []),
+            columns_to_upper=True,
+            cells_to_upper=True,
+            columns_to_remove_spaces=settings.get("module_validator_lpu.agencies_data.columns_to_remove_spaces", []),
+            columns_to_remove_accents=settings.get("module_validator_lpu.agencies_data.columns_to_remove_accents", []),
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de agências: {e}")
@@ -553,10 +553,10 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
                 file_path=file_path,
                 sheet_name=settings.get("module_validator_lpu.constructors_data.sheet_name", "Sheet1"),
             ),
-            to_upper=True,
-            columns=True,
-            cells=True,
-            normalize_values=settings.get("module_validator_lpu.constructors_data.normalize_values", []),
+            columns_to_upper=True,
+            cells_to_upper=True,
+            columns_to_remove_spaces=settings.get("module_validator_lpu.constructors_data.columns_to_remove_spaces", []),
+            columns_to_remove_accents=settings.get("module_validator_lpu.constructors_data.columns_to_remove_accents", []),
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de construtoras: {e}")

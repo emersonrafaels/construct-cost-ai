@@ -226,84 +226,94 @@ def _export_multiple_sheets(
 
 def transform_case(
     df: pd.DataFrame,
-    to_upper: bool = True,
-    columns: Union[bool, List[str]] = False,
-    cells: Union[bool, List[Tuple[int, int]]] = False,
-    normalize: bool = False,
-    remove_spaces: bool = False,
-    normalize_columns: Union[bool, List[str]] = False,
-    normalize_values: Union[bool, List[str]] = False
+    columns_to_upper: Union[List[str], str, bool] = None,
+    cells_to_upper: Union[List[str], str, bool] = None,
+    columns_to_lower: Union[List[str], str, bool] = None,
+    cells_to_lower: Union[List[str], str, bool] = None,
+    columns_to_remove_spaces: Union[List[str], str, bool] = None,
+    cells_to_remove_spaces: Union[List[str], str, bool] = None,
+    columns_to_remove_accents: Union[List[str], str, bool] = None,
+    cells_to_remove_accents: Union[List[str], str, bool] = None,
 ) -> pd.DataFrame:
     """
-    Transforma valores de texto em um DataFrame para uppercase ou lowercase, com opções para todas as colunas ou células específicas.
-    Também permite normalizar os dados, como remover acentos e espaços, e especificar quais colunas ou valores devem ser normalizados.
+    Aplica transformações específicas em colunas e células de um DataFrame, como transformar em maiúsculas/minúsculas,
+    remover espaços e remover acentos.
 
     Args:
         df (pd.DataFrame): DataFrame a ser transformado.
-        to_upper (bool): Se True, transforma os valores para uppercase. Se False, transforma para lowercase. Default é True.
-        columns (Union[bool, List[str]]): Se True, todas as colunas serão transformadas. Se lista, apenas as colunas especificadas serão transformadas. Default é False.
-        cells (Union[bool, List[Tuple[int, int]]]): Se True, todas as células serão transformadas. Se lista, apenas as células especificadas serão transformadas. Default é False.
-        normalize (bool): Se True, remove acentos dos valores de texto. Default é False.
-        remove_spaces (bool): Se True, remove espaços dos valores de texto. Default é False.
-        normalize_columns (Union[bool, List[str]]): Se True, normaliza todos os nomes de colunas. Se lista, normaliza apenas as colunas especificadas. Default é False.
-        normalize_values (Union[bool, List[str]]): Se True, normaliza todos os valores de colunas. Se lista, normaliza apenas os valores das colunas especificadas. Default é False.
+        columns_to_upper (Union[List[str], str, bool]): Colunas para transformar os nomes em maiúsculas. Use True para todas.
+        cells_to_upper (Union[List[str], str, bool]): Colunas para transformar os valores das células em maiúsculas. Use True para todas.
+        columns_to_lower (Union[List[str], str, bool]): Colunas para transformar os nomes em minúsculas. Use True para todas.
+        cells_to_lower (Union[List[str], str, bool]): Colunas para transformar os valores das células em minúsculas. Use True para todas.
+        columns_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos nomes. Use True para todas.
+        cells_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos valores das células. Use True para todas.
+        columns_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos nomes. Use True para todas.
+        cells_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos valores das células. Use True para todas.
 
     Returns:
-        pd.DataFrame: DataFrame com os valores transformados.
+        pd.DataFrame: DataFrame com as transformações aplicadas.
     """
 
-    def transform_value(value):
+    def transform_value(value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False):
         """Aplica transformações a um único valor."""
         if isinstance(value, str):
-            if normalize:
+            if remove_accents:
                 value = unidecode(value)
             if remove_spaces:
                 value = value.replace(" ", "")
-            return value.upper() if to_upper else value.lower()
+            if to_upper:
+                value = value.upper()
+            if to_lower:
+                value = value.lower()
         return value
 
-    def normalize_column_names(columns):
-        """Normaliza os nomes das colunas."""
-        return [unidecode(col).replace(" ", "") for col in columns]
+    def resolve_columns(param):
+        """Resolve o parâmetro para retornar uma lista de colunas."""
+        if param is True:
+            return df.columns.tolist()
+        elif isinstance(param, str):
+            return [param]
+        elif isinstance(param, list):
+            return param
+        return []
 
-    # Normalizar nomes de colunas
-    if normalize_columns:
-        if normalize_columns is True:
-            df.columns = normalize_column_names(df.columns)
-        elif isinstance(normalize_columns, list):
-            df.rename(
-                columns={col: unidecode(col).replace(" ", "") for col in normalize_columns if col in df.columns},
-                inplace=True,
-            )
+    # Resolver colunas para cada transformação
+    columns_to_upper = resolve_columns(columns_to_upper)
+    cells_to_upper = resolve_columns(cells_to_upper)
+    columns_to_lower = resolve_columns(columns_to_lower)
+    cells_to_lower = resolve_columns(cells_to_lower)
+    columns_to_remove_spaces = resolve_columns(columns_to_remove_spaces)
+    cells_to_remove_spaces = resolve_columns(cells_to_remove_spaces)
+    columns_to_remove_accents = resolve_columns(columns_to_remove_accents)
+    cells_to_remove_accents = resolve_columns(cells_to_remove_accents)
 
-    # Transformar células específicas
-    if cells:
-        if cells is True:
-            df = df.map(transform_value)
-        elif isinstance(cells, list):
-            for row, col in cells:
-                if row < len(df) and col < len(df.columns):
-                    df.iat[row, col] = transform_value(df.iat[row, col])
+    # Transformar nomes de colunas
+    if columns_to_upper:
+        df.rename(columns={col: col.upper() for col in columns_to_upper if col in df.columns}, inplace=True)
+    if columns_to_lower:
+        df.rename(columns={col: col.lower() for col in columns_to_lower if col in df.columns}, inplace=True)
+    if columns_to_remove_spaces:
+        df.rename(columns={col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns}, inplace=True)
+    if columns_to_remove_accents:
+        df.rename(columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns}, inplace=True)
 
-    # Transformar colunas específicas
-    if columns:
-        if columns is True:
-            # Transforma todas as colunas do DataFrame
-            df.columns = [str(column).upper() for column in df.columns]
-        else:
-            # Transforma apenas as colunas especificadas
-            for col in columns:
-                if col in df.columns:
-                    df[col] = df[col].apply(transform_value)
-
-    # Normalizar valores em colunas específicas
-    if normalize_values:
-        if normalize_values is True:
-            df = df.map(lambda x: unidecode(x) if isinstance(x, str) else x)
-        elif isinstance(normalize_values, list):
-            for col in normalize_values:
-                if col in df.columns:
-                    df[col] = df[col].apply(lambda x: unidecode(x) if isinstance(x, str) else x)
+    # Transformar valores das células
+    if cells_to_upper:
+        for col in cells_to_upper:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: transform_value(x, to_upper=True))
+    if cells_to_lower:
+        for col in cells_to_lower:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: transform_value(x, to_lower=True))
+    if cells_to_remove_spaces:
+        for col in cells_to_remove_spaces:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: transform_value(x, remove_spaces=True))
+    if cells_to_remove_accents:
+        for col in cells_to_remove_accents:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: transform_value(x, remove_accents=True))
 
     return df
 
