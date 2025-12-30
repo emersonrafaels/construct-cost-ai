@@ -94,6 +94,7 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             to_upper=True,
             columns=True,
             cells=True,
+            normalize_values=settings.get("module_validator_lpu.budget_data.normalize_values", []),
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -139,6 +140,9 @@ def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes.
         ValueError: Se houver erro ao converter os tipos de colunas.
     """
+    
+    logger.info("Iniciando o carregamento da base de metadados")
+    
     # Obtém o caminho e a aba do arquivo a partir das configurações
     file_path = file_path or settings.get("module_validator_lpu.budget_metadados.file_path")
     sheet_name = settings.get("module_validator_lpu.budget_metadados.sheet_name", "Metadata")
@@ -161,6 +165,7 @@ def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
             to_upper=True,
             columns=True,
             cells=True,
+            normalize_values=settings.get("module_validator_lpu.budget_metadados.normalize_values", []),
         )
 
         # Converte as colunas para os tipos corretos
@@ -391,6 +396,9 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
         FileNotFoundError: Se o arquivo não for encontrado
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes
     """
+    
+    logger.info("Iniciando o carregamento da base LPU")
+    
     file_path = Path(file_path)
 
     if not file_path.exists():
@@ -416,6 +424,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             to_upper=True,
             columns=True,
             cells=True,
+            normalize_values=settings.get("module_validator_lpu.lpu_data.normalize_values", []),
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
@@ -464,6 +473,9 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
         FileNotFoundError: Se o arquivo não for encontrado.
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes.
     """
+    
+    logger.info("Iniciando o carregamento da base de agências")
+    
     file_path = Path(file_path)
 
     if not file_path.exists():
@@ -484,6 +496,7 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
             to_upper=True,
             columns=True,
             cells=True,
+            normalize_values=settings.get("module_validator_lpu.agencies_data.normalize_values", []),
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de agências: {e}")
@@ -520,6 +533,9 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
         FileNotFoundError: Se o arquivo não for encontrado.
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes.
     """
+    
+    logger.info("Iniciando o carregamento da base de construtoras")
+    
     file_path = Path(file_path)
 
     if not file_path.exists():
@@ -531,15 +547,16 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
     )
 
     try:
-        # Ler os dados de LPU e realizar pré processing
+        # Ler os dados de Fornecedores/Construtoras e realizar pré processing
         df = transform_case(
             read_data(
                 file_path=file_path,
-                sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
+                sheet_name=settings.get("module_validator_lpu.constructors_data.sheet_name", "Sheet1"),
             ),
             to_upper=True,
             columns=True,
             cells=True,
+            normalize_values=settings.get("module_validator_lpu.constructors_data.normalize_values", []),
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de construtoras: {e}")
@@ -874,6 +891,23 @@ def validate_lpu(
         if verbose:
             logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata_agencias)}")
             logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata_agencias.shape}")
+    except Exception as e:
+        logger.error(f"Erro ao cruzar dados: {e}")
+        raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
+    
+    try:
+        # Realiza o merge entre budget/metadados e agencias
+        df_budget_metadata_agencias_constructors = merge_data_with_columns(
+            df_left=df_budget_metadata_agencias,
+            df_right=df_constructors,
+            left_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.left_on"),
+            right_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.right_on"),
+            how=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.how", "left"),
+            validate=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.validate", "many_to_one"),
+        )
+        if verbose:
+            logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata_agencias_constructors)}")
+            logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata_agencias_constructors.shape}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
