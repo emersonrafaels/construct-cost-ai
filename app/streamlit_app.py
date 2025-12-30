@@ -1,4 +1,17 @@
-"""Streamlit frontend for budget validation."""
+"""
+Streamlit frontend for budget validation.
+
+Interface web Streamlit para validação de orçamentos de construção.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Development"
 
 import json
 from datetime import datetime
@@ -16,7 +29,7 @@ from construct_cost_ai.domain.validators.deterministic import (
 from construct_cost_ai.infra.ai import StackSpotAIClient
 from construct_cost_ai.infra.config import get_settings
 
-# Get settings instance
+# Obtendo a instância de configurações
 settings = get_settings()
 
 # Page configuration
@@ -41,9 +54,7 @@ def get_orchestrator() -> BudgetValidationOrchestrator:
 
     ai_client = StackSpotAIClient(mock_mode=True)
 
-    return BudgetValidationOrchestrator(
-        deterministic_validators=validators, ai_agent=ai_client
-    )
+    return BudgetValidationOrchestrator(deterministic_validators=validators, ai_agent=ai_client)
 
 
 def parse_budget_file(uploaded_file) -> list:

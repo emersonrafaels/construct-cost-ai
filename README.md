@@ -1,323 +1,137 @@
-# Construct Cost AI - Budget Validation Orchestration Service
+# DataCraft - Verificador Inteligente de Orçamentos de Obras
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-**Construct Cost AI** is an intelligent orchestration service for validating construction cost estimates (budgets). It combines **deterministic rule-based validators** with **AI-powered analysis** (via StackSpot AI) to identify pricing anomalies, quantity deviations, and out-of-catalog items in construction budgets.
+**Construct Cost AI** é um serviço inteligente de orquestração para validação de orçamentos de obras. Ele combina **validações determinísticas baseadas em regras** com **análises impulsionadas por IA** (via StackSpot AI) para identificar anomalias de preços, desvios de quantidades e itens fora de catálogo em orçamentos de construção.
 
-## 🎯 Purpose
+---
 
-This service validates construction budgets submitted by suppliers by:
-- Applying **business rules and thresholds** (quantity limits, price ranges, catalog validation)
-- Leveraging **AI agents** for contextual analysis and risk assessment
-- Providing **structured findings** with severity levels and natural-language explanations
-- Supporting multiple interfaces: **REST API**, **Streamlit UI**, and **CLI**
+## 🎯 Objetivo
 
-## 🏗️ Architecture
+Este serviço valida orçamentos de obras enviados por fornecedores, aplicando:
+- **Regras de negócio e limites** (limites de quantidade, faixas de preços, validação de catálogo)
+- **Agentes de IA** para análise contextual e avaliação de riscos
+- **Resultados estruturados** com níveis de severidade e explicações em linguagem natural
+- Suporte a múltiplas interfaces: **API REST**, **UI Streamlit** e **CLI**
 
-**Construct Cost AI** is designed as an **orchestration layer** (not a monolith):
+---
 
-- **Object-oriented design** for extensibility
-- **Deterministic validators**: Rule-based checks (LPU, SINAPI, thresholds)
-- **AI agents**: Probabilistic analysis via StackSpot AI HTTP API
-- **Clean separation**: Domain logic, infrastructure, API, and UI layers
+## 🏗️ Arquitetura
+
+O **Construct Cost AI** foi projetado como uma **camada de orquestração** (não um monolito):
+
+- **Design orientado a objetos** para extensibilidade
+- **Validadores determinísticos**: Checagens baseadas em regras (LPU, Match Fuzzy, Match por Contexto)
+- **Agentes de IA**: Análise probabilística via API HTTP do StackSpot AI
+- **Separação limpa**: Lógica de domínio, infraestrutura, API e camadas de UI
 
 ```
 src/construct_cost_ai/
-├── api/                 # FastAPI REST endpoints
-├── domain/              # Core business logic
-│   ├── models.py        # Pydantic domain models
-│   ├── orchestrator.py  # Main orchestration class
-│   └── validators/      # Deterministic validators
-├── infra/               # Infrastructure layer
-│   ├── ai/              # StackSpot AI client
-│   ├── config/          # Dynaconf configuration
-│   └── logging/         # Loguru logging setup
-app/                     # Streamlit frontend
-cli/                     # Rich-based CLI
-tests/                   # pytest test suite
+├── api/                 # Endpoints REST do FastAPI
+├── domain/              # Lógica de negócio principal
+│   ├── models.py        # Modelos de domínio do Pydantic
+│   ├── orchestrator.py  # Classe principal de orquestração
+│   └── validators/      # Validadores determinísticos
+├── infra/               # Camada de infraestrutura
+│   ├── ai/              # Cliente do StackSpot AI
+│   ├── config/          # Configuração do Dynaconf
+│   └── logging/         # Configuração do Loguru
+app/                     # Frontend Streamlit
+cli/                     # CLI baseado em Rich
+tests/                   # Testes com pytest
 ```
 
-## ✨ Features
+---
 
-### Core Capabilities
-- ✅ **Quantity deviation detection** (compare vs. reference data)
-- ✅ **Unit price anomaly detection** (compare vs. SINAPI/LPU tables)
-- ✅ **Out-of-catalog validation** (identify non-standard items)
-- ✅ **AI-powered contextual analysis** (risk assessment, explanations)
-- ✅ **Findings aggregation** (by item and by service group)
-- ✅ **Risk level calculation** (LOW, MEDIUM, HIGH, CRITICAL)
+## ✨ Funcionalidades
+
+### Capacidades Principais
+- ✅ **Detecção de desvios de quantidade** (comparação com dados de referência)
+- ✅ **Detecção de anomalias de preço unitário** (comparação com tabelas SINAPI/LPU)
+- ✅ **Validação de itens fora de catálogo** (identificação de itens não padronizados)
+- ✅ **Análise contextual com IA** (avaliação de riscos, explicações)
+- ✅ **Agregação de resultados** (por item e por grupo de serviços)
+- ✅ **Cálculo de nível de risco** (BAIXO, MÉDIO, ALTO, CRÍTICO)
 
 ### Interfaces
-- 🌐 **FastAPI REST API** (for M2M integration, e.g., Salesforce)
-- 🖥️ **Streamlit web UI** (interactive file upload and visualization)
-- 💻 **Rich CLI** (terminal-based validation with pretty tables)
+- 🌐 **API REST FastAPI** (para integração M2M, ex.: Salesforce)
+- 🖥️ **UI Web Streamlit** (upload interativo de arquivos e visualização)
+- 💻 **CLI Rich** (validação via terminal com tabelas formatadas)
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
+## 🚀 Início Rápido
+
+### Pré-requisitos
 - Python 3.11+
-- pip or uv
+- pip ou uv
 
-### Installation
+### Instalação
 
 ```bash
-# Clone the repository
+# Clone o repositório
 git clone https://github.com/emersonrafaels/construct-cost-ai.git
 cd construct-cost-ai
 
-# Create and activate virtual environment
+# Crie e ative o ambiente virtual
 python -m venv venv
 # Windows
 venv\Scripts\activate
 # Linux/Mac
 source venv/bin/activate
 
-# Install dependencies
-pip install -e ".[dev]"
+# Instale as dependências
+pip install -r requirements.txt
 ```
 
-### Configuration
+### Configuração
 
-1. Copy the example environment file:
+1. Copie o arquivo de exemplo `.env`:
 ```bash
 copy .env.example .env
 ```
 
-2. Edit `.env` and add your StackSpot AI credentials:
+2. Edite o arquivo `src/config` e adicione suas credenciais do StackSpot AI:
 ```env
 STACKSPOT_AI_BASE_URL=https://api.stackspot.ai/v1
-STACKSPOT_AI_API_KEY=your-api-key-here
+STACKSPOT_AI_API_KEY=sua-chave-de-api-aqui
 ```
 
-> **Note**: The service runs in **mock mode** by default (AI calls return simulated responses). Set `mock_mode=False` in code to enable real API calls.
+---
 
-## 📖 Usage
+## 📖 Uso
 
-### 1️⃣ FastAPI REST API
+### 1️⃣ Executando o `main_backtest.py`
 
-Start the API server:
+O arquivo `main_backtest.py` é um exemplo prático para validar orçamentos de obras. Ele pode ser executado diretamente para processar arquivos de entrada e gerar resultados.
 
+**Exemplo de execução:**
 ```bash
-uvicorn construct_cost_ai.api.app:app --reload --host 0.0.0.0 --port 8000
+python examples/main_backtest.py
 ```
 
-Access the interactive API docs at: http://localhost:8000/docs
+## ⚙️ Configuração
 
-**Example API call:**
+A configuração é gerenciada via **Dynaconf** com múltiplas fontes:
 
-```bash
-curl -X POST "http://localhost:8000/validate-budget" \
-  -H "Content-Type: application/json" \
-  -d @examples/sample_budget.json
-```
-
-**Endpoints:**
-- `GET /health` - Health check
-- `POST /validate-budget` - Validate a budget
-
-### 2️⃣ Streamlit Web UI
-
-Launch the Streamlit app:
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-Open your browser at: http://localhost:8501
-
-**Features:**
-- Upload budget file (JSON or CSV)
-- Input project metadata (archetype, area, region)
-- View validation results with interactive tables
-- See AI explanations and risk assessment
-
-### 3️⃣ Rich-based CLI
-
-Run validation from the command line:
-
-```bash
-# Using the installed CLI command
-construct-cost-cli validate examples/sample_budget.json \
-  --archetype Residential \
-  --area 150 \
-  --region SP \
-  --output results.json
-
-# Or using Python module
-python -m construct_cost_ai.cli.main validate examples/sample_budget.json \
-  --archetype Commercial \
-  --area 500 \
-  --region RJ
-```
-
-**CLI Options:**
-- `--archetype, -a`: Building archetype (Residential, Commercial, etc.)
-- `--area, -s`: Square footage in m²
-- `--region, -r`: Region/state code (e.g., SP, RJ)
-- `--supplier`: Supplier name (optional)
-- `--project-id, -p`: Project ID (optional)
-- `--output, -o`: Save results to JSON file
-
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=construct_cost_ai --cov-report=html
-
-# Run specific test file
-pytest tests/test_orchestrator.py -v
-```
-
-## ⚙️ Configuration
-
-Configuration is managed via **Dynaconf** with multiple sources:
-
-1. **`settings.toml`** - Default settings
-2. **`.env`** - Environment variables
-3. **`.secrets.toml`** - Secrets (gitignored)
-
-### Key Settings
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `stackspot_ai_base_url` | StackSpot AI API base URL | `https://api.stackspot.ai/v1` |
-| `stackspot_ai_api_key` | API key for authentication | (required) |
-| `log_level` | Logging level | `INFO` |
-| `quantity_deviation_threshold` | Max quantity deviation | `0.15` (15%) |
-| `unit_price_deviation_threshold` | Max price deviation | `0.20` (20%) |
-
-### Environment-Specific Settings
-
-Switch environments using:
-```bash
-export ENV_FOR_DYNACONF=production
-```
-
-Environments: `development` (default), `production`
+1. **`settings.toml`** - Configurações padrão
+2. **`.env`** - Variáveis de ambiente
+3. **`.secrets.toml`** - Segredos (ignorados pelo git)
 
 ## 📊 Logging
 
-Logging is handled by **Loguru** with structured, leveled output:
+O logging é tratado pelo **Loguru** com saída estruturada e nivelada:
 
-- **Console**: Colored, human-readable logs
-- **File**: JSON-formatted logs with rotation (configurable)
+- **Console**: Logs coloridos e legíveis
+- **Arquivo**: Logs em formato JSON com rotação (configurável)
 
-Logs are stored in `logs/construct_cost_ai.log` (configurable via `settings.toml`).
+Os logs são armazenados em `logs/construct_cost_ai.log` (configurável via `settings.toml`).
 
-**Log Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
+**Níveis de Log**: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-## 🔌 Extending the Service
-
-### Adding a New Deterministic Validator
-
-1. Create a new class in `src/construct_cost_ai/domain/validators/`:
-
-```python
-from construct_cost_ai.domain.validators.base import BaseDeterministicValidator
-from construct_cost_ai.domain.models import Budget, Finding
-
-class MyCustomValidator(BaseDeterministicValidator):
-    def __init__(self):
-        super().__init__(name="My Custom Validator")
-    
-    def validate(self, budget: Budget) -> list[Finding]:
-        findings = []
-        # Your validation logic here
-        return findings
-```
-
-2. Register it in the orchestrator:
-
-```python
-from construct_cost_ai.domain.orchestrator import BudgetValidationOrchestrator
-
-orchestrator = BudgetValidationOrchestrator()
-orchestrator.add_validator(MyCustomValidator())
-```
-
-### Integrating Real StackSpot AI
-
-To use real StackSpot AI instead of mock responses:
-
-1. Set your API key in `.env`
-2. Modify the client initialization:
-
-```python
-from construct_cost_ai.infra.ai import StackSpotAIClient
-
-ai_client = StackSpotAIClient(mock_mode=False)
-```
-
-## 📝 Data Models
-
-### Input: Budget
-
-```json
-{
-  "items": [
-    {
-      "item_id": "item_001",
-      "code": "SINAPI_88307",
-      "description": "CONCRETO FCK >= 25MPA",
-      "group": "Structural",
-      "quantity": 15.5,
-      "unit": "m³",
-      "unit_price": 425.50,
-      "total_price": 6595.25
-    }
-  ],
-  "metadata": {
-    "archetype": "Residential",
-    "square_footage": 150.0,
-    "region": "SP",
-    "supplier": "ABC Construtora",
-    "project_id": "PRJ-2025-001"
-  }
-}
-```
-
-### Output: Validation Result
-
-```json
-{
-  "findings_by_item": [
-    {
-      "code": "PRICE_ANOMALY_001",
-      "severity": "WARNING",
-      "message": "Unit price deviation of 22% for item 'CONCRETO...'",
-      "item_id": "item_001",
-      "group": "Structural",
-      "validator": "Unit Price Threshold Validator"
-    }
-  ],
-  "findings_by_group": {
-    "Structural": [...],
-    "Finishing": [...]
-  },
-  "summary": {
-    "total_items": 6,
-    "items_with_findings": 3,
-    "total_findings": 5,
-    "findings_by_severity": {
-      "WARNING": 3,
-      "ERROR": 2
-    },
-    "risk_level": "MEDIUM",
-    "execution_time_ms": 125.5
-  },
-  "explanations": [
-    "Analysis of 6 budget items totaling R$ 35,683.75...",
-    "Several items show price deviations..."
-  ]
-}
-```
+---
 
 ## 🛠️ Tech Stack
 
@@ -331,41 +145,23 @@ ai_client = StackSpotAIClient(mock_mode=False)
 - **HTTP Client**: httpx
 - **Testing**: pytest
 
-## 📄 License
+---
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+## 📄 Licença
 
-## 👥 Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 🐛 Troubleshooting
-
-### Import Errors (loguru, dynaconf, etc.)
-
-These are expected during development until dependencies are installed. Run:
-```bash
-pip install -e ".[dev]"
-```
-
-### StackSpot AI Connection Issues
-
-The service runs in **mock mode** by default. To troubleshoot real API calls:
-1. Verify API key in `.env`
-2. Check logs in `logs/construct_cost_ai.log`
-3. Review StackSpot AI client logs
-
-## 📞 Support
-
-For questions or issues:
-- Open an issue on GitHub
-- Contact: emerson@example.com
+Este projeto está licenciado sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
-**Built with ❤️ for smarter construction cost validation**
+## 📞 Suporte
+
+Para dúvidas ou problemas:
+- Abra uma issue no GitHub
+- Contate: Alvaro Antonio Borges (julgalv), Clarissa Simoyama (simoyam), Emerson Vinicius Rafael (emervin), Lucas Ken (kushida), Fabiana Marques Fernandes (fmfcwdv)
+
+---
+
+
+**Produto: Verificador Inteligente de Orçamentos de Obras**
+
+**Construído com ❤️ por DataCraft.**

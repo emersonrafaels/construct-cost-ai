@@ -1,0 +1,76 @@
+[default]
+
+[default.default_budget_reader]
+# Configurações gerais do sistema
+SOURCE_FILE_COLUMN_NAME = "SOURCE_FILE"
+SHEET_NAME_COLUMN_NAME = "SHEET_NAME"
+
+[default.default_budget_reader.default_sheet]
+# Configurações da aba padrão a ser lida
+name = ""  # Nome da aba padrão (deixe vazio para todas as abas)
+sheet_candidates = ["LPU", "01"]  # Candidatos a nomes de abas
+pattern_default = "default01"
+
+[default.default_budget_reader.expected_columns.default01]
+# Colunas esperadas para o padrão "default01"
+columns = [
+    "ID",  # Identificador único do item
+    "DESCRIÇÃO",  # Nome do item
+    "UN.",  # Unidade de medida
+    "UNITÁRIO",  # Preço unitário
+    "COMENTÁRIO",  # Comentários adicionais
+    "QUANTIDADE",  # Quantidade do item
+    "TOTAL"  # Valor total do item
+]
+
+[default.default_budget_reader.expected_columns.default02]
+# Colunas esperadas para o padrão "default02"
+columns = [
+    "ITEM",  # ID da categoria
+    "DESCRIÇÃO",  # Nome do item
+    "UN",  # Unidade de medida
+    "QUANT",  # Quantidade do item
+    "PREÇO UNITÁRIO",  # Preço unitário
+    "",  # Coluna vazia
+    "PREÇO TOTAL"  # Valor total do item
+]
+
+[default.default_budget_reader.alternative_columns.default01]
+# Colunas alternativas mínimas para o padrão "default01"
+columns = [
+    "ID",  # Identificador único do item
+    "DESCRIÇÃO",  # Nome do item
+    "UNITÁRIO",  # Preço unitário
+    "QUANTIDADE"  # Quantidade do item
+]
+
+[default.default_budget_reader.alternative_columns.default02]
+# Colunas alternativas mínimas para o padrão "default02"
+columns = [
+    "DESCRIÇÃO",  # Nome do item
+    "QUANT",  # Quantidade do item
+    "P.U."  # Preço unitário
+]
+
+[default.default_budget_reader.default01.result]
+# Rename de colunas para o padrão "default01"
+dict_rename = {"ID" = "ID", "DESCRIÇÃO" = "NOME", "UN." = "UNIDADE", "UNITÁRIO" = "PREÇO LPU", "COMENTÁRIO" = "COMENTÁRIO", "QUANTIDADE" = "QUANTIDADE", "TOTAL" = "VALOR TOTAL"}
+
+[default.default_budget_reader.default02.result]
+# Rename de colunas para o padrão "default02"
+dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT" = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO LPU", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
+
+[default.default_budget_reader.result]
+# Colunas esperadas no final do processo
+list_result_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "COMENTÁRIO", "QUANTIDADE", "VALOR TOTAL", "SOURCE_FILE", "SHEET_NAME"]
+file_name_output = "01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx" # Nome do arquivo de saída final
+name_sheet_output_tables = "Tables"  # Nome da aba do arquivo de saída final (Tabelas de orçamento)
+name_sheet_output_metadata = "Metadata"  # Nome da aba de metadados do arquivo de saída final (Metadados de orçamento)
+
+[default.default_budget_reader.filtros]
+# Filtros aplicados no pós-processamento
+dict_filtros = {"QUANTIDADE" = "greater_than:0"}
+
+[default.default_budget_reader.dir_outputs]
+# Diretório de saída padrão
+path = "data/outputs"  # Caminho para salvar os arquivos de saída

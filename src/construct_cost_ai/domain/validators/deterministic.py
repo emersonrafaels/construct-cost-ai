@@ -1,10 +1,22 @@
-"""Deterministic validators for budget validation."""
+"""
+Deterministic validators for budget validation.
+
+Implementa validadores baseados em regras para análise de orçamentos.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Development"
 
 from typing import List
 
 from construct_cost_ai.domain.models import Budget, Finding, Severity
 from construct_cost_ai.domain.validators.base import BaseDeterministicValidator
-from construct_cost_ai.infra.logging import logger
 
 
 class QuantityDeviationValidator(BaseDeterministicValidator):
@@ -265,6 +277,4 @@ class OutOfCatalogValidator(BaseDeterministicValidator):
         }
 
         # For demonstration, items not starting with known prefixes are "out of catalog"
-        return code in known_codes or any(
-            code.startswith(prefix) for prefix in ["SINAPI_", "LPU_"]
-        )
+        return code in known_codes or any(code.startswith(prefix) for prefix in ["SINAPI_", "LPU_"])

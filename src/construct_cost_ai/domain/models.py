@@ -1,4 +1,17 @@
-"""Core domain models for budget validation."""
+"""
+Core domain models for budget validation.
+
+Define os modelos de dados principais do domínio de validação de orçamentos.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Development"
 
 from datetime import datetime
 from enum import Enum
@@ -36,7 +49,7 @@ class BudgetItem(BaseModel):
     unit: str = Field(..., description="Unit of measurement")
     unit_price: float = Field(..., ge=0, description="Unit price")
     total_price: float = Field(..., ge=0, description="Total price (quantity * unit_price)")
-    
+
     @field_validator("total_price")
     @classmethod
     def validate_total_price(cls, v: float, info) -> float:
@@ -78,9 +91,7 @@ class Finding(BaseModel):
     message: str = Field(..., description="Human-readable message")
     item_id: Optional[str] = Field(None, description="Reference to budget item (if applicable)")
     group: Optional[str] = Field(None, description="Service group (if applicable)")
-    details: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional contextual data"
-    )
+    details: Dict[str, Any] = Field(default_factory=dict, description="Additional contextual data")
     validator: str = Field(..., description="Name of the validator that generated this finding")
 
 

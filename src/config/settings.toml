@@ -1,0 +1,178 @@
+[default]
+# Produto Metadata
+app_name = "Verificador Inteligente de Orçamentos de Obras"
+squad_name = "DataCraft"
+app_version = "0.0.1"
+
+# Configuração - Validador LPU
+[default.module_validator_lpu]
+# Tolerância de divergência para status de conciliação (%)
+tol_percentile = 0.0
+
+[default.module_validator_lpu.agencies_data]
+
+# Base de Agências
+file_path = "data/inputs/agencias/BASE_AGENCIAS.xlsx"
+sheet_name = "Sheet1"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "REGIAO" = "object", "UF" = "object", "CIDADE" = "object"}
+
+# Colunas para normalização de valores
+cells_to_remove_spaces = []
+cells_to_remove_accents = []
+
+[default.module_validator_lpu.constructors_data]
+
+# Base de Construtoras
+file_path = "data/inputs/construtoras/BASE_CONSTRUTORAS.xlsx"
+sheet_name = "Sheet1"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GRUPO" = "object"}
+
+# Colunas para normalização de valores
+cells_to_remove_spaces = ["GRUPO"]
+cells_to_remove_accents = []
+
+[default.module_validator_lpu.budget_data]
+
+# Caminhos padrão
+file_path = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+sheet_name = "Tables"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"ID" = "object", "NOME" = "object", "UNIDADE" = "object", "PREÇO LPU" = "float64", "QUANTIDADE" = "float64", "SOURCE_FILE" = "object", "SHEET_NAME" = "object"}
+
+# Colunas para normalização de valores
+cells_to_remove_spaces = []
+cells_to_remove_accents = []
+
+column_quantity = "QUANTIDADE"
+column_unit_price = "PREÇO LPU"
+column_total_value = "VALOR TOTAL"
+
+[default.module_validator_lpu.budget_metadados]
+
+# Caminhos padrão
+file_path = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+sheet_name = "Metadata"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"CÓDIGO_UPE" = "int", "NUMERO_AGENCIA" = "int", "CONSTRUTORA" = "object", "SOURCE_FILE" = "object"}
+
+# Colunas para normalização de valores
+cells_to_remove_spaces = []
+cells_to_remove_accents = []
+
+column_code_upe = "CÓDIGO_UPE"
+column_constructor = "CONSTRUTORA"
+column_source_file = "SOURCE_FILE"
+
+[default.module_validator_lpu.lpu_data]
+
+file_path = "data/inputs/lpu/BASE_LPU.xlsx"
+sheet_name = "LPU"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {"CÓD ITEM" = "object", "ITEM" = "object", "UN" = "object"}
+
+# Colunas para normalização de valores
+cells_to_remove_spaces = []
+cells_to_remove_accents = []
+
+# Colunas padrões do padrão long
+long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "float64"}
+
+# Adiciona as variáveis necessárias para regiões e grupos
+regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
+groups = ["GRUPO1", "GRUPO2", "GRUPO3", "GRUPO 1", "GRUPO 2", "GRUPO 3"]
+
+[default.module_validator_lpu.merge_budget_metadata]
+left_on = "SOURCE_FILE"
+right_on = "SOURCE_FILE"
+how = "left"
+validate = "many_to_one"
+
+[default.module_validator_lpu.merge_budget_metadata_agencies]
+left_on = "NUMERO_AGENCIA"
+right_on = "CD_PONTO"
+how = "left"
+validate = "many_to_one"
+
+[default.module_validator_lpu.merge_budget_metadata_agencies_constructors]
+left_on = ["CONSTRUTORA", "REGIAO"]
+right_on = ["FORNECEDOR", "REGIAO"]
+how = "left"
+validate = "many_to_one"
+
+[default.module_validator_lpu.merge_budget_lpu]
+
+# Configurações de merge
+how_merge = "left"
+
+# Colunas do orçamento (df_budget)
+columns_on_budget_id = "ID"
+columns_on_budget_nome = "NOME"
+
+# Colunas da LPU (df_lpu)
+columns_on_lpu_id = "CÓD ITEM"
+columns_on_lpu_nome = "ITEM"
+
+[default.module_validator_lpu.output_settings]
+
+# Nomes dos arquivos de saída
+output_dir = "data/outputs"
+file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
+file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
+file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
+
+# Configurações de exportação
+top_n_divergencias = 10
+top_n_divergencias_extended = 20
+
+# StackSpot AI Configuration
+[default.stackspot]
+ai_base_url = "https://api.stackspot.ai/v1"
+ai_timeout = 30 # seconds
+
+# Logging Configuration
+[default.logging]
+level = "INFO"
+format = "json"
+rotation = "10 MB"
+retention = "30 days"
+
+# API Configuration
+[default.api]
+title = "Verificador Inteligente de Orçamentos de Obras - Serviço de Validação"
+host = "0.0.0.0"
+port = 8000
+reload = false
+version = "0.0.1"
+
+# Validators Configuration
+[default.validators]
+quantity_deviation_threshold = 0.15
+unit_price_deviation_threshold = 0.20
+
+# Development Environment
+[development]
+debug = true
+
+[development.logging]
+level = "DEBUG"
+
+[development.api]
+reload = true
+
+# Production Environment
+[production]
+debug = false
+
+[production.logging]
+level = "WARNING"
+
+[production.api]
+reload = false

@@ -1,6 +1,19 @@
-"""API schemas for request and response models."""
+"""
+API schemas for request and response models.
 
-from typing import Dict, List, Optional
+Define os modelos Pydantic para requisições e respostas da API.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Development"
+
+from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -8,7 +21,6 @@ from construct_cost_ai.domain.models import (
     BudgetItem,
     BudgetMetadata,
     Finding,
-    RiskLevel,
     ValidationSummary,
 )
 

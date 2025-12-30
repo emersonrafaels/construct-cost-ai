@@ -1,4 +1,17 @@
-"""FastAPI application factory and configuration."""
+"""
+FastAPI application factory and configuration.
+
+Este módulo cria e configura a aplicação FastAPI para validação de orçamentos.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Development"
 
 from contextlib import asynccontextmanager
 
@@ -9,7 +22,7 @@ from construct_cost_ai.api.routes import router
 from construct_cost_ai.infra.config import get_settings
 from construct_cost_ai.infra.logging import logger
 
-# Get settings instance
+# Obtendo a instância de configurações
 settings = get_settings()
 
 
@@ -42,9 +55,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(router)
 
-    logger.info(
-        f"FastAPI app created: {app.title} v{app.version}"
-    )
+    logger.info(f"FastAPI app created: {app.title} v{app.version}")
 
     return app
 

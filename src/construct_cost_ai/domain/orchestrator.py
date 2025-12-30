@@ -1,4 +1,17 @@
-"""Budget validation orchestrator."""
+"""
+Budget validation orchestrator.
+
+Orquestra a validação de orçamentos usando validadores determinísticos e agentes de IA.
+"""
+
+__author__ = "Emerson V. Rafael (emervin)"
+__copyright__ = "Copyright 2025, Construct Cost AI"
+__credits__ = ["Emerson V. Rafael"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Emerson V. Rafael"
+__email__ = "emersonssmile@gmail.com"
+__status__ = "Development"
 
 import time
 from collections import defaultdict
@@ -72,13 +85,13 @@ class BudgetValidationOrchestrator:
                 ai_result = self.ai_agent.analyze_budget_context(budget)
                 explanations = ai_result.get("explanations", [])
                 ai_risk_assessment = ai_result.get("risk_assessment")
-                
+
                 # Add suggestions as explanations
                 suggestions = ai_result.get("suggestions", [])
                 if suggestions:
                     explanations.append("\nRecommendations:")
                     explanations.extend([f"• {s}" for s in suggestions])
-                
+
                 logger.debug(f"AI analysis complete: {len(explanations)} explanations")
             except Exception as e:
                 logger.error(f"Error running AI analysis: {str(e)}", exc_info=True)
@@ -87,9 +100,7 @@ class BudgetValidationOrchestrator:
         findings_by_group = self._aggregate_by_group(all_findings)
 
         # Calculate summary
-        summary = self._calculate_summary(
-            budget, all_findings, start_time, ai_risk_assessment
-        )
+        summary = self._calculate_summary(budget, all_findings, start_time, ai_risk_assessment)
 
         execution_time = (time.time() - start_time) * 1000
         logger.info(
@@ -201,7 +212,12 @@ class BudgetValidationOrchestrator:
             ai_risk = ai_risk_map.get(ai_risk_assessment.upper(), findings_risk)
 
             # Take the higher of the two risk levels
-            risk_levels_order = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL]
+            risk_levels_order = [
+                RiskLevel.LOW,
+                RiskLevel.MEDIUM,
+                RiskLevel.HIGH,
+                RiskLevel.CRITICAL,
+            ]
             if risk_levels_order.index(ai_risk) > risk_levels_order.index(findings_risk):
                 return ai_risk
 
