@@ -460,3 +460,111 @@ def cast_columns(df: pd.DataFrame, column_types: Dict[str, str]) -> pd.DataFrame
         else:
             raise ValueError(f"A coluna '{column}' não existe no DataFrame.")
     return df
+
+
+def merge_data(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: list,
+    right_on: list,
+    how: str = "inner",
+    suffixes: tuple = ("_left", "_right"),
+) -> pd.DataFrame:
+    """
+    Perform a generic merge between two DataFrames.
+
+    Args:
+        df_left (pd.DataFrame): The left DataFrame.
+        df_right (pd.DataFrame): The right DataFrame.
+        left_on (list): Columns to merge on from the left DataFrame.
+        right_on (list): Columns to merge on from the right DataFrame.
+        how (str): Type of merge to perform. Defaults to "inner".
+        suffixes (tuple): Suffixes to apply to overlapping column names. Defaults to ("_left", "_right").
+
+    Returns:
+        pd.DataFrame: The merged DataFrame.
+
+    Raises:
+        ValueError: If the merge operation fails.
+    """
+    try:
+        merged_df = pd.merge(
+            df_left,
+            df_right,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=suffixes,
+        )
+        return merged_df
+    except Exception as e:
+        logger.error(f"Error during merge: {e}")
+        raise ValueError(f"Error during merge: {e}")
+
+
+def merge_data_with_columns(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: list,
+    right_on: list,
+    selected_left_columns: list = None,
+    selected_right_columns: list = None,
+    how: str = "inner",
+    suffixes: tuple = ("_left", "_right"),
+    validate: str = None,  # Novo parâmetro para validar o tipo de relacionamento
+) -> pd.DataFrame:
+    """
+    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas para incluir no resultado.
+
+    Parâmetros:
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        selected_left_columns (list, opcional): Colunas a serem mantidas do DataFrame da esquerda. Padrão é None (mantém todas).
+        selected_right_columns (list, opcional): Colunas a serem mantidas do DataFrame da direita. Padrão é None (mantém todas).
+        how (str): Tipo de merge a ser realizado. Padrão é "inner".
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
+        validate (str, opcional): Valida o tipo de relacionamento entre os DataFrames. Ex.: "one_to_one", "one_to_many", "many_to_one", "many_to_many".
+
+    Retorna:
+        pd.DataFrame: DataFrame resultante do merge com as colunas selecionadas.
+
+    Levanta:
+        ValueError: Se ocorrer um erro durante o merge ou se a validação falhar.
+    """
+    try:
+        # Filtra as colunas do DataFrame da esquerda, se especificado
+        if selected_left_columns:
+            df_left = df_left[left_on + selected_left_columns]  # Mantém apenas as colunas necessárias
+
+        # Filtra as colunas do DataFrame da direita, se especificado
+        if selected_right_columns:
+            df_right = df_right[right_on + selected_right_columns]  # Mantém apenas as colunas necessárias
+
+        # Realiza o merge entre os dois DataFrames com validação
+        merged_df = pd.merge(
+            df_left,
+            df_right,
+            left_on=left_on,  # Colunas para o merge no DataFrame da esquerda
+            right_on=right_on,  # Colunas para o merge no DataFrame da direita
+            how=how,  # Tipo de merge (inner, left, right, outer)
+            suffixes=suffixes,  # Sufixos para colunas duplicadas
+            validate=validate,  # Valida o tipo de relacionamento
+        )
+        return merged_df
+
+    # Trata erro de validação do merge
+    except pd.errors.MergeError as e:
+        logger.error(f"Erro de validação durante o merge: {e}")
+        raise ValueError(f"Erro de validação durante o merge: {e}")
+
+    # Trata erro de colunas ausentes
+    except KeyError as e:
+        logger.error(f"Coluna não encontrada durante o merge: {e}")
+        raise ValueError(f"Coluna não encontrada durante o merge: {e}")
+
+    # Trata outros erros gerais
+    except Exception as e:
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")

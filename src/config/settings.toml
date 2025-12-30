@@ -42,7 +42,7 @@ file_path = "data/outputs/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
 sheet_name = "Metadata"
 
 # Colunas obrigatórias com tipos
-required_columns_with_types = {"CÓDIGO_UPE" = "int", "CONSTRUTORA" = "object", "SOURCE_FILE" = "object"}
+required_columns_with_types = {"CÓDIGO_UPE" = "int", "NUMERO_AGENCIA" = "int", "CONSTRUTORA" = "object", "SOURCE_FILE" = "object"}
 column_code_upe = "CÓDIGO_UPE"
 column_constructor = "CONSTRUTORA"
 column_source_file = "SOURCE_FILE"
@@ -61,6 +61,18 @@ long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "flo
 # Adiciona as variáveis necessárias para regiões e grupos
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
 groups = ["GRUPO1", "GRUPO2", "GRUPO3", "GRUPO 1", "GRUPO 2", "GRUPO 3"]
+
+[default.module_validator_lpu.merge_budget_metadata]
+left_on = "SOURCE_FILE"
+right_on = "SOURCE_FILE"
+how = "left"
+validate = "many_to_one"
+
+[default.module_validator_lpu.merge_budget_metadata_agencies]
+left_on = "NUMERO_AGENCIA"
+right_on = "CD_PONTO"
+how = "left"
+validate = "many_to_one"
 
 [default.module_validator_lpu.merge_budget_lpu]
 

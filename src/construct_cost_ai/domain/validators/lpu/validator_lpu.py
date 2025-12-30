@@ -27,7 +27,13 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
-from utils.data.data_functions import read_data, export_data, cast_columns, transform_case
+from utils.data.data_functions import (
+    read_data,
+    export_data,
+    cast_columns,
+    transform_case,
+    merge_data_with_columns,
+)
 from utils.lpu.lpu_functions import generate_region_group_combinations, split_regiao_grupo
 
 settings = get_settings()
@@ -83,13 +89,11 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
         df = transform_case(
             read_data(
                 file_path=file_path,
-                sheet_name=settings.get(
-                "module_validator_lpu.budget_data.sheet_name", "Tables"
-            ),
+                sheet_name=settings.get("module_validator_lpu.budget_data.sheet_name", "Tables"),
             ),
             to_upper=True,
             columns=True,
-            cells=True
+            cells=True,
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -119,6 +123,7 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
 
     return df
 
+
 def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
     """
     Carrega o arquivo de metadados.
@@ -139,7 +144,9 @@ def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
     sheet_name = settings.get("module_validator_lpu.budget_metadados.sheet_name", "Metadata")
 
     # Colunas obrigatórias e seus tipos
-    required_columns = settings.get("module_validator_lpu.budget_metadados.required_columns_with_types", {})
+    required_columns = settings.get(
+        "module_validator_lpu.budget_metadados.required_columns_with_types", {}
+    )
 
     file_path = Path(file_path)
 
@@ -404,13 +411,11 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
         df = transform_case(
             read_data(
                 file_path=file_path,
-                sheet_name=settings.get(
-                    "module_validator_lpu.lpu_data.sheet_name", "LPU"
-                ),
+                sheet_name=settings.get("module_validator_lpu.lpu_data.sheet_name", "LPU"),
             ),
             to_upper=True,
             columns=True,
-            cells=True
+            cells=True,
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
@@ -474,13 +479,11 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
         df = transform_case(
             read_data(
                 file_path=file_path,
-                sheet_name=settings.get(
-                    "module_validator_lpu.agencies_data.sheet_name", "Sheet1"
-                ),
+                sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
             ),
             to_upper=True,
             columns=True,
-            cells=True
+            cells=True,
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de agências: {e}")
@@ -532,13 +535,11 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
         df = transform_case(
             read_data(
                 file_path=file_path,
-                sheet_name=settings.get(
-                    "module_validator_lpu.agencies_data.sheet_name", "Sheet1"
-                ),
+                sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
             ),
             to_upper=True,
             columns=True,
-            cells=True
+            cells=True,
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de construtoras: {e}")
@@ -603,8 +604,8 @@ def get_default_settings(key):
         "top_n_divergences": settings.validador_lpu.top_n_divergencias,
         "top_n_divergences_extended": settings.validador_lpu.top_n_divergencias_extended,
     }
-    
-    
+
+
 def validate_and_merge(
     df_left: pd.DataFrame,
     df_right: pd.DataFrame,
@@ -726,7 +727,11 @@ def merge_budget_lpu(
         not_matched = not_matched_secondary
     logger.info(
         "Match realizado usando as colunas: {} - {} - {} dados de {} ({}%)".format(
-            columns_on_budget, columns_on_lpu, matched_count, total_count, round((matched_count / total_count) * 100, 2)
+            columns_on_budget,
+            columns_on_lpu,
+            matched_count,
+            total_count,
+            round((matched_count / total_count) * 100, 2),
         )
     )
 
@@ -796,12 +801,14 @@ def validate_lpu(
     except Exception as e:
         logger.error(f"Erro ao carregar orçamento: {e}")
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
-    
+
     try:
         logger.info(f"Carregando metadados de orçamentos de: {file_path_metadata}")
         df_budget_metadata = load_metadata(file_path_metadata)
         if verbose:
-            logger.info(f"   ✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens")
+            logger.info(
+                f"   ✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens"
+            )
     except Exception as e:
         logger.error(f"Erro ao carregar metadados dos orçamentos: {e}")
         raise ValidatorLPUError(f"Erro ao carregar metadados dos orçamentos: {e}")
@@ -836,6 +843,46 @@ def validate_lpu(
     # 2. Cruza dados
     if verbose:
         logger.info("🔗 Cruzando orçamento com LPU...")
+    
+    try:
+        # Realiza o merge entre budget e metadados
+        df_budget_metadata = merge_data_with_columns(
+            df_left=df_budget,
+            df_right=df_budget_metadata,
+            left_on=settings.get("module_validator_lpu.merge_budget_metadata.left_on"),
+            right_on=settings.get("module_validator_lpu.merge_budget_metadata.right_on"),
+            how=settings.get("module_validator_lpu.merge_budget_metadata.how", "left"),
+            validate=settings.get("module_validator_lpu.merge_budget_metadata.validate", "many_to_one"),
+        )
+        if verbose:
+            logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata)}")
+            logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata.shape}")
+    except Exception as e:
+        logger.error(f"Erro ao cruzar dados: {e}")
+        raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
+    
+    try:
+        # Realiza o merge entre budget/metadados e agencias
+        df_budget_metadata_agencias = merge_data_with_columns(
+            df_left=df_budget_metadata,
+            df_right=df_agencies,
+            left_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies.left_on"),
+            right_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies.right_on"),
+            how=settings.get("module_validator_lpu.merge_budget_metadata_agencies.how", "left"),
+            validate=settings.get("module_validator_lpu.merge_budget_metadata_agencies.validate", "many_to_one"),
+        )
+        if verbose:
+            logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata_agencias)}")
+            logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata_agencias.shape}")
+    except Exception as e:
+        logger.error(f"Erro ao cruzar dados: {e}")
+        raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
+    
+    # Salvar o resultado em um arquivo Excel
+    export_data(data=df_budget_metadata_agencias, 
+                file_path=Path(output_dir, output_file), 
+                index=False)
+    logger.success(f"Resultado salvo em: {output_file}")
 
     try:
         # Realiza o merge entre orçamento e LPU
@@ -1003,7 +1050,8 @@ def orchestrate_validate_lpu(
         base_dir, file_path_agencies or settings.get("module_validator_lpu.agencies_data.file_path")
     )
     path_file_constructors = Path(
-        base_dir, file_path_constructors or settings.get("module_validator_lpu.constructors_data.file_path")
+        base_dir,
+        file_path_constructors or settings.get("module_validator_lpu.constructors_data.file_path"),
     )
     output_dir = Path(
         base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir")
