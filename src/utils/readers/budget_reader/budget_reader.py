@@ -883,7 +883,7 @@ def orchestrate_budget_reader(
             # Processa todos os arquivos em um diretório
             files = get_files_from_directory(
                 directory=input_item,
-                extension=extensions if isinstance(extensions, str) else None,
+                extension=extensions if isinstance(extensions, (list, str)) else None,
                 prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
                 suffix=tuple(suffix) if isinstance(suffix, list) else suffix,
             )
