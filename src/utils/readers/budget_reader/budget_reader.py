@@ -895,8 +895,8 @@ def orchestrate_budget_reader(
 
     # Verifica se há tabelas processadas
     if all_tables:
-        
-        logger.success(f"Processados com sucesso: {len(all_tables)} arquivos.")
+        4
+        logger.success(f"Processados com sucesso: {len(all_tables)} arquivos")
         
         # Concatena e salva os resultados
         append_and_save_results(
