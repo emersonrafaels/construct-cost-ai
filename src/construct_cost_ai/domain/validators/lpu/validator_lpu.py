@@ -93,8 +93,8 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             ),
             columns_to_upper=True,
             cells_to_upper=True,
-            columns_to_remove_spaces=settings.get("module_validator_lpu.budget_data.columns_to_remove_spaces", []),
-            columns_to_remove_accents=settings.get("module_validator_lpu.budget_data.columns_to_remove_accents", []),
+            cells_to_remove_spaces=settings.get("module_validator_lpu.budget_data.cells_to_remove_spaces", []),
+            cells_to_remove_accents=settings.get("module_validator_lpu.budget_data.cells_to_remove_accents", []),
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -164,8 +164,8 @@ def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
             read_data(file_path=file_path, sheet_name=sheet_name),
             columns_to_upper=True,
             cells_to_upper=True,
-            columns_to_remove_spaces=settings.get("module_validator_lpu.budget_metadados.columns_to_remove_spaces", []),
-            columns_to_remove_accents=settings.get("module_validator_lpu.budget_metadados.columns_to_remove_accents", []),
+            cells_to_remove_spaces=settings.get("module_validator_lpu.budget_metadados.cells_to_remove_spaces", []),
+            cells_to_remove_accents=settings.get("module_validator_lpu.budget_metadados.cells_to_remove_accents", []),
         )
 
         # Converte as colunas para os tipos corretos
@@ -423,8 +423,8 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             ),
             columns_to_upper=True,
             cells_to_upper=True,
-            columns_to_remove_spaces=settings.get("module_validator_lpu.lpu_data.columns_to_remove_spaces", []),
-            columns_to_remove_accents=settings.get("module_validator_lpu.lpu_data.columns_to_remove_accents", []),
+            cells_to_remove_spaces=settings.get("module_validator_lpu.lpu_data.cells_to_remove_spaces", []),
+            cells_to_remove_accents=settings.get("module_validator_lpu.lpu_data.cells_to_remove_accents", []),
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
@@ -495,8 +495,8 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
             ),
             columns_to_upper=True,
             cells_to_upper=True,
-            columns_to_remove_spaces=settings.get("module_validator_lpu.agencies_data.columns_to_remove_spaces", []),
-            columns_to_remove_accents=settings.get("module_validator_lpu.agencies_data.columns_to_remove_accents", []),
+            cells_to_remove_spaces=settings.get("module_validator_lpu.agencies_data.cells_to_remove_spaces", []),
+            cells_to_remove_accents=settings.get("module_validator_lpu.agencies_data.cells_to_remove_accents", []),
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de agências: {e}")
@@ -555,8 +555,8 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
             ),
             columns_to_upper=True,
             cells_to_upper=True,
-            columns_to_remove_spaces=settings.get("module_validator_lpu.constructors_data.columns_to_remove_spaces", []),
-            columns_to_remove_accents=settings.get("module_validator_lpu.constructors_data.columns_to_remove_accents", []),
+            cells_to_remove_spaces=settings.get("module_validator_lpu.constructors_data.cells_to_remove_spaces", []),
+            cells_to_remove_accents=settings.get("module_validator_lpu.constructors_data.cells_to_remove_accents", []),
         )
     except Exception as e:
         logger.error(f"Erro ao carregar o arquivo de construtoras: {e}")
@@ -863,65 +863,68 @@ def validate_lpu(
     
     try:
         # Realiza o merge entre budget e metadados
-        df_budget_metadata = merge_data_with_columns(
+        df_merge_budget_metadata = merge_data_with_columns(
             df_left=df_budget,
             df_right=df_budget_metadata,
             left_on=settings.get("module_validator_lpu.merge_budget_metadata.left_on"),
             right_on=settings.get("module_validator_lpu.merge_budget_metadata.right_on"),
             how=settings.get("module_validator_lpu.merge_budget_metadata.how", "left"),
+            suffixes=("_orc", "_meta"),
             validate=settings.get("module_validator_lpu.merge_budget_metadata.validate", "many_to_one"),
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata.shape}")
+            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata)}")
+            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata.shape}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
     
     try:
         # Realiza o merge entre budget/metadados e agencias
-        df_budget_metadata_agencias = merge_data_with_columns(
-            df_left=df_budget_metadata,
+        df_merge_budget_metadata_agencias = merge_data_with_columns(
+            df_left=df_merge_budget_metadata,
             df_right=df_agencies,
             left_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies.left_on"),
             right_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies.right_on"),
             how=settings.get("module_validator_lpu.merge_budget_metadata_agencies.how", "left"),
+            suffixes=("_meta", "_age"),
             validate=settings.get("module_validator_lpu.merge_budget_metadata_agencies.validate", "many_to_one"),
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata_agencias)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata_agencias.shape}")
+            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias)}")
+            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias.shape}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
     
     try:
         # Realiza o merge entre budget/metadados e agencias
-        df_budget_metadata_agencias_constructors = merge_data_with_columns(
-            df_left=df_budget_metadata_agencias,
+        df_merge_budget_metadata_agencias_constructors = merge_data_with_columns(
+            df_left=df_merge_budget_metadata_agencias,
             df_right=df_constructors,
             left_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.left_on"),
             right_on=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.right_on"),
             how=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.how", "left"),
+            suffixes=("_age", "_constr"),
             validate=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.validate", "many_to_one"),
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_budget_metadata_agencias_constructors)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_budget_metadata_agencias_constructors.shape}")
+            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}")
+            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias_constructors.shape}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
     
     # Salvar o resultado em um arquivo Excel
-    export_data(data=df_budget_metadata_agencias, 
+    export_data(data=df_merge_budget_metadata_agencias_constructors, 
                 file_path=Path(output_dir, output_file), 
                 index=False)
     logger.success(f"Resultado salvo em: {output_file}")
 
     try:
         # Realiza o merge entre orçamento e LPU
-        df_budget_lpu = merge_budget_lpu(
-            df_budget=df_budget,
+        df_merge_budget_metadata_agencias_constructors_lpu = merge_budget_lpu(
+            df_budget=df_merge_budget_metadata_agencias_constructors,
             df_lpu=df_lpu,
             columns_on_budget=[
                 settings.get("module_validator_lpu.merge_budget_lpu.columns_on_budget_id"),
@@ -937,7 +940,7 @@ def validate_lpu(
             ],  # Coluna secundária do df_lpu
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_budget_lpu)}")
+            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors_lpu)}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
