@@ -187,7 +187,7 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(how="all").reset_index(drop=True)
 
     # Converte todas as colunas e celulas em uppercase
-    return transform_case(df=df, to_upper=True, columns=True, cells=True)
+    return transform_case(df=df, columns_to_upper=True, cells_to_upper=True)
 
 
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
@@ -813,7 +813,7 @@ def get_files_from_directory(
 
     files = dir_path.iterdir()
     if extension:
-        files = filter(lambda f: f.suffix == extension, files)
+        files = filter(lambda f: f.suffix in extension, files)
     if prefix:
         files = filter(lambda f: f.name.startswith(prefix), files)
     if suffix:
@@ -887,11 +887,17 @@ def orchestrate_budget_reader(
                 prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
                 suffix=tuple(suffix) if isinstance(suffix, list) else suffix,
             )
+            
+            logger.info(f"{len(files)} arquivos encontrados no diretório: {input_item}")
+            
             for file_path in files:
                 _ = process_file(file_path=str(file_path))
 
     # Verifica se há tabelas processadas
     if all_tables:
+        
+        logger.success(f"Processados com sucesso: {len(all_tables)} arquivos.")
+        
         # Concatena e salva os resultados
         append_and_save_results(
             all_tables=all_tables,

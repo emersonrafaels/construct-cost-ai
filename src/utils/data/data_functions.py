@@ -289,13 +289,13 @@ def transform_case(
 
     # Transformar nomes de colunas
     if columns_to_upper:
-        df.rename(columns={col: col.upper() for col in columns_to_upper if col in df.columns}, inplace=True)
+        df.rename(columns={col: str(col).upper() for col in columns_to_upper if col in df.columns}, inplace=True)
     if columns_to_lower:
-        df.rename(columns={col: col.lower() for col in columns_to_lower if col in df.columns}, inplace=True)
+        df.rename(columns={col: str(col).lower() for col in columns_to_lower if col in df.columns}, inplace=True)
     if columns_to_remove_spaces:
-        df.rename(columns={col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns}, inplace=True)
+        df.rename(columns={col: str(col).replace(" ", "") for col in columns_to_remove_spaces if col in df.columns}, inplace=True)
     if columns_to_remove_accents:
-        df.rename(columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns}, inplace=True)
+        df.rename(columns={col: unidecode(str(col)) for col in columns_to_remove_accents if col in df.columns}, inplace=True)
 
     # Transformar valores das células
     if cells_to_upper:
