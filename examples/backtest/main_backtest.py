@@ -55,6 +55,7 @@ if __name__ == "__main__":
     # )
 
     # Exemplo com diretório
-    orchestrate_budget_reader(Path(Path(__file__).parents[2], 
-                                   "data/inputs/orcamentos"), 
-                              extensions=[".xlsx", ".xlsm", ".xls"])
+    orchestrate_budget_reader(
+        Path(Path(__file__).parents[2], "data/inputs/orcamentos"),
+        extensions=[".xlsx", ".xlsm", ".xls"],
+    )

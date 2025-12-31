@@ -254,7 +254,9 @@ def transform_case(
         pd.DataFrame: DataFrame com as transformações aplicadas.
     """
 
-    def transform_value(value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False):
+    def transform_value(
+        value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False
+    ):
         """Aplica transformações a um único valor."""
         if isinstance(value, str):
             if remove_accents:
@@ -276,7 +278,7 @@ def transform_case(
         elif isinstance(param, list):
             return param
         return []
-    
+
     # Garantir que os nomes das colunas sejam strings
     df.columns = df.columns.map(str)
 
@@ -292,13 +294,27 @@ def transform_case(
 
     # Transformar nomes de colunas
     if columns_to_upper:
-        df.rename(columns={col: col.upper() for col in columns_to_upper if col in df.columns}, inplace=True)
+        df.rename(
+            columns={col: col.upper() for col in columns_to_upper if col in df.columns},
+            inplace=True,
+        )
     if columns_to_lower:
-        df.rename(columns={col: col.lower() for col in columns_to_lower if col in df.columns}, inplace=True)
+        df.rename(
+            columns={col: col.lower() for col in columns_to_lower if col in df.columns},
+            inplace=True,
+        )
     if columns_to_remove_spaces:
-        df.rename(columns={col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns}, inplace=True)
+        df.rename(
+            columns={
+                col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns
+            },
+            inplace=True,
+        )
     if columns_to_remove_accents:
-        df.rename(columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns}, inplace=True)
+        df.rename(
+            columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns},
+            inplace=True,
+        )
 
     # Transformar valores das células
     if cells_to_upper:
@@ -585,11 +601,15 @@ def merge_data_with_columns(
     try:
         # Filtra as colunas do DataFrame da esquerda, se especificado
         if selected_left_columns:
-            df_left = df_left[left_on + selected_left_columns]  # Mantém apenas as colunas necessárias
+            df_left = df_left[
+                left_on + selected_left_columns
+            ]  # Mantém apenas as colunas necessárias
 
         # Filtra as colunas do DataFrame da direita, se especificado
         if selected_right_columns:
-            df_right = df_right[right_on + selected_right_columns]  # Mantém apenas as colunas necessárias
+            df_right = df_right[
+                right_on + selected_right_columns
+            ]  # Mantém apenas as colunas necessárias
 
         # Realiza o merge entre os dois DataFrames com validação
         merged_df = pd.merge(

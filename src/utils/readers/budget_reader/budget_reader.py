@@ -887,9 +887,9 @@ def orchestrate_budget_reader(
                 prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
                 suffix=tuple(suffix) if isinstance(suffix, list) else suffix,
             )
-            
+
             logger.info(f"{len(files)} arquivos encontrados no diretório: {input_item}")
-            
+
             for file_path in files:
                 _ = process_file(file_path=str(file_path))
 
@@ -897,7 +897,7 @@ def orchestrate_budget_reader(
     if all_tables:
         4
         logger.success(f"Processados com sucesso: {len(all_tables)} arquivos")
-        
+
         # Concatena e salva os resultados
         append_and_save_results(
             all_tables=all_tables,
