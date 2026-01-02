@@ -183,13 +183,13 @@ def merge_budget_lpu(
         merged_df = two_stage_merge(
             left=budget,
             right=lpu,
-            keys_stage1=columns_on_budget,  # bidimensional
-            keys_stage2=columns_on_lpu,     # bidimensional
+            keys_stage1=columns_on_budget,
+            keys_stage2=columns_on_lpu,
             how=how,
             suffixes=("_budget", "_lpu"),
             keep_indicator=True,
-            validate_stage1=validate_norm,
-            validate_stage2=validate_norm,
+            validate_stage1=validate,
+            validate_stage2=validate,
             handle_duplicates=True,
         )
 
