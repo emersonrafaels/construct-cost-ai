@@ -66,7 +66,7 @@ import pandas as pd
 from unidecode import unidecode
 
 # Adiciona o diretório src ao path
-base_dir = Path(__file__).parents[5]
+base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
@@ -609,7 +609,6 @@ def perform_merge(
     except pd.errors.MergeError as e:
         if handle_duplicates and "not a many-to-one merge" in str(e):
             logger.warning("Removendo duplicidades para tentar novamente o merge.")
-            df_left = df_left.drop_duplicates(subset=left_on)
             df_right = df_right.drop_duplicates(subset=right_on)
             return pd.merge(
                 df_left,
@@ -664,98 +663,141 @@ def merge_data_with_columns(
         indicator=indicator,
         handle_duplicates=handle_duplicates,
     )
-
+    
 
 def two_stage_merge(
     left: pd.DataFrame,
     right: pd.DataFrame,
-    keys_stage1: List[List[str]],
-    keys_stage2: List[List[str]],
+    keys_stage1: List[List[str]],  # colunas do LEFT (Budget)
+    keys_stage2: List[List[str]],  # colunas do RIGHT (LPU)
     how: str = "left",
     suffixes: Tuple[str, str] = ("_l", "_r"),
     keep_indicator: bool = True,
     validate_stage1: Optional[str] = None,
-    validate_stage2: Optional[str] = None,
+    validate_stage2: Optional[str] = None,  # mantido por compatibilidade
     handle_duplicates: bool = False,
 ) -> pd.DataFrame:
     """
-    Faz merge em 2 estágios:
-      - Estágio 1: merge por cada conjunto de chaves em keys_stage1.
-      - Estágio 2: somente para linhas sem match no estágio 1, merge por cada conjunto de chaves em keys_stage2.
-    Regra: se der match no estágio 1, ele prevalece.
+    Merge priorizado (sem duplicar linhas do LEFT), pareando regras por índice:
 
-    Args:
-        left (pd.DataFrame): DataFrame da esquerda.
-        right (pd.DataFrame): DataFrame da direita.
-        keys_stage1 (List[List[str]]): Lista bidimensional de chaves para o estágio 1.
-        keys_stage2 (List[List[str]]): Lista bidimensional de chaves para o estágio 2.
-        how (str): Tipo de merge (padrão é "left").
-        suffixes (Tuple[str, str]): Sufixos para colunas sobrepostas.
-        keep_indicator (bool): Se True, mantém o indicador de origem.
-        validate_stage1 (Optional[str]): Validação para o estágio 1 (ex.: "m:1", "1:1").
-        validate_stage2 (Optional[str]): Validação para o estágio 2 (ex.: "m:1", "1:1").
-        handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
+        regra i:
+            left_on  = keys_stage1[i]
+            right_on = keys_stage2[i]
 
-    Returns:
-        pd.DataFrame: DataFrame resultante do merge em dois estágios.
+    Exemplo (Budget x LPU):
+        ['ID','REGIAO','GRUPO'] <-> ['CÓD ITEM','REGIAO','GRUPO']
+        ['NOME','REGIAO','GRUPO'] <-> ['ITEM','REGIAO','GRUPO']
+
+    Comportamento:
+    - tenta regra 1 no conjunto "remaining"
+    - o que casar sai do remaining e entra no output
+    - tenta regra 2 só no restante
+    - sobras entram como left_only
+
+    Retorna:
+    - cada linha do left aparece no máximo 1 vez
+    - adiciona:
+        _merge_stage: stage1 | none
+        _merge_rule : rule_01, rule_02...
     """
-    # DataFrame inicial para consolidar os resultados
-    consolidated_df = pd.DataFrame()
 
-    # Itera sobre as combinações de chaves em keys_stage1 e keys_stage2
-    for idx, (stage1_keys, stage2_keys) in enumerate(zip(keys_stage1, keys_stage2)):
-        logger.info(f"Iniciando merge para combinação {idx + 1}: Stage1={stage1_keys}, Stage2={stage2_keys}")
+    if how != "left":
+        raise ValueError("two_stage_merge (consumo) suporta apenas how='left'.")
 
-        # 1) Merge estágio 1
-        m1 = perform_merge(
-            df_left=left,
+    def _to_list_str(x) -> List[str]:
+        # BoxList/list/tuple -> list[str]
+        return [str(c) for c in list(x)]
+
+    # Normaliza BoxList -> list[str]
+    left_keysets = [_to_list_str(k) for k in keys_stage1]
+    right_keysets = [_to_list_str(k) for k in keys_stage2]
+
+    # Garantia de pareamento por regra
+    if len(left_keysets) != len(right_keysets):
+        raise ValueError(
+            f"keys_stage1 e keys_stage2 precisam ter o mesmo tamanho. "
+            f"Recebido: {len(left_keysets)} vs {len(right_keysets)}."
+        )
+
+    # Preserva ordem original do left
+    base_left = left.copy()
+    row_id_col = "_row_id__tsm"
+    if row_id_col in base_left.columns:
+        raise ValueError(f"Coluna reservada já existe no DataFrame: {row_id_col}")
+
+    # Adiciona coluna de ID (Int) temporária
+    base_left[row_id_col] = range(len(base_left))
+    
+    # Mapeando todas as colunas que o dataframe possui
+    base_left_cols = list(left.columns) + [row_id_col]
+
+    # Inicia um dataframe com todos os dados
+    remaining = base_left[base_left_cols].copy()
+    
+    # Inicia o dataframe que conterá o resultado final (merged + unmerged)
+    collected_parts: List[pd.DataFrame] = []
+
+    def _clean_remaining(df: pd.DataFrame) -> pd.DataFrame:
+        # Mantém apenas colunas do left (evita levar colunas do right para a próxima tentativa)
+        return df[base_left_cols].copy()
+
+    # Executa regras em ordem (prioridade)
+    for i, (lkeys, rkeys) in enumerate(zip(left_keysets, right_keysets), start=1):
+        
+        # Verificando se há ainda linhas para processar
+        if remaining.empty:
+            break
+
+        # Criando identificador da regra
+        rule = f"rule_{i:02d}"
+        logger.info(f"[two_stage_merge] Tentativa {i} | LEFT={lkeys} <-> RIGHT={rkeys}")
+
+        # Executando o merge
+        merged = perform_merge(
+            df_left=remaining,
             df_right=right,
-            left_on=stage1_keys,
-            right_on=stage1_keys,
-            how=how,
+            left_on=lkeys,
+            right_on=rkeys,
+            how="left",
             suffixes=suffixes,
             validate=validate_stage1,
             indicator=True,
             handle_duplicates=handle_duplicates,
         )
 
-        # Separar matched vs unmatched
-        matched_1 = m1[m1["_merge"] != "left_only"].copy()
-        unmatched_1 = m1[m1["_merge"] == "left_only"].copy()
+        # Separa matched e unmatched
+        matched = merged[merged["_merge"] == "both"].copy()
+        unmatched = merged[merged["_merge"] == "left_only"].copy()
 
-        # Se não houver unmatched, adiciona os resultados ao consolidado e continua
-        if unmatched_1.empty:
-            consolidated_df = pd.concat([consolidated_df, matched_1], ignore_index=True)
-            continue
+        if not matched.empty:
+            matched["_merge_stage"] = f"stage{i}"
+            matched["_merge_rule"] = rule
+            collected_parts.append(matched)
 
-        # 2) Preparar unmatched para merge estágio 2
-        right_cols = set(right.columns)
-        safe_drop = [c for c in unmatched_1.columns if (c in right_cols and c not in left.columns)]
-        unmatched_left_clean = unmatched_1.drop(columns=safe_drop + ["_merge"], errors="ignore")
+        # mantém só o left para próxima tentativa
+        unmatched = unmatched.drop(columns=["_merge"], errors="ignore")
+        remaining = _clean_remaining(unmatched)
 
-        # 3) Merge estágio 2
-        m2 = perform_merge(
-            df_left=unmatched_left_clean,
-            df_right=right,
-            left_on=stage2_keys,
-            right_on=stage2_keys,
-            how=how,
-            suffixes=suffixes,
-            validate=validate_stage2,
-            indicator=True,
-            handle_duplicates=handle_duplicates,
-        )
+    # Adiciona as linhas restantes (não casaram em nenhuma regra) ao resultado final.
+    if not remaining.empty:
+        remaining_out = remaining.copy()
+        remaining_out["_merge"] = "left_only"
+        remaining_out["_merge_stage"] = "none"
+        remaining_out["_merge_rule"] = None
+        collected_parts.append(remaining_out)
 
-        # Recombina os resultados do estágio 1 e estágio 2
-        combined = pd.concat([matched_1, m2], ignore_index=True)
-        consolidated_df = pd.concat([consolidated_df, combined], ignore_index=True)
+    # Consolida todas as partes (matched e unmatched) em um único DataFrame.
+    out = pd.concat(collected_parts, ignore_index=True, sort=False)
 
-    # Adiciona o indicador de estágio, se necessário
-    if keep_indicator:
-        consolidated_df["_merge_stage"] = "none"
-        consolidated_df.loc[consolidated_df["_merge"] == "both", "_merge_stage"] = "stage1"
-        consolidated_df.loc[consolidated_df["_merge"] == "left_only", "_merge_stage"] = "stage2"
-    else:
-        consolidated_df = consolidated_df.drop(columns=["_merge"], errors="ignore")
+    # Restaura a ordem original do DataFrame com base na coluna de ID temporária.
+    out = out.sort_values(by=row_id_col, kind="stable").reset_index(drop=True)
 
-    return consolidated_df
+    # Remove a coluna de ID temporária.
+    out = out.drop(columns=[row_id_col], errors="ignore")
+
+    # Remove a coluna "_merge" se o indicador não for necessário.
+    if not keep_indicator:
+        out = out.drop(columns=["_merge"], errors="ignore")
+
+    # Retorna o DataFrame final consolidado
+    return out

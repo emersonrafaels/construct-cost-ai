@@ -885,7 +885,7 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget/metadados/construtoras/agencias e LPU
         logger.info(f"🔗 Cruzando orçamento com LPU")
-        df_merge_budget_metadata_agencias_constructors_lpu = merge_budget_lpu(
+        df_merge_budget_metadata_agencias_constructors_lpu, len_merged = merge_budget_lpu(
             df_budget=df_merge_budget_metadata_agencias_constructors,
             df_lpu=df_lpu_long,
             columns_on_budget=[
@@ -904,7 +904,7 @@ def validate_lpu(
         )
         if verbose:
             logger.info(
-                f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors_lpu)}"
+                f"   ✅ Itens cruzados com a LPU: {len_merged}"
             )
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
@@ -912,7 +912,7 @@ def validate_lpu(
 
     # Salvar o resultado em um arquivo Excel
     export_data(
-        data=df_merge_budget_metadata_agencias_constructors,
+        data=df_merge_budget_metadata_agencias_constructors_lpu,
         file_path=Path(output_dir, output_file),
         index=False,
     )

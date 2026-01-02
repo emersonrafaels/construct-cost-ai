@@ -166,7 +166,6 @@ def merge_budget_lpu(
     validate: str = "many_to_many",
     use_two_stage_merge: bool = False,
 ) -> dict:
-    results = {}
 
     # Evita efeito colateral
     budget = df_budget.copy()
@@ -180,6 +179,8 @@ def merge_budget_lpu(
 
     # Verifica se é desejado usar o merge em duas etapas
     if use_two_stage_merge:
+        
+        # Realizando o cruzamento considerando dois estágios de merge
         merged_df = two_stage_merge(
             left=budget,
             right=lpu,
@@ -192,27 +193,35 @@ def merge_budget_lpu(
             validate_stage2=validate,
             handle_duplicates=True,
         )
-
-        return merged_df
-
-    # caso antigo: mantém o for (merge simples por combinação)
-    consolidated_df = pd.DataFrame()
+        
+        if "_merge" in merged_df.columns:
+            # Obtendo a quantidade de dados com cruzamento realizado com sucesso
+            len_merged = len(merged_df[merged_df["_merge"] == "both"])
     
-    # Itera sobre as combinações de colunas para realizar múltiplos merges
-    for idx, (budget_cols, lpu_cols) in enumerate(zip(columns_on_budget, columns_on_lpu)):
-        key = f"Budget: {budget_cols} <-> LPU: {lpu_cols}"
-        merged_df = merge_data_with_columns(
-            df_left=budget,
-            df_right=lpu,
-            left_on=budget_cols,
-            right_on=lpu_cols,
-            how=how,
-            validate=validate_norm,
-            suffixes=("_budget", f"_lpu_{idx}"),
-            indicator=True,
-            handle_duplicates=True,
-        )
-        consolidated_df = pd.concat([consolidated_df, merged_df], ignore_index=True)
-        results[key] = {"success": True, "merged_rows": len(merged_df), "dataframe": merged_df}
+    else:
+        # Itera sobre as combinações de colunas para realizar múltiplos merges
+        for idx, (budget_cols, lpu_cols) in enumerate(zip(columns_on_budget, columns_on_lpu)):
+            
+            # Realizando o cruzamento considerando um único estágio de merge
+            # Verifica se a coluna _merge já existe e renomeia para evitar conflitos
+            if "_merge" in budget.columns:
+                budget = budget.rename(columns={"_merge": f"_merge_budget_{idx}"})
+            if "_merge" in lpu.columns:
+                lpu = lpu.rename(columns={"_merge": f"_merge_lpu_{idx}"})
 
-    return consolidated_df
+            merged_df = merge_data_with_columns(
+                df_left=budget,
+                df_right=lpu,
+                left_on=budget_cols,
+                right_on=lpu_cols,
+                how=how,
+                validate=validate_norm,
+                suffixes=("_budget", f"_lpu_{idx}"),
+                indicator=True,
+                handle_duplicates=True,
+            )
+            
+            # Obtendo a quantidade de dados com cruzamento realizado com sucesso
+            len_merged = len(merged_df[merged_df["_merge"] == both])
+
+    return merged_df, len_merged

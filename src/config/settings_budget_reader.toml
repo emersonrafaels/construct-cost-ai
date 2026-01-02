@@ -54,15 +54,15 @@ columns = [
 
 [default.default_budget_reader.default01.result]
 # Rename de colunas para o padrão "default01"
-dict_rename = {"ID" = "ID", "DESCRIÇÃO" = "NOME", "UN." = "UNIDADE", "UNITÁRIO" = "PREÇO LPU", "COMENTÁRIO" = "COMENTÁRIO", "QUANTIDADE" = "QUANTIDADE", "TOTAL" = "VALOR TOTAL"}
+dict_rename = {"ID" = "ID", "DESCRIÇÃO" = "NOME", "UN." = "UNIDADE", "UNITÁRIO" = "PREÇO PAGO", "COMENTÁRIO" = "COMENTÁRIO", "QUANTIDADE" = "QUANTIDADE", "TOTAL" = "VALOR TOTAL"}
 
 [default.default_budget_reader.default02.result]
 # Rename de colunas para o padrão "default02"
-dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT" = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO LPU", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
+dict_rename = {"ITEM" = "ID", "DESCRIÇÃO" = "NOME", "UN" = "UNIDADE", "QUANT" = "QUANTIDADE", "PREÇO UNITÁRIO" = "PREÇO PAGO", "" = "", "PREÇO TOTAL" = "VALOR TOTAL"}
 
 [default.default_budget_reader.result]
 # Colunas esperadas no final do processo
-list_result_columns = ["ID", "NOME", "UNIDADE", "PREÇO LPU", "COMENTÁRIO", "QUANTIDADE", "VALOR TOTAL", "SOURCE_FILE", "SHEET_NAME"]
+list_result_columns = ["ID", "NOME", "UNIDADE", "PREÇO PAGO", "COMENTÁRIO", "QUANTIDADE", "VALOR TOTAL", "SOURCE_FILE", "SHEET_NAME"]
 file_name_output = "01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx" # Nome do arquivo de saída final
 name_sheet_output_tables = "Tables"  # Nome da aba do arquivo de saída final (Tabelas de orçamento)
 name_sheet_output_metadata = "Metadata"  # Nome da aba de metadados do arquivo de saída final (Metadados de orçamento)
