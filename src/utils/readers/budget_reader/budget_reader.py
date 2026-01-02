@@ -377,6 +377,10 @@ def extract_metadata(
                 if metadata[key] is None and (
                     pattern.upper() in cell_str or method == "specific_cell"
                 ):
+                    if method == "specific_cell" and config.get("specific_cell") is None:
+                        metadata[key] = None
+                        continue
+                    
                     # Busca o valor do metadado com base na configuração
                     find_metadata_value(
                         row=row,

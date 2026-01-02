@@ -153,7 +153,7 @@ def read_data(
         else:
             raise e
     except Exception as e:
-        raise RuntimeError(f"Erro ao ler o arquivo {file_path}: {str(e)}")
+        logger.error(f"Erro ao ler o arquivo {file_path}: {str(e)}")
 
 
 def export_data(
