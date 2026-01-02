@@ -27,12 +27,5 @@ from construct_cost_ai.domain.validators.lpu.validator_lpu import orchestrate_va
 
 if __name__ == "__main__":
     
-    # Executando a orquestração do módulo de leitura de orçamentos
-    orchestrate_budget_reader(
-        Path(Path(__file__).parents[2], "data/inputs/orcamentos"),
-        extensions=[".xlsx", ".xlsm", ".xls"],
-        recursive=True
-    )
-
     # Executa a orquestração do módulo de validação LPU
     orchestrate_validate_lpu()
