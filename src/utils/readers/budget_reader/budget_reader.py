@@ -86,6 +86,7 @@ from utils.data.data_functions import (
     transform_case,
     export_data,
     rename_columns,
+    ensure_columns_exist,
     select_columns,
 )
 from utils.python_functions import convert_value
@@ -104,18 +105,21 @@ PATTERN_DEFAULT = settings.get("default_budget_reader.default_sheet.pattern_defa
 EXPECTED_COLUMNS = {
     "default01": settings.get("default_budget_reader.expected_columns.default01.columns", []),
     "default02": settings.get("default_budget_reader.expected_columns.default02.columns", []),
+    "default03": settings.get("default_budget_reader.expected_columns.default03.columns", []),
 }
 
 # Colunas mínimas alternativas
 ALTERNATIVE_COLUMNS = {
     "default01": settings.get("default_budget_reader.alternative_columns.default01.columns", []),
     "default02": settings.get("default_budget_reader.alternative_columns.default02.columns", []),
+    "default03": settings.get("default_budget_reader.alternative_columns.default03.columns", []),
 }
 
 # Criando o dicionário de renomeação de colunas
 DICT_RENAME = {
     "default01": settings.get("default_budget_reader.default01.result", {}),
     "default02": settings.get("default_budget_reader.default02.result", {}),
+    "default03": settings.get("default_budget_reader.default03.result", {}),
 }
 
 # Obtendo as chaves de metadados padrão
@@ -187,7 +191,11 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(how="all").reset_index(drop=True)
 
     # Converte todas as colunas e celulas em uppercase
-    return transform_case(df=df, to_upper=True, columns=True, cells=True)
+    return transform_case(df=df, 
+                          columns_to_upper=True, 
+                          cells_to_upper=True, 
+                          columns_to_remove_accents=True, 
+                          cells_to_remove_accents=True)
 
 
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
@@ -218,6 +226,9 @@ def locate_table(
             str(col).upper() if isinstance(col, str) else col
             for col in alternative_columns[pattern_key]
         ]
+        
+        if pattern_key == "default03":
+            pass
 
         # Número de colunas esperadas
         num_cols = len(normalized_expected)
@@ -400,13 +411,20 @@ def rename_and_select_columns(
     if pattern_key not in rename_mappings:
         raise ValueError(f"Padrão '{pattern_key}' não encontrado nos mapeamentos de renomeação.")
 
+    # Obtém o dicionário de renomeação para o padrão fornecido
     rename_dict = rename_mappings[pattern_key].get("dict_rename", {})
 
     # Renomeia as colunas do DataFrame
     df = rename_columns(df, rename_dict=rename_dict)
+    
+    # Garante que todas as colunas em selected_columns existam no DataFrame
+    df = ensure_columns_exist(df=df, columns=selected_columns, default_value=None)
 
     # Seleciona apenas as colunas desejadas (valores do dicionário de renomeação)
     df = select_columns(df, target_columns=selected_columns)
+    
+    # Cria as colunas adicionais, se necessário
+    
 
     return df
 
@@ -794,6 +812,7 @@ def get_files_from_directory(
     extension: Optional[str] = None,
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
+    recursive: Optional[bool] = False,
 ) -> List[Path]:
     """
     Obtém uma lista de arquivos em um diretório com base em filtros opcionais de extensão, prefixo e sufixo.
@@ -803,6 +822,7 @@ def get_files_from_directory(
         extension (Optional[str]): Extensão dos arquivos a serem filtrados (e.g., ".xlsx").
         prefix (Optional[str]): Prefixo dos arquivos a serem filtrados.
         suffix (Optional[str]): Sufixo dos arquivos a serem filtrados.
+        recursive (Optional[bool]): Se deve buscar arquivos recursivamente em subdiretórios.
 
     Returns:
         List[Path]: Lista de objetos Path correspondentes aos arquivos filtrados.
@@ -811,9 +831,17 @@ def get_files_from_directory(
     if not dir_path.is_dir():
         raise ValueError(f"O caminho fornecido não é um diretório válido: {directory}")
 
-    files = dir_path.iterdir()
+    # Obtém todos os arquivos no diretório (e subdiretórios, se especificado)
+    if recursive:
+        # Busca recursiva em subdiretórios
+        files = dir_path.rglob("*")
+    else:
+        # Busca apenas no diretório solicitado
+        files = dir_path.iterdir()
+    
+    # Filtra apenas arquivos com base nos critérios fornecidos
     if extension:
-        files = filter(lambda f: f.suffix == extension, files)
+        files = filter(lambda f: f.suffix in extension, files)
     if prefix:
         files = filter(lambda f: f.name.startswith(prefix), files)
     if suffix:
@@ -828,6 +856,7 @@ def orchestrate_budget_reader(
     extensions: Optional[Union[str, List[str]]] = None,
     prefix: Optional[Union[str, List[str]]] = None,
     suffix: Optional[Union[str, List[str]]] = None,
+    recursive: Optional[bool] = False,
 ) -> pd.DataFrame:
     """
     Orquestra o processamento de múltiplos arquivos de orçamento ou diretórios.
@@ -837,6 +866,7 @@ def orchestrate_budget_reader(
         extensions (Optional[Union[str, List[str]]]): Extensão ou lista de extensões permitidas para arquivos em diretórios.
         prefix (Optional[Union[str, List[str]]]): Prefixo ou lista de prefixos permitidos para arquivos em diretórios.
         suffix (Optional[Union[str, List[str]]]): Sufixo ou lista de sufixos permitidos para arquivos em diretórios.
+        recursive (Optional[bool]): Se deve buscar arquivos recursivamente em subdiretórios.
 
     Returns:
         pd.DataFrame: DataFrame consolidado com os dados processados.
@@ -883,15 +913,22 @@ def orchestrate_budget_reader(
             # Processa todos os arquivos em um diretório
             files = get_files_from_directory(
                 directory=input_item,
-                extension=extensions if isinstance(extensions, str) else None,
+                extension=extensions if isinstance(extensions, (list, str)) else None,
                 prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
                 suffix=tuple(suffix) if isinstance(suffix, list) else suffix,
+                recursive=recursive,
             )
+
+            logger.info(f"{len(files)} arquivos encontrados no diretório: {input_item}")
+
             for file_path in files:
                 _ = process_file(file_path=str(file_path))
 
     # Verifica se há tabelas processadas
     if all_tables:
+        # Loga o número de arquivos processados com sucesso
+        logger.success(f"Processados com sucesso: {len(all_tables)} arquivos")
+
         # Concatena e salva os resultados
         append_and_save_results(
             all_tables=all_tables,

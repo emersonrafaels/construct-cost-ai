@@ -66,7 +66,7 @@ import pandas as pd
 from unidecode import unidecode
 
 # Adiciona o diretório src ao path
-base_dir = Path(__file__).parents[5]
+base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
@@ -254,7 +254,9 @@ def transform_case(
         pd.DataFrame: DataFrame com as transformações aplicadas.
     """
 
-    def transform_value(value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False):
+    def transform_value(
+        value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False
+    ):
         """Aplica transformações a um único valor."""
         if isinstance(value, str):
             if remove_accents:
@@ -277,6 +279,9 @@ def transform_case(
             return param
         return []
 
+    # Garantir que os nomes das colunas sejam strings
+    df.columns = df.columns.map(str)
+
     # Resolver colunas para cada transformação
     columns_to_upper = resolve_columns(columns_to_upper)
     cells_to_upper = resolve_columns(cells_to_upper)
@@ -289,13 +294,27 @@ def transform_case(
 
     # Transformar nomes de colunas
     if columns_to_upper:
-        df.rename(columns={col: col.upper() for col in columns_to_upper if col in df.columns}, inplace=True)
+        df.rename(
+            columns={col: col.upper() for col in columns_to_upper if col in df.columns},
+            inplace=True,
+        )
     if columns_to_lower:
-        df.rename(columns={col: col.lower() for col in columns_to_lower if col in df.columns}, inplace=True)
+        df.rename(
+            columns={col: col.lower() for col in columns_to_lower if col in df.columns},
+            inplace=True,
+        )
     if columns_to_remove_spaces:
-        df.rename(columns={col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns}, inplace=True)
+        df.rename(
+            columns={
+                col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns
+            },
+            inplace=True,
+        )
     if columns_to_remove_accents:
-        df.rename(columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns}, inplace=True)
+        df.rename(
+            columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns},
+            inplace=True,
+        )
 
     # Transformar valores das células
     if cells_to_upper:
@@ -370,6 +389,24 @@ def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.Data
     # Renomeia as colunas do DataFrame
     df = df.rename(columns=valid_rename_dict)
 
+    return df
+
+
+def ensure_columns_exist(df: pd.DataFrame, columns: list, default_value=None) -> pd.DataFrame:
+    """
+    Garante que todas as colunas especificadas existam no DataFrame, criando-as com um valor padrão se necessário.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser verificado.
+        columns (list): Lista de colunas que devem existir no DataFrame.
+        default_value (Any): Valor padrão para preencher as colunas criadas. Default é None.
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas garantidas.
+    """
+    for col in columns:
+        if col not in df.columns:
+            df[col] = default_value  # Cria a coluna com o valor padrão
     return df
 
 
@@ -548,6 +585,63 @@ def merge_data(
         raise ValueError(f"Error during merge: {e}")
 
 
+def perform_merge(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: list,
+    right_on: list,
+    how: str,
+    suffixes: tuple,
+    validate: Optional[str],
+    indicator: bool,
+    handle_duplicates: bool,
+) -> pd.DataFrame:
+    """
+    Função auxiliar para realizar o merge entre dois DataFrames, com tratamento de duplicidades.
+
+    Args:
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        how (str): Tipo de merge a ser realizado.
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas.
+        validate (Optional[str]): Valida o tipo de relacionamento entre os DataFrames.
+        indicator (bool): Se True, adiciona uma coluna indicando a origem de cada linha no merge.
+        handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
+
+    Returns:
+        pd.DataFrame: DataFrame resultante do merge.
+    """
+    try:
+        return pd.merge(
+            df_left,
+            df_right,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=suffixes,
+            validate=validate,
+            indicator=indicator,
+        )
+    except pd.errors.MergeError as e:
+        if handle_duplicates and "not a many-to-one merge" in str(e):
+            logger.warning("Removendo duplicidades para tentar novamente o merge.")
+            df_right = df_right.drop_duplicates(subset=right_on)
+            return pd.merge(
+                df_left,
+                df_right,
+                left_on=left_on,
+                right_on=right_on,
+                how=how,
+                suffixes=suffixes,
+                validate=validate,
+                indicator=indicator,
+            )
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
+
+
 def merge_data_with_columns(
     df_left: pd.DataFrame,
     df_right: pd.DataFrame,
@@ -557,60 +651,171 @@ def merge_data_with_columns(
     selected_right_columns: list = None,
     how: str = "inner",
     suffixes: tuple = ("_left", "_right"),
-    validate: str = None,  # Novo parâmetro para validar o tipo de relacionamento
+    validate: str = None,
+    indicator: bool = False,
+    handle_duplicates: bool = False,
 ) -> pd.DataFrame:
     """
-    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas para incluir no resultado.
+    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas e lidar com duplicidades.
 
     Parâmetros:
-        df_left (pd.DataFrame): DataFrame da esquerda.
-        df_right (pd.DataFrame): DataFrame da direita.
-        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
-        right_on (list): Colunas do DataFrame da direita para realizar o merge.
-        selected_left_columns (list, opcional): Colunas a serem mantidas do DataFrame da esquerda. Padrão é None (mantém todas).
-        selected_right_columns (list, opcional): Colunas a serem mantidas do DataFrame da direita. Padrão é None (mantém todas).
-        how (str): Tipo de merge a ser realizado. Padrão é "inner".
-        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
-        validate (str, opcional): Valida o tipo de relacionamento entre os DataFrames. Ex.: "one_to_one", "one_to_many", "many_to_one", "many_to_many".
+        (mesmos parâmetros da função original)
+    """
+    # Filtra as colunas do DataFrame da esquerda, se especificado
+    if selected_left_columns:
+        df_left = df_left[left_on + selected_left_columns]
+
+    # Filtra as colunas do DataFrame da direita, se especificado
+    if selected_right_columns:
+        df_right = df_right[right_on + selected_right_columns]
+
+    # Realiza o merge usando a função auxiliar
+    return perform_merge(
+        df_left=df_left,
+        df_right=df_right,
+        left_on=left_on,
+        right_on=right_on,
+        how=how,
+        suffixes=suffixes,
+        validate=validate,
+        indicator=indicator,
+        handle_duplicates=handle_duplicates,
+    )
+    
+
+def two_stage_merge(
+    left: pd.DataFrame,
+    right: pd.DataFrame,
+    keys_stage1: List[List[str]],  # colunas do LEFT (Budget)
+    keys_stage2: List[List[str]],  # colunas do RIGHT (LPU)
+    how: str = "left",
+    suffixes: Tuple[str, str] = ("_l", "_r"),
+    keep_indicator: bool = True,
+    validate_stage1: Optional[str] = None,
+    validate_stage2: Optional[str] = None,  # mantido por compatibilidade
+    handle_duplicates: bool = False,
+) -> pd.DataFrame:
+    """
+    Merge priorizado (sem duplicar linhas do LEFT), pareando regras por índice:
+
+        regra i:
+            left_on  = keys_stage1[i]
+            right_on = keys_stage2[i]
+
+    Exemplo (Budget x LPU):
+        ['ID','REGIAO','GRUPO'] <-> ['CÓD ITEM','REGIAO','GRUPO']
+        ['NOME','REGIAO','GRUPO'] <-> ['ITEM','REGIAO','GRUPO']
+
+    Comportamento:
+    - tenta regra 1 no conjunto "remaining"
+    - o que casar sai do remaining e entra no output
+    - tenta regra 2 só no restante
+    - sobras entram como left_only
 
     Retorna:
-        pd.DataFrame: DataFrame resultante do merge com as colunas selecionadas.
-
-    Levanta:
-        ValueError: Se ocorrer um erro durante o merge ou se a validação falhar.
+    - cada linha do left aparece no máximo 1 vez
+    - adiciona:
+        _merge_stage: stage1 | none
+        _merge_rule : rule_01, rule_02...
     """
-    try:
-        # Filtra as colunas do DataFrame da esquerda, se especificado
-        if selected_left_columns:
-            df_left = df_left[left_on + selected_left_columns]  # Mantém apenas as colunas necessárias
 
-        # Filtra as colunas do DataFrame da direita, se especificado
-        if selected_right_columns:
-            df_right = df_right[right_on + selected_right_columns]  # Mantém apenas as colunas necessárias
+    if how != "left":
+        raise ValueError("two_stage_merge (consumo) suporta apenas how='left'.")
 
-        # Realiza o merge entre os dois DataFrames com validação
-        merged_df = pd.merge(
-            df_left,
-            df_right,
-            left_on=left_on,  # Colunas para o merge no DataFrame da esquerda
-            right_on=right_on,  # Colunas para o merge no DataFrame da direita
-            how=how,  # Tipo de merge (inner, left, right, outer)
-            suffixes=suffixes,  # Sufixos para colunas duplicadas
-            validate=validate,  # Valida o tipo de relacionamento
+    def _to_list_str(x) -> List[str]:
+        # BoxList/list/tuple -> list[str]
+        return [str(c) for c in list(x)]
+
+    # Normaliza BoxList -> list[str]
+    left_keysets = [_to_list_str(k) for k in keys_stage1]
+    right_keysets = [_to_list_str(k) for k in keys_stage2]
+
+    # Garantia de pareamento por regra
+    if len(left_keysets) != len(right_keysets):
+        raise ValueError(
+            f"keys_stage1 e keys_stage2 precisam ter o mesmo tamanho. "
+            f"Recebido: {len(left_keysets)} vs {len(right_keysets)}."
         )
-        return merged_df
 
-    # Trata erro de validação do merge
-    except pd.errors.MergeError as e:
-        logger.error(f"Erro de validação durante o merge: {e}")
-        raise ValueError(f"Erro de validação durante o merge: {e}")
+    # Preserva ordem original do left
+    base_left = left.copy()
+    row_id_col = "_row_id__tsm"
+    if row_id_col in base_left.columns:
+        raise ValueError(f"Coluna reservada já existe no DataFrame: {row_id_col}")
 
-    # Trata erro de colunas ausentes
-    except KeyError as e:
-        logger.error(f"Coluna não encontrada durante o merge: {e}")
-        raise ValueError(f"Coluna não encontrada durante o merge: {e}")
+    # Adiciona coluna de ID (Int) temporária
+    base_left[row_id_col] = range(len(base_left))
+    
+    # Mapeando todas as colunas que o dataframe possui
+    base_left_cols = list(left.columns) + [row_id_col]
 
-    # Trata outros erros gerais
-    except Exception as e:
-        logger.error(f"Erro durante o merge: {e}")
-        raise ValueError(f"Erro durante o merge: {e}")
+    # Inicia um dataframe com todos os dados
+    remaining = base_left[base_left_cols].copy()
+    
+    # Inicia o dataframe que conterá o resultado final (merged + unmerged)
+    collected_parts: List[pd.DataFrame] = []
+
+    def _clean_remaining(df: pd.DataFrame) -> pd.DataFrame:
+        # Mantém apenas colunas do left (evita levar colunas do right para a próxima tentativa)
+        return df[base_left_cols].copy()
+
+    # Executa regras em ordem (prioridade)
+    for i, (lkeys, rkeys) in enumerate(zip(left_keysets, right_keysets), start=1):
+        
+        # Verificando se há ainda linhas para processar
+        if remaining.empty:
+            break
+
+        # Criando identificador da regra
+        rule = f"rule_{i:02d}"
+        logger.info(f"[two_stage_merge] Tentativa {i} | LEFT={lkeys} <-> RIGHT={rkeys}")
+
+        # Executando o merge
+        merged = perform_merge(
+            df_left=remaining,
+            df_right=right,
+            left_on=lkeys,
+            right_on=rkeys,
+            how="left",
+            suffixes=suffixes,
+            validate=validate_stage1,
+            indicator=True,
+            handle_duplicates=handle_duplicates,
+        )
+
+        # Separa matched e unmatched
+        matched = merged[merged["_merge"] == "both"].copy()
+        unmatched = merged[merged["_merge"] == "left_only"].copy()
+
+        if not matched.empty:
+            matched["_merge_stage"] = f"stage{i}"
+            matched["_merge_rule"] = rule
+            collected_parts.append(matched)
+
+        # mantém só o left para próxima tentativa
+        unmatched = unmatched.drop(columns=["_merge"], errors="ignore")
+        remaining = _clean_remaining(unmatched)
+
+    # Adiciona as linhas restantes (não casaram em nenhuma regra) ao resultado final.
+    if not remaining.empty:
+        remaining_out = remaining.copy()
+        remaining_out["_merge"] = "left_only"
+        remaining_out["_merge_stage"] = "none"
+        remaining_out["_merge_rule"] = None
+        collected_parts.append(remaining_out)
+
+    # Consolida todas as partes (matched e unmatched) em um único DataFrame.
+    out = pd.concat(collected_parts, ignore_index=True, sort=False)
+
+    # Restaura a ordem original do DataFrame com base na coluna de ID temporária.
+    out = out.sort_values(by=row_id_col, kind="stable").reset_index(drop=True)
+
+    # Remove a coluna de ID temporária.
+    out = out.drop(columns=[row_id_col], errors="ignore")
+
+    # Remove a coluna "_merge" se o indicador não for necessário.
+    if not keep_indicator:
+        out = out.drop(columns=["_merge"], errors="ignore")
+
+    # Retorna o DataFrame final consolidado
+    return out

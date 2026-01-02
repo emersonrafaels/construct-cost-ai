@@ -109,15 +109,32 @@ validate = "many_to_one"
 [default.module_validator_lpu.merge_budget_lpu]
 
 # Configurações de merge
-how_merge = "left"
+how = "left"
+validate = "many_to_one"
 
 # Colunas do orçamento (df_budget)
 columns_on_budget_id = "ID"
 columns_on_budget_nome = "NOME"
+columns_on_budget_region = "REGIÃO"
+columns_on_budget_group = "GRUPO"
+
+# Primeiro conjunto de colunas testadas no merge (na ordem)
+columns_budget_merge_one = ["ID", "REGIAO", "GRUPO"]
+
+# Segundo conjunto de colunas testadas no merge (na ordem)
+columns_budget_merge_two = ["NOME", "REGIAO", "GRUPO"]
 
 # Colunas da LPU (df_lpu)
 columns_on_lpu_id = "CÓD ITEM"
 columns_on_lpu_nome = "ITEM"
+columns_on_lpu_region = "REGIÃO"
+columns_on_lpu_group = "GRUPO"
+
+# Primeiro conjunto de colunas testadas no merge (na ordem)
+columns_lpu_merge_one = ["CÓD ITEM", "REGIAO", "GRUPO"]
+
+# Segundo conjunto de colunas testadas no merge (na ordem)
+columns_lpu_merge_two = ["ITEM", "REGIAO", "GRUPO"]
 
 [default.module_validator_lpu.output_settings]
 
@@ -131,6 +148,9 @@ file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
 # Configurações de exportação
 top_n_divergencias = 10
 top_n_divergencias_extended = 20
+
+[regex_patterns]
+group_pattern = "-GRUPO\\d+"
 
 # StackSpot AI Configuration
 [default.stackspot]
