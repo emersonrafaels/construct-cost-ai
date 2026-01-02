@@ -794,6 +794,7 @@ def get_files_from_directory(
     extension: Optional[str] = None,
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
+    recursive: Optional[bool] = False,
 ) -> List[Path]:
     """
     Obtém uma lista de arquivos em um diretório com base em filtros opcionais de extensão, prefixo e sufixo.
@@ -803,6 +804,7 @@ def get_files_from_directory(
         extension (Optional[str]): Extensão dos arquivos a serem filtrados (e.g., ".xlsx").
         prefix (Optional[str]): Prefixo dos arquivos a serem filtrados.
         suffix (Optional[str]): Sufixo dos arquivos a serem filtrados.
+        recursive (Optional[bool]): Se deve buscar arquivos recursivamente em subdiretórios.
 
     Returns:
         List[Path]: Lista de objetos Path correspondentes aos arquivos filtrados.
@@ -811,7 +813,15 @@ def get_files_from_directory(
     if not dir_path.is_dir():
         raise ValueError(f"O caminho fornecido não é um diretório válido: {directory}")
 
-    files = dir_path.iterdir()
+    # Obtém todos os arquivos no diretório (e subdiretórios, se especificado)
+    if recursive:
+        # Busca recursiva em subdiretórios
+        files = dir_path.rglob("*")
+    else:
+        # Busca apenas no diretório solicitado
+        files = dir_path.iterdir()
+    
+    # Filtra apenas arquivos com base nos critérios fornecidos
     if extension:
         files = filter(lambda f: f.suffix in extension, files)
     if prefix:
@@ -828,6 +838,7 @@ def orchestrate_budget_reader(
     extensions: Optional[Union[str, List[str]]] = None,
     prefix: Optional[Union[str, List[str]]] = None,
     suffix: Optional[Union[str, List[str]]] = None,
+    recursive: Optional[bool] = False,
 ) -> pd.DataFrame:
     """
     Orquestra o processamento de múltiplos arquivos de orçamento ou diretórios.
@@ -837,6 +848,7 @@ def orchestrate_budget_reader(
         extensions (Optional[Union[str, List[str]]]): Extensão ou lista de extensões permitidas para arquivos em diretórios.
         prefix (Optional[Union[str, List[str]]]): Prefixo ou lista de prefixos permitidos para arquivos em diretórios.
         suffix (Optional[Union[str, List[str]]]): Sufixo ou lista de sufixos permitidos para arquivos em diretórios.
+        recursive (Optional[bool]): Se deve buscar arquivos recursivamente em subdiretórios.
 
     Returns:
         pd.DataFrame: DataFrame consolidado com os dados processados.
@@ -886,6 +898,7 @@ def orchestrate_budget_reader(
                 extension=extensions if isinstance(extensions, (list, str)) else None,
                 prefix=tuple(prefix) if isinstance(prefix, list) else prefix,
                 suffix=tuple(suffix) if isinstance(suffix, list) else suffix,
+                recursive=recursive,
             )
 
             logger.info(f"{len(files)} arquivos encontrados no diretório: {input_item}")
