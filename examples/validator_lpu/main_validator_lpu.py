@@ -1,10 +1,8 @@
 """
-Realiza o backtest completo do produto: Módulo de Validação LPU (Lista de Preços Unitários)
+Realiza o uso do Módulo: validator_lpu
+------------------------
 
-1) Lê orçamentos a partir de um diretório específico.
-2) Aplica o módulo de validação LPU para cruzar orçamentos com dados
-3) Aplica o módulo de validação Não LPU - Match Fuzzy
-
+Este script exemplifica como utilizar o módulo de validação LPU (Lista de Preços Unitários) para cruzar orçamentos com dados de LPU, metadados, agências e construtoras. Ele demonstra a leitura de arquivos de orçamento a partir de um diretório específico e a aplicação do módulo de validação para verificar a consistência dos dados.
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
