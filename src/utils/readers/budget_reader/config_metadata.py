@@ -115,6 +115,56 @@ def get_metadata_keys():
                 "type": "str",
             },
         },
+        "default03": {
+            "CÓDIGO_UPE": {
+                "sheet_name": "Resumo",
+                "pattern": "UPE",
+                "method": "specific_cell",
+                "max_rows": None,
+                "specific_cell": None,
+                "type": "str",
+            },
+            "NUMERO_AGENCIA": {
+                "sheet_name": "Resumo",
+                "pattern": "AGÊNCIA",
+                "method": "specific_cell",
+                "max_rows": None,
+                "specific_cell": (4, 1),
+                "type": "int",
+            },
+            "NOME_AGENCIA": {
+                "sheet_name": "Resumo",
+                "pattern": "NOME AGÊNCIA",
+                "method": "specific_cell",
+                "max_rows": None,
+                "specific_cell": (5, 1),
+                "type": "str",
+            },
+            "CONSTRUTORA": {
+                "sheet_name": "Resumo",
+                "pattern": "CONSTRUTORA",
+                "method": None,
+                "max_rows": None,
+                "specific_cell": None,
+                "type": "str",
+            },
+            "TIPO": {
+                "sheet_name": "Resumo",
+                "pattern": "TIPO",
+                "method": "specific_cell",
+                "max_rows": None,
+                "specific_cell": (6, 1),
+                "type": "str",
+            },
+            "PROGRAMA_DONO": {
+                "sheet_name": "01",
+                "pattern": "DONO",
+                "method": None,
+                "max_rows": None,
+                "specific_cell": None,
+                "type": "str",
+            },
+        },
     }
 
     return DEFAULT_METADATA_KEYS

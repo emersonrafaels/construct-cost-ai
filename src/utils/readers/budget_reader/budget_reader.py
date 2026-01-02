@@ -86,6 +86,7 @@ from utils.data.data_functions import (
     transform_case,
     export_data,
     rename_columns,
+    ensure_columns_exist,
     select_columns,
 )
 from utils.python_functions import convert_value
@@ -104,18 +105,21 @@ PATTERN_DEFAULT = settings.get("default_budget_reader.default_sheet.pattern_defa
 EXPECTED_COLUMNS = {
     "default01": settings.get("default_budget_reader.expected_columns.default01.columns", []),
     "default02": settings.get("default_budget_reader.expected_columns.default02.columns", []),
+    "default03": settings.get("default_budget_reader.expected_columns.default03.columns", []),
 }
 
 # Colunas mínimas alternativas
 ALTERNATIVE_COLUMNS = {
     "default01": settings.get("default_budget_reader.alternative_columns.default01.columns", []),
     "default02": settings.get("default_budget_reader.alternative_columns.default02.columns", []),
+    "default03": settings.get("default_budget_reader.alternative_columns.default03.columns", []),
 }
 
 # Criando o dicionário de renomeação de colunas
 DICT_RENAME = {
     "default01": settings.get("default_budget_reader.default01.result", {}),
     "default02": settings.get("default_budget_reader.default02.result", {}),
+    "default03": settings.get("default_budget_reader.default03.result", {}),
 }
 
 # Obtendo as chaves de metadados padrão
@@ -187,7 +191,11 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(how="all").reset_index(drop=True)
 
     # Converte todas as colunas e celulas em uppercase
-    return transform_case(df=df, columns_to_upper=True, cells_to_upper=True)
+    return transform_case(df=df, 
+                          columns_to_upper=True, 
+                          cells_to_upper=True, 
+                          columns_to_remove_accents=True, 
+                          cells_to_remove_accents=True)
 
 
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
@@ -218,6 +226,9 @@ def locate_table(
             str(col).upper() if isinstance(col, str) else col
             for col in alternative_columns[pattern_key]
         ]
+        
+        if pattern_key == "default03":
+            pass
 
         # Número de colunas esperadas
         num_cols = len(normalized_expected)
@@ -400,13 +411,20 @@ def rename_and_select_columns(
     if pattern_key not in rename_mappings:
         raise ValueError(f"Padrão '{pattern_key}' não encontrado nos mapeamentos de renomeação.")
 
+    # Obtém o dicionário de renomeação para o padrão fornecido
     rename_dict = rename_mappings[pattern_key].get("dict_rename", {})
 
     # Renomeia as colunas do DataFrame
     df = rename_columns(df, rename_dict=rename_dict)
+    
+    # Garante que todas as colunas em selected_columns existam no DataFrame
+    df = ensure_columns_exist(df=df, columns=selected_columns, default_value=None)
 
     # Seleciona apenas as colunas desejadas (valores do dicionário de renomeação)
     df = select_columns(df, target_columns=selected_columns)
+    
+    # Cria as colunas adicionais, se necessário
+    
 
     return df
 
@@ -908,7 +926,7 @@ def orchestrate_budget_reader(
 
     # Verifica se há tabelas processadas
     if all_tables:
-        4
+        # Loga o número de arquivos processados com sucesso
         logger.success(f"Processados com sucesso: {len(all_tables)} arquivos")
 
         # Concatena e salva os resultados

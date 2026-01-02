@@ -392,6 +392,24 @@ def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.Data
     return df
 
 
+def ensure_columns_exist(df: pd.DataFrame, columns: list, default_value=None) -> pd.DataFrame:
+    """
+    Garante que todas as colunas especificadas existam no DataFrame, criando-as com um valor padrão se necessário.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser verificado.
+        columns (list): Lista de colunas que devem existir no DataFrame.
+        default_value (Any): Valor padrão para preencher as colunas criadas. Default é None.
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas garantidas.
+    """
+    for col in columns:
+        if col not in df.columns:
+            df[col] = default_value  # Cria a coluna com o valor padrão
+    return df
+
+
 def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
     """
     Seleciona colunas de um DataFrame com base em uma lista de colunas alvo, mantendo a ordem fornecida.
