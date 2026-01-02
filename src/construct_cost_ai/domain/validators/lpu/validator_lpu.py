@@ -782,7 +782,7 @@ def validate_lpu(
         raise ValidatorLPUError(f"Erro ao carregar metadados dos orçamentos: {e}")
 
     try:
-        logger.debug(f"Carregando LPU de: {file_path_lpu}")
+        logger.info(f"Carregando LPU de: {file_path_lpu}")
         df_lpu_wide, df_lpu_long = load_lpu(file_path_lpu)
         if verbose:
             logger.info(f"   ✅ LPU carregada: {len(df_lpu_long)} itens")
@@ -791,7 +791,7 @@ def validate_lpu(
         raise ValidatorLPUError(f"Erro ao carregar LPU: {e}")
 
     try:
-        logger.debug(f"Carregando agências de: {file_path_agencies}")
+        logger.info(f"Carregando agências de: {file_path_agencies}")
         df_agencies = load_agencies(file_path_agencies)
         if verbose:
             logger.info(f"   ✅ Agências carregadas: {len(df_agencies)} itens")
@@ -800,7 +800,7 @@ def validate_lpu(
         raise ValidatorLPUError(f"Erro ao carregar agências: {e}")
 
     try:
-        logger.debug(f"Carregando construtoras de: {file_path_constructors}")
+        logger.info(f"Carregando construtoras de: {file_path_constructors}")
         df_constructors = load_constructors(file_path_constructors)
         if verbose:
             logger.info(f"   ✅ Construtoras carregadas: {len(df_constructors)} itens")
@@ -808,12 +808,9 @@ def validate_lpu(
         logger.error(f"Erro ao carregar construtoras: {e}")
         raise ValidatorLPUError(f"Erro ao carregar construtoras: {e}")
 
-    # 2. Cruza dados
-    if verbose:
-        logger.info("🔗 Cruzando orçamento com LPU...")
-
     try:
         # Realiza o merge entre budget e metadados
+        logger.info(f"🔗 Cruzando orçamento com Metadados")
         df_merge_budget_metadata = merge_data_with_columns(
             df_left=df_budget,
             df_right=df_budget_metadata,
@@ -834,6 +831,7 @@ def validate_lpu(
 
     try:
         # Realiza o merge entre budget/metadados e agencias
+        logger.info(f"🔗 Cruzando orçamento com Agências")
         df_merge_budget_metadata_agencias = merge_data_with_columns(
             df_left=df_merge_budget_metadata,
             df_right=df_agencies,
@@ -854,6 +852,7 @@ def validate_lpu(
 
     try:
         # Realiza o merge entre budget/metadados/construtoras e agencias
+        logger.info(f"🔗 Cruzando orçamento com Construtoras")
         df_merge_budget_metadata_agencias_constructors = merge_data_with_columns(
             df_left=df_merge_budget_metadata_agencias,
             df_right=df_constructors,
@@ -885,6 +884,7 @@ def validate_lpu(
 
     try:
         # Realiza o merge entre budget/metadados/construtoras/agencias e LPU
+        logger.info(f"🔗 Cruzando orçamento com LPU")
         df_merge_budget_metadata_agencias_constructors_lpu = merge_budget_lpu(
             df_budget=df_merge_budget_metadata_agencias_constructors,
             df_lpu=df_lpu_long,
@@ -900,6 +900,7 @@ def validate_lpu(
             validate=settings.get(
                 "module_validator_lpu.merge_budget_lpu.validate", "many_to_one"
             ),
+            use_two_stage_merge=True
         )
         if verbose:
             logger.info(

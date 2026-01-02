@@ -567,6 +567,64 @@ def merge_data(
         raise ValueError(f"Error during merge: {e}")
 
 
+def perform_merge(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: list,
+    right_on: list,
+    how: str,
+    suffixes: tuple,
+    validate: Optional[str],
+    indicator: bool,
+    handle_duplicates: bool,
+) -> pd.DataFrame:
+    """
+    Função auxiliar para realizar o merge entre dois DataFrames, com tratamento de duplicidades.
+
+    Args:
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        how (str): Tipo de merge a ser realizado.
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas.
+        validate (Optional[str]): Valida o tipo de relacionamento entre os DataFrames.
+        indicator (bool): Se True, adiciona uma coluna indicando a origem de cada linha no merge.
+        handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
+
+    Returns:
+        pd.DataFrame: DataFrame resultante do merge.
+    """
+    try:
+        return pd.merge(
+            df_left,
+            df_right,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=suffixes,
+            validate=validate,
+            indicator=indicator,
+        )
+    except pd.errors.MergeError as e:
+        if handle_duplicates and "not a many-to-one merge" in str(e):
+            logger.warning("Removendo duplicidades para tentar novamente o merge.")
+            df_left = df_left.drop_duplicates(subset=left_on)
+            df_right = df_right.drop_duplicates(subset=right_on)
+            return pd.merge(
+                df_left,
+                df_right,
+                left_on=left_on,
+                right_on=right_on,
+                how=how,
+                suffixes=suffixes,
+                validate=validate,
+                indicator=indicator,
+            )
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
+
+
 def merge_data_with_columns(
     df_left: pd.DataFrame,
     df_right: pd.DataFrame,
@@ -576,64 +634,128 @@ def merge_data_with_columns(
     selected_right_columns: list = None,
     how: str = "inner",
     suffixes: tuple = ("_left", "_right"),
-    validate: str = None,  # Novo parâmetro para validar o tipo de relacionamento
+    validate: str = None,
+    indicator: bool = False,
+    handle_duplicates: bool = False,
 ) -> pd.DataFrame:
     """
-    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas para incluir no resultado.
+    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas e lidar com duplicidades.
 
     Parâmetros:
-        df_left (pd.DataFrame): DataFrame da esquerda.
-        df_right (pd.DataFrame): DataFrame da direita.
-        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
-        right_on (list): Colunas do DataFrame da direita para realizar o merge.
-        selected_left_columns (list, opcional): Colunas a serem mantidas do DataFrame da esquerda. Padrão é None (mantém todas).
-        selected_right_columns (list, opcional): Colunas a serem mantidas do DataFrame da direita. Padrão é None (mantém todas).
-        how (str): Tipo de merge a ser realizado. Padrão é "inner".
-        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
-        validate (str, opcional): Valida o tipo de relacionamento entre os DataFrames. Ex.: "one_to_one", "one_to_many", "many_to_one", "many_to_many".
-
-    Retorna:
-        pd.DataFrame: DataFrame resultante do merge com as colunas selecionadas.
-
-    Levanta:
-        ValueError: Se ocorrer um erro durante o merge ou se a validação falhar.
+        (mesmos parâmetros da função original)
     """
-    try:
-        # Filtra as colunas do DataFrame da esquerda, se especificado
-        if selected_left_columns:
-            df_left = df_left[
-                left_on + selected_left_columns
-            ]  # Mantém apenas as colunas necessárias
+    # Filtra as colunas do DataFrame da esquerda, se especificado
+    if selected_left_columns:
+        df_left = df_left[left_on + selected_left_columns]
 
-        # Filtra as colunas do DataFrame da direita, se especificado
-        if selected_right_columns:
-            df_right = df_right[
-                right_on + selected_right_columns
-            ]  # Mantém apenas as colunas necessárias
+    # Filtra as colunas do DataFrame da direita, se especificado
+    if selected_right_columns:
+        df_right = df_right[right_on + selected_right_columns]
 
-        # Realiza o merge entre os dois DataFrames com validação
-        merged_df = pd.merge(
-            df_left,
-            df_right,
-            left_on=left_on,  # Colunas para o merge no DataFrame da esquerda
-            right_on=right_on,  # Colunas para o merge no DataFrame da direita
-            how=how,  # Tipo de merge (inner, left, right, outer)
-            suffixes=suffixes,  # Sufixos para colunas duplicadas
-            validate=validate,  # Valida o tipo de relacionamento
+    # Realiza o merge usando a função auxiliar
+    return perform_merge(
+        df_left=df_left,
+        df_right=df_right,
+        left_on=left_on,
+        right_on=right_on,
+        how=how,
+        suffixes=suffixes,
+        validate=validate,
+        indicator=indicator,
+        handle_duplicates=handle_duplicates,
+    )
+
+
+def two_stage_merge(
+    left: pd.DataFrame,
+    right: pd.DataFrame,
+    keys_stage1: List[List[str]],
+    keys_stage2: List[List[str]],
+    how: str = "left",
+    suffixes: Tuple[str, str] = ("_l", "_r"),
+    keep_indicator: bool = True,
+    validate_stage1: Optional[str] = None,
+    validate_stage2: Optional[str] = None,
+    handle_duplicates: bool = False,
+) -> pd.DataFrame:
+    """
+    Faz merge em 2 estágios:
+      - Estágio 1: merge por cada conjunto de chaves em keys_stage1.
+      - Estágio 2: somente para linhas sem match no estágio 1, merge por cada conjunto de chaves em keys_stage2.
+    Regra: se der match no estágio 1, ele prevalece.
+
+    Args:
+        left (pd.DataFrame): DataFrame da esquerda.
+        right (pd.DataFrame): DataFrame da direita.
+        keys_stage1 (List[List[str]]): Lista bidimensional de chaves para o estágio 1.
+        keys_stage2 (List[List[str]]): Lista bidimensional de chaves para o estágio 2.
+        how (str): Tipo de merge (padrão é "left").
+        suffixes (Tuple[str, str]): Sufixos para colunas sobrepostas.
+        keep_indicator (bool): Se True, mantém o indicador de origem.
+        validate_stage1 (Optional[str]): Validação para o estágio 1 (ex.: "m:1", "1:1").
+        validate_stage2 (Optional[str]): Validação para o estágio 2 (ex.: "m:1", "1:1").
+        handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
+
+    Returns:
+        pd.DataFrame: DataFrame resultante do merge em dois estágios.
+    """
+    # DataFrame inicial para consolidar os resultados
+    consolidated_df = pd.DataFrame()
+
+    # Itera sobre as combinações de chaves em keys_stage1 e keys_stage2
+    for idx, (stage1_keys, stage2_keys) in enumerate(zip(keys_stage1, keys_stage2)):
+        logger.info(f"Iniciando merge para combinação {idx + 1}: Stage1={stage1_keys}, Stage2={stage2_keys}")
+
+        # 1) Merge estágio 1
+        m1 = perform_merge(
+            df_left=left,
+            df_right=right,
+            left_on=stage1_keys,
+            right_on=stage1_keys,
+            how=how,
+            suffixes=suffixes,
+            validate=validate_stage1,
+            indicator=True,
+            handle_duplicates=handle_duplicates,
         )
-        return merged_df
 
-    # Trata erro de validação do merge
-    except pd.errors.MergeError as e:
-        logger.error(f"Erro de validação durante o merge: {e}")
-        raise ValueError(f"Erro de validação durante o merge: {e}")
+        # Separar matched vs unmatched
+        matched_1 = m1[m1["_merge"] != "left_only"].copy()
+        unmatched_1 = m1[m1["_merge"] == "left_only"].copy()
 
-    # Trata erro de colunas ausentes
-    except KeyError as e:
-        logger.error(f"Coluna não encontrada durante o merge: {e}")
-        raise ValueError(f"Coluna não encontrada durante o merge: {e}")
+        # Se não houver unmatched, adiciona os resultados ao consolidado e continua
+        if unmatched_1.empty:
+            consolidated_df = pd.concat([consolidated_df, matched_1], ignore_index=True)
+            continue
 
-    # Trata outros erros gerais
-    except Exception as e:
-        logger.error(f"Erro durante o merge: {e}")
-        raise ValueError(f"Erro durante o merge: {e}")
+        # 2) Preparar unmatched para merge estágio 2
+        right_cols = set(right.columns)
+        safe_drop = [c for c in unmatched_1.columns if (c in right_cols and c not in left.columns)]
+        unmatched_left_clean = unmatched_1.drop(columns=safe_drop + ["_merge"], errors="ignore")
+
+        # 3) Merge estágio 2
+        m2 = perform_merge(
+            df_left=unmatched_left_clean,
+            df_right=right,
+            left_on=stage2_keys,
+            right_on=stage2_keys,
+            how=how,
+            suffixes=suffixes,
+            validate=validate_stage2,
+            indicator=True,
+            handle_duplicates=handle_duplicates,
+        )
+
+        # Recombina os resultados do estágio 1 e estágio 2
+        combined = pd.concat([matched_1, m2], ignore_index=True)
+        consolidated_df = pd.concat([consolidated_df, combined], ignore_index=True)
+
+    # Adiciona o indicador de estágio, se necessário
+    if keep_indicator:
+        consolidated_df["_merge_stage"] = "none"
+        consolidated_df.loc[consolidated_df["_merge"] == "both", "_merge_stage"] = "stage1"
+        consolidated_df.loc[consolidated_df["_merge"] == "left_only", "_merge_stage"] = "stage2"
+    else:
+        consolidated_df = consolidated_df.drop(columns=["_merge"], errors="ignore")
+
+    return consolidated_df

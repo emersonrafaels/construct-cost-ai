@@ -24,9 +24,11 @@ import pandas as pd
 base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
+from config.config_logger import logger
 from config.config_dynaconf import get_settings
 from utils.data.data_functions import (
     merge_data_with_columns,
+    two_stage_merge,
 )
 
 settings = get_settings()
@@ -155,54 +157,62 @@ def separate_regions(
     return df_regions, col_to_regiao_grupo
 
 
-def merge_budget_lpu(df_budget, 
-                     df_lpu, 
-                     columns_on_budget, 
-                     columns_on_lpu, 
-                     how="inner", 
-                     validate="many_to_many"):
-    """
-    Realiza o merge entre colunas especificadas de df_budget e df_lpu.
-
-    Args:
-        df_budget (pd.DataFrame): DataFrame do orçamento.
-        df_lpu (pd.DataFrame): DataFrame da LPU.
-        columns_on_budget (List[List[str]]): Listas de conjuntos de colunas do orçamento.
-        columns_on_lpu (List[List[str]]): Listas de conjuntos de colunas da LPU.
-        how (str): Tipo de merge (padrão é "inner").
-        validate (str): Tipo de validação do merge (padrão é "many_to_many").
-
-    Returns:
-        dict: Resultados do merge para cada combinação de colunas.
-    """
+def merge_budget_lpu(
+    df_budget: pd.DataFrame,
+    df_lpu: pd.DataFrame,
+    columns_on_budget: List[List[str]],
+    columns_on_lpu: List[List[str]],
+    how: str = "inner",
+    validate: str = "many_to_many",
+    use_two_stage_merge: bool = False,
+) -> dict:
     results = {}
 
-    # Itera sobre as combinações de colunas usando zip
-    for budget_cols, lpu_cols in zip(columns_on_budget, columns_on_lpu):
-        key = f"Budget: {budget_cols} <-> LPU: {lpu_cols}"
-        try:
-            # Realiza o merge
-            merged_df = merge_data_with_columns(
-                df_left=df_budget,  
-                df_right=df_lpu,
-                left_on=budget_cols,
-                right_on=lpu_cols,
-                how=how,  # Pode ser ajustado para "left", "right", etc.
-                validate=validate,  # Validação do merge
-            )
-            
-            results[key] = {
-                "success": True,
-                "merged_rows": len(merged_df),
-                "columns_budget": budget_cols,
-                "columns_lpu": lpu_cols,
-            }
-        except Exception as e:
-            results[key] = {
-                "success": False,
-                "error": str(e),
-                "columns_budget": budget_cols,
-                "columns_lpu": lpu_cols,
-            }
+    # Evita efeito colateral
+    budget = df_budget.copy()
+    lpu = df_lpu.copy()
 
-    return results
+    # Verifica se a coluna _merge já existe e renomeia para evitar conflitos
+    if "_merge" in budget.columns:
+        budget = budget.rename(columns={"_merge": "_merge_budget"})
+    if "_merge" in lpu.columns:
+        lpu = lpu.rename(columns={"_merge": "_merge_lpu"})
+
+    # Verifica se é desejado usar o merge em duas etapas
+    if use_two_stage_merge:
+        merged_df = two_stage_merge(
+            left=budget,
+            right=lpu,
+            keys_stage1=columns_on_budget,  # bidimensional
+            keys_stage2=columns_on_lpu,     # bidimensional
+            how=how,
+            suffixes=("_budget", "_lpu"),
+            keep_indicator=True,
+            validate_stage1=validate_norm,
+            validate_stage2=validate_norm,
+            handle_duplicates=True,
+        )
+
+        return merged_df
+
+    # caso antigo: mantém o for (merge simples por combinação)
+    consolidated_df = pd.DataFrame()
+    
+    # Itera sobre as combinações de colunas para realizar múltiplos merges
+    for idx, (budget_cols, lpu_cols) in enumerate(zip(columns_on_budget, columns_on_lpu)):
+        key = f"Budget: {budget_cols} <-> LPU: {lpu_cols}"
+        merged_df = merge_data_with_columns(
+            df_left=budget,
+            df_right=lpu,
+            left_on=budget_cols,
+            right_on=lpu_cols,
+            how=how,
+            validate=validate_norm,
+            suffixes=("_budget", f"_lpu_{idx}"),
+            indicator=True,
+            handle_duplicates=True,
+        )
+        consolidated_df = pd.concat([consolidated_df, merged_df], ignore_index=True)
+        results[key] = {"success": True, "merged_rows": len(merged_df), "dataframe": merged_df}
+
+    return consolidated_df
