@@ -271,7 +271,7 @@ def transform_case(
 
     def resolve_columns(param):
         """Resolve o parâmetro para retornar uma lista de colunas."""
-        if param is True:
+        if param in [True, "true", "True"]:
             return df.columns.tolist()
         elif isinstance(param, str):
             return [param]
@@ -292,29 +292,40 @@ def transform_case(
     columns_to_remove_accents = resolve_columns(columns_to_remove_accents)
     cells_to_remove_accents = resolve_columns(cells_to_remove_accents)
 
+    # Mapeamento para rastrear mudanças nos nomes das colunas
+    column_mapping = {col: col for col in df.columns}
+
     # Transformar nomes de colunas
     if columns_to_upper:
-        df.rename(
-            columns={col: col.upper() for col in columns_to_upper if col in df.columns},
-            inplace=True,
+        column_mapping.update(
+            {col: col.upper() for col in columns_to_upper if col in column_mapping}
         )
     if columns_to_lower:
-        df.rename(
-            columns={col: col.lower() for col in columns_to_lower if col in df.columns},
-            inplace=True,
+        column_mapping.update(
+            {col: col.lower() for col in columns_to_lower if col in column_mapping}
         )
     if columns_to_remove_spaces:
-        df.rename(
-            columns={
-                col: col.replace(" ", "") for col in columns_to_remove_spaces if col in df.columns
-            },
-            inplace=True,
+        column_mapping.update(
+            {col: col.replace(" ", "") for col in columns_to_remove_spaces if col in column_mapping}
         )
     if columns_to_remove_accents:
-        df.rename(
-            columns={col: unidecode(col) for col in columns_to_remove_accents if col in df.columns},
-            inplace=True,
+        column_mapping.update(
+            {col: unidecode(col) for col in columns_to_remove_accents if col in column_mapping}
         )
+
+    # Atualizar os nomes das colunas no DataFrame
+    df.rename(columns=column_mapping, inplace=True)
+
+    # Atualizar os parâmetros de células com os novos nomes das colunas
+    def update_column_list(columns):
+        if columns:
+            return [column_mapping.get(col, col) for col in columns]
+        return []
+
+    cells_to_upper = update_column_list(cells_to_upper)
+    cells_to_lower = update_column_list(cells_to_lower)
+    cells_to_remove_spaces = update_column_list(cells_to_remove_spaces)
+    cells_to_remove_accents = update_column_list(cells_to_remove_accents)
 
     # Transformar valores das células
     if cells_to_upper:
@@ -517,25 +528,56 @@ if __name__ == "__main__":
         print(f"Error exporting to JSON: {e}")
 
 
-def cast_columns(df: pd.DataFrame, column_types: Dict[str, str]) -> pd.DataFrame:
+def cast_columns(df: pd.DataFrame, column_types: Dict[str, Union[str, type]]) -> pd.DataFrame:
     """
     Tenta converter as colunas de um DataFrame para os tipos especificados.
 
     Args:
         df (pd.DataFrame): O DataFrame a ser convertido.
-        column_types (Dict[str, str]): Um dicionário onde as chaves são os nomes das colunas
-                                       e os valores são os tipos esperados (ex.: "float64", "object").
+        column_types (Dict[str, Union[str, type]]): Um dicionário onde as chaves são os nomes das colunas
+                                                    e os valores são os tipos esperados (ex.: "float64", int).
 
     Returns:
         pd.DataFrame: O DataFrame com as colunas convertidas.
 
     Raises:
-        ValueError: Se uma coluna especificada não existir no DataFrame.
+        ValueError: Se uma coluna especificada não existir no DataFrame ou se o tipo for inválido.
     """
+    valid_types = {
+        "int",
+        "float",
+        "object",
+        "category",
+        "bool",
+        "datetime64",
+    }  # Tipos válidos baseados no pandas
+    
     for column, col_type in column_types.items():
         if column in df.columns:
             try:
-                df[column] = df[column].astype(col_type)
+                # Se col_type for um tipo numérico (ex.: float), aplica diretamente
+                if isinstance(col_type, type):
+                    df[column] = df[column].astype(col_type)
+                else:
+                    # Garante que col_type seja uma string
+                    col_type = str(col_type).lower()
+                    # Verifica se o tipo é válido
+                    if not any(col_type.startswith(t) for t in valid_types):
+                        logger.error(
+                            f"Tipo de dado '{col_type}' não é válido para a coluna '{column}'."
+                        )
+                    if col_type.startswith("int"):
+                        # Preenche NaN com 0 antes de converter para int
+                        df[column] = (
+                            pd.to_numeric(df[column], errors="coerce").fillna(0).astype(col_type)
+                        )
+
+                        # Após a conversão, substitui valores NaN por string vazia
+                        df[column] = df[column].replace(
+                            {0: ""} if col_type == "int" else {pd.NA: "", None: ""}
+                        )
+                    else:
+                        df[column] = df[column].astype(col_type)
             except Exception as e:
                 raise ValueError(
                     f"Erro ao converter a coluna '{column}' para o tipo '{col_type}': {e}"
@@ -681,7 +723,7 @@ def merge_data_with_columns(
         indicator=indicator,
         handle_duplicates=handle_duplicates,
     )
-    
+
 
 def two_stage_merge(
     left: pd.DataFrame,
@@ -745,13 +787,13 @@ def two_stage_merge(
 
     # Adiciona coluna de ID (Int) temporária
     base_left[row_id_col] = range(len(base_left))
-    
+
     # Mapeando todas as colunas que o dataframe possui
     base_left_cols = list(left.columns) + [row_id_col]
 
     # Inicia um dataframe com todos os dados
     remaining = base_left[base_left_cols].copy()
-    
+
     # Inicia o dataframe que conterá o resultado final (merged + unmerged)
     collected_parts: List[pd.DataFrame] = []
 
@@ -761,7 +803,7 @@ def two_stage_merge(
 
     # Executa regras em ordem (prioridade)
     for i, (lkeys, rkeys) in enumerate(zip(left_keysets, right_keysets), start=1):
-        
+
         # Verificando se há ainda linhas para processar
         if remaining.empty:
             break

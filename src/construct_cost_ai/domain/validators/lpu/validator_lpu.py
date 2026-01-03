@@ -40,6 +40,8 @@ from utils.lpu.lpu_functions import (
     separate_regions,
     merge_budget_lpu,
 )
+from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import calculate_lpu_discrepancies
+from construct_cost_ai.domain.validators.lpu.stats.validator_lpu_stats import calculate_validation_stats
 
 settings = get_settings()
 
@@ -889,23 +891,19 @@ def validate_lpu(
             df_budget=df_merge_budget_metadata_agencias_constructors,
             df_lpu=df_lpu_long,
             columns_on_budget=[
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_one"), 
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_two")
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_one"),
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_two"),
             ],
             columns_on_lpu=[
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_one"), 
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_two")
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_one"),
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_two"),
             ],
             how=settings.get("module_validator_lpu.merge_budget_lpu.how", "left"),
-            validate=settings.get(
-                "module_validator_lpu.merge_budget_lpu.validate", "many_to_one"
-            ),
-            use_two_stage_merge=True
+            validate=settings.get("module_validator_lpu.merge_budget_lpu.validate", "many_to_one"),
+            use_two_stage_merge=True,
         )
         if verbose:
-            logger.info(
-                f"   ✅ Itens cruzados com a LPU: {len_merged}"
-            )
+            logger.info(f"   ✅ Itens cruzados com a LPU: {len_merged}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -925,92 +923,15 @@ def validate_lpu(
         )
 
     try:
-        df_result = calculate_discrepancies(df_budget_lpu)
+        df_result = calculate_lpu_discrepancies(df=df_merge_budget_metadata_agencias_constructors_lpu)
     except Exception as e:
         logger.error(f"Erro ao calcular discrepâncias: {e}")
         raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
 
     # Estatísticas
     if verbose:
-        logger.info("")
-        logger.info("📊 ESTATÍSTICAS DA VALIDAÇÃO")
-        logger.info("-" * 80)
-
-        total_items = len(df_result)
-        items_ok = (df_result["status_conciliacao"] == "OK").sum()
-        items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
-        items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
-
-        logger.info(f"   Total de itens validados: {total_items}")
-        logger.info(f"   ✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-        logger.info(
-            f"   ⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)"
-        )
-        logger.info(f"   📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
-        logger.info("")
-
-        total_budgeted_value = df_result["valor_total_orcado"].sum()
-        total_divergence = df_result["dif_total"].sum()
-        refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
-            "dif_total"
-        ].sum()
-
-        logger.info(f"   💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
-        logger.info(f"   💵 Divergência total: R$ {total_divergence:,.2f}")
-        logger.info(f"   💸 Ressarcimento potencial: R$ {refund_divergence:,.2f}")
-        logger.info("")
-
-    # Registra estatísticas no logger
-    logger.debug("📊 ESTATÍSTICAS DA VALIDAÇÃO")
-    total_items = len(df_result)
-    items_ok = (df_result["status_conciliacao"] == "OK").sum()
-    items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
-    items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
-
-    logger.debug(f"Total de itens validados: {total_items}")
-    logger.debug(f"✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-    logger.debug(f"⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)")
-    logger.debug(f"📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
-
-    total_budgeted_value = df_result["valor_total_orcado"].sum()
-    total_divergence = df_result["dif_total"].sum()
-    refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
-        "dif_total"
-    ].sum()
-
-    logger.debug(f"💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
-    logger.debug(f"💵 Divergência total: R$ {total_divergence:,.2f}")
-    logger.debug(f"💸 Ressarcimento potencial: R$ {refund_divergence:,.2f}")
-
-    # 4. Salva resultados
-    if verbose:
-        logger.info("")
-        logger.info("💾 Salvando resultados...")
-
-    try:
-        # Salva formato básico (4 planilhas)
-        save_results(df_result, output_dir)
-
-        # Salva relatório completo em Excel (11+ planilhas)
-        generate_complete_excel_report(df_result, output_dir)
-
-        # Salva relatório HTML
-        generate_html_report(df_result, output_dir)
-
-    except Exception as e:
-        logger.error(f"Erro ao salvar resultados: {e}")
-        raise ValidatorLPUError(f"Erro ao salvar resultados: {e}")
-
-    if verbose:
-        logger.info("")
-        logger.info("=" * 80)
-        logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
-        logger.info("=" * 80)
-
-    logger.debug("=" * 80)
-    logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
-    logger.debug("=" * 80)
-
+        calculate_validation_stats(df_result)
+        
     return df_result
 
 

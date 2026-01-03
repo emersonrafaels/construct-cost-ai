@@ -22,10 +22,9 @@ from pathlib import Path
 base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from utils.readers.budget_reader.budget_reader import orchestrate_budget_reader, FileInput
 from construct_cost_ai.domain.validators.lpu.validator_lpu import orchestrate_validate_lpu
 
 if __name__ == "__main__":
-    
+
     # Executa a orquestração do módulo de validação LPU
     orchestrate_validate_lpu()
