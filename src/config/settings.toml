@@ -7,16 +7,20 @@ app_version = "0.0.1"
 # Configuração - Validador LPU
 [default.module_validator_lpu]
 
+# Indica se queremos uma execução de código mais detalhada em prints (verbosa)
+verbosa = true
+
 # Tolerância de divergência para status de conciliação (%)
 tol_percentile = 0.0
 
 # Colunas padrão para cálculo de discrepâncias
-col_quantity = "QUANTIDADE"
-column_unit_price_paid = "PREÇO PAGO"
-column_unit_price_lpu = "PREÇO LPU"
+column_quantity = "QUANTIDADE"
+column_unit_price_paid = "PRECO PAGO"
+column_unit_price_lpu = "PRECO LPU"
 column_total_paid = "VALOR TOTAL PAGO"
 column_total_lpu = "VALOR TOTAL LPU"
 column_difference = "DIFERENÇA TOTAL"
+column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
 column_status = "STATUS CONCILIAÇÃO"
 
 # Opção para obter as estatísticas de status LPU
@@ -57,6 +61,9 @@ sheet_name = "Tables"
 
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"ID" = "object", "NOME" = "object", "UNIDADE" = "object", "PRECO PAGO" = "float64", "QUANTIDADE" = "float64", "SOURCE_FILE" = "object", "SHEET_NAME" = "object"}
+
+# Colunas para renomear
+columns_to_rename = {"VALOR TOTAL" = "VALOR TOTAL PAGO"}
 
 # Colunas para normalização de valores
 cells_to_remove_spaces = []
@@ -99,7 +106,7 @@ cells_to_remove_accents = "true"
 long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "float64"}
 
 # Colunas para renomear
-columns_to_rename = {"PREÇO" = "PREÇO LPU"}
+columns_to_rename = {"PRECO" = "PRECO LPU"}
 
 # Adiciona as variáveis necessárias para regiões e grupos
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
@@ -155,12 +162,17 @@ columns_lpu_merge_two = ["ITEM", "REGIAO", "GRUPO"]
 
 [default.module_validator_lpu.output_settings]
 
+# Lista de colunas no resultado final
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'CIDADE', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'STATUS CONCILIAÇÃO', 'SOURCE_FILE', 'SHEET_NAME_orc']
+
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"
 file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
 file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
 file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
 file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
+
+[default.module_validator_lpu.stats]
 
 # Configurações de exportação
 top_n_divergencias = 10

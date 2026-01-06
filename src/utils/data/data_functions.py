@@ -551,7 +551,7 @@ def cast_columns(df: pd.DataFrame, column_types: Dict[str, Union[str, type]]) ->
         "bool",
         "datetime64",
     }  # Tipos válidos baseados no pandas
-    
+
     for column, col_type in column_types.items():
         if column in df.columns:
             try:

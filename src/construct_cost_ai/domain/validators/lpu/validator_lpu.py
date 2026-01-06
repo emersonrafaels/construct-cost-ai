@@ -33,6 +33,8 @@ from utils.data.data_functions import (
     cast_columns,
     transform_case,
     merge_data_with_columns,
+    select_columns,
+    rename_columns,
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
@@ -40,8 +42,12 @@ from utils.lpu.lpu_functions import (
     separate_regions,
     merge_budget_lpu,
 )
-from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import calculate_lpu_discrepancies
-from construct_cost_ai.domain.validators.lpu.stats.validator_lpu_stats import calculate_validation_stats
+from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
+    calculate_lpu_discrepancies,
+)
+from construct_cost_ai.domain.validators.lpu.stats.validator_lpu_stats import (
+    calculate_validation_stats,
+)
 
 settings = get_settings()
 
@@ -132,6 +138,12 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             "module_validator_lpu.budget_data.column_unit_price", "unitario_orcado"
         ),
     )
+
+    # Verificando se há colunas para renomear
+    if settings.get("module_validator_lpu.budget_data.columns_to_rename"):
+        df = rename_columns(
+            df, rename_dict=settings.get("module_validator_lpu.budget_data.columns_to_rename")
+        )
 
     return df
 
@@ -480,9 +492,17 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     except ValueError as e:
         raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
-    return transform_case(df=df_wide, columns_to_upper=True), transform_case(
-        df=df_long, columns_to_upper=True
-    )
+    # Realizando as transformações finais dos dataframes
+    df_wide = transform_case(df=df_wide, columns_to_upper=True)
+    df_long = transform_case(df=df_long, columns_to_upper=True)
+
+    # Verificando se há colunas para renomear
+    if settings.get("module_validator_lpu.lpu_data.columns_to_rename"):
+        df_long = rename_columns(
+            df_long, rename_dict=settings.get("module_validator_lpu.lpu_data.columns_to_rename")
+        )
+
+    return df_wide, df_long
 
 
 def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
@@ -713,6 +733,25 @@ def validate_and_merge(
 
     return merged_df, matched_count, total_count
 
+def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Cria o DataFrame de resultado formatado para exportação.
+
+    Args:
+        df (pd.DataFrame): DataFrame com os resultados completos da validação.
+
+    Returns:
+        pd.DataFrame: DataFrame formatado para exportação.
+    """
+    
+    # Seleciona as colunas necessárias para o resultado final
+    list_select_columns = settings.get("module_validator_lpu.output_settings.list_columns_result", [])
+    
+    if list_select_columns:
+        df_result = select_columns(df=df, target_columns=list_select_columns)
+
+    return df_result
+
 
 def validate_lpu(
     file_path_budget: Union[str, Path] = None,
@@ -908,32 +947,42 @@ def validate_lpu(
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
 
+    # 3. Calcula discrepâncias
+    try:
+        df_result = calculate_lpu_discrepancies(
+            df=df_merge_budget_metadata_agencias_constructors_lpu,
+            column_quantity=settings.get("module_validator_lpu.column_quantity"),
+            column_unit_price_paid=settings.get("module_validator_lpu.column_unit_price_paid"),
+            column_unit_price_lpu=settings.get("module_validator_lpu.column_unit_price_lpu"),
+            column_total_paid=settings.get("module_validator_lpu.column_total_paid"),
+            column_total_lpu=settings.get("module_validator_lpu.column_total_lpu"),
+            column_difference=settings.get("module_validator_lpu.column_difference"),
+            column_discrepancy=settings.get(
+                "module_validator_lpu.column_discrepancy"
+            ),
+            column_status=settings.get("module_validator_lpu.column_status"),
+            tol_percentile=settings.get("module_validator_lpu.tol_percentile"),
+            verbose=settings.get("module_validator_lpu.verbose", True),
+        )
+    except Exception as e:
+        logger.error(f"Erro ao calcular discrepâncias: {e}")
+        raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
+    
+    # Formatando o resultado final
+    df_result = generate_format_result(df_result)
+    
     # Salvar o resultado em um arquivo Excel
     export_data(
-        data=df_merge_budget_metadata_agencias_constructors_lpu,
+        data=df_result,
         file_path=Path(output_dir, output_file),
         index=False,
     )
     logger.success(f"Resultado salvo em: {output_file}")
 
-    # 3. Calcula discrepâncias
-    try:
-        df_result = calculate_lpu_discrepancies(df=df_merge_budget_metadata_agencias_constructors_lpu, 
-                                                column_unit_price_paid=settings.get("module_validator_lpu.column_unit_price_paid"),
-                                                column_unit_price_lpu=settings.get("module_validator_lpu.column_unit_price_lpu"),
-                                                column_total_paid=settings.get("module_validator_lpu.column_total_paid"),
-                                                column_total_lpu=settings.get("module_validator_lpu.column_total_lpu"),
-                                                column_difference=settings.get("module_validator_lpu.column_difference"),
-                                                column_status=settings.get("module_validator_lpu.column_status"), 
-                                                tol_percentile=settings.get("module_validator_lpu.tol_percentile"))
-    except Exception as e:
-        logger.error(f"Erro ao calcular discrepâncias: {e}")
-        raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
-
     # Estatísticas
     if settings.get("module_validator_lpu.get_lpu_status", False):
         calculate_validation_stats(df_result)
-        
+
     return df_result
 
 

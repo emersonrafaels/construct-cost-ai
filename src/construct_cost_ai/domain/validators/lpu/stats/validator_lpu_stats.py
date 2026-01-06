@@ -26,6 +26,7 @@ from config.config_dynaconf import get_settings
 
 settings = get_settings()
 
+
 def calculate_validation_stats(df_result: pd.DataFrame, verbose: bool = True) -> None:
     """
     Calculate and display validation statistics for LPU.
@@ -52,7 +53,9 @@ def calculate_validation_stats(df_result: pd.DataFrame, verbose: bool = True) ->
 
     total_budgeted_value = df_result["valor_total_orcado"].sum()
     total_divergence = df_result["dif_total"].sum()
-    refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"]["dif_total"].sum()
+    refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
+        "dif_total"
+    ].sum()
 
     # Display statistics in the console
     if verbose:
