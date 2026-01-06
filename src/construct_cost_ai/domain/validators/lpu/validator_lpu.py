@@ -981,7 +981,8 @@ def validate_lpu(
 
     # Estatísticas
     if settings.get("module_validator_lpu.get_lpu_status", False):
-        calculate_validation_stats(df_result)
+        calculate_validation_stats(df_result, 
+                                   verbose=settings.get("module_validator_lpu.verbose", True))
 
     return df_result
 
