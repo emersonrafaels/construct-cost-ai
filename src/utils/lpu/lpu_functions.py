@@ -29,6 +29,7 @@ from config.config_dynaconf import get_settings
 from utils.data.data_functions import (
     merge_data_with_columns,
     two_stage_merge,
+    rename_columns,
 )
 
 settings = get_settings()
@@ -223,5 +224,11 @@ def merge_budget_lpu(
 
             # Obtendo a quantidade de dados com cruzamento realizado com sucesso
             len_merged = len(merged_df[merged_df["_merge"] == both])
+            
+    # Renomeando colunas
+    merged_df = rename_columns(
+        df=merged_df,
+        rename_dict=settings.get("module_validator_lpu.lpu_data.columns_to_rename")
+    )
 
     return merged_df, len_merged

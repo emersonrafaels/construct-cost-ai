@@ -917,19 +917,21 @@ def validate_lpu(
     logger.success(f"Resultado salvo em: {output_file}")
 
     # 3. Calcula discrepâncias
-    if verbose:
-        logger.info(
-            f"🧮 Calculando discrepâncias (tolerância {settings.get('validador_lpu.tolerancia_percentual')}%)..."
-        )
-
     try:
-        df_result = calculate_lpu_discrepancies(df=df_merge_budget_metadata_agencias_constructors_lpu)
+        df_result = calculate_lpu_discrepancies(df=df_merge_budget_metadata_agencias_constructors_lpu, 
+                                                column_unit_price_paid=settings.get("module_validator_lpu.column_unit_price_paid"),
+                                                column_unit_price_lpu=settings.get("module_validator_lpu.column_unit_price_lpu"),
+                                                column_total_paid=settings.get("module_validator_lpu.column_total_paid"),
+                                                column_total_lpu=settings.get("module_validator_lpu.column_total_lpu"),
+                                                column_difference=settings.get("module_validator_lpu.column_difference"),
+                                                column_status=settings.get("module_validator_lpu.column_status"), 
+                                                tol_percentile=settings.get("module_validator_lpu.tol_percentile"))
     except Exception as e:
         logger.error(f"Erro ao calcular discrepâncias: {e}")
         raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
 
     # Estatísticas
-    if verbose:
+    if settings.get("module_validator_lpu.get_lpu_status", False):
         calculate_validation_stats(df_result)
         
     return df_result

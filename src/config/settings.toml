@@ -6,8 +6,22 @@ app_version = "0.0.1"
 
 # Configuração - Validador LPU
 [default.module_validator_lpu]
+
 # Tolerância de divergência para status de conciliação (%)
 tol_percentile = 0.0
+
+# Colunas padrão para cálculo de discrepâncias
+col_quantity = "QUANTIDADE"
+column_unit_price_paid = "PREÇO PAGO"
+column_unit_price_lpu = "PREÇO LPU"
+column_total_paid = "VALOR TOTAL PAGO"
+column_total_lpu = "VALOR TOTAL LPU"
+column_difference = "DIFERENÇA TOTAL"
+column_status = "STATUS CONCILIAÇÃO"
+
+# Opção para obter as estatísticas de status LPU
+get_lpu_status = true
+
 
 [default.module_validator_lpu.agencies_data]
 
@@ -83,6 +97,9 @@ cells_to_remove_accents = "true"
 
 # Colunas padrões do padrão long
 long_default_columns = {"REGIAO" = "object", "GRUPO" = "object", "PREÇO" = "float64"}
+
+# Colunas para renomear
+columns_to_rename = {"PREÇO" = "PREÇO LPU"}
 
 # Adiciona as variáveis necessárias para regiões e grupos
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]

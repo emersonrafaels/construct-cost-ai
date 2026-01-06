@@ -38,7 +38,7 @@ def calculate_lpu_discrepancies(
     column_total_lpu: str = "valor_lpu",
     column_difference: str = "dif_total",
     column_status: str = "status_conciliacao",
-    tolerance_percent: float = None,
+    tol_percentile: float = None,
 ) -> pd.DataFrame:
     """
     Calcula o valor LPU e compara com o valor pago, identificando discrepâncias.
@@ -52,11 +52,17 @@ def calculate_lpu_discrepancies(
         column_total_lpu (str): Nome da coluna de valor total LPU.
         column_difference (str): Nome da coluna de diferença total.
         column_status (str): Nome da coluna de status de conciliação.
-        tolerance_percent (float): Tolerância percentual para discrepâncias.
+        tol_percentile (float): Tolerância percentual para discrepâncias.
 
     Returns:
         pd.DataFrame: DataFrame atualizado com as colunas de valor LPU, diferença e status.
     """
+    
+    if verbose:
+        logger.info(
+            f"🧮 Calculando discrepâncias (tolerância {settings.get('validador_lpu.tolerancia_percentual')}%)..."
+        )
+    
     # Calcula o valor total LPU
     df[column_total_lpu] = df[column_quantity] * df[column_unit_price_lpu]
 
@@ -64,10 +70,10 @@ def calculate_lpu_discrepancies(
     df[column_difference] = df[column_total_paid] - df[column_total_lpu]
 
     # Define o status de conciliação com base na tolerância
-    if tolerance_percent is None:
-        tolerance_percent = settings.get("module_validator_lpu.tol_percentile", 5)
+    if tol_percentile is None:
+        tol_percentile = settings.get("module_validator_lpu.tol_percentile", 0)
 
-    tolerance_value = df[column_total_lpu] * (tolerance_percent / 100)
+    tolerance_value = df[column_total_lpu] * (tol_percentile / 100)
 
     def classify_discrepancy(row):
         if abs(row[column_difference]) <= tolerance_value[row.name]:
