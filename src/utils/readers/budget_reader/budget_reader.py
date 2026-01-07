@@ -191,11 +191,13 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(how="all").reset_index(drop=True)
 
     # Converte todas as colunas e celulas em uppercase
-    return transform_case(df=df, 
-                          columns_to_upper=True, 
-                          cells_to_upper=True, 
-                          columns_to_remove_accents=True, 
-                          cells_to_remove_accents=True)
+    return transform_case(
+        df=df,
+        columns_to_upper=True,
+        cells_to_upper=True,
+        columns_to_remove_accents=True,
+        cells_to_remove_accents=True,
+    )
 
 
 # Função para localizar dinamicamente o cabeçalho da tabela no DataFrame
@@ -226,7 +228,7 @@ def locate_table(
             str(col).upper() if isinstance(col, str) else col
             for col in alternative_columns[pattern_key]
         ]
-        
+
         if pattern_key == "default03":
             pass
 
@@ -377,6 +379,10 @@ def extract_metadata(
                 if metadata[key] is None and (
                     pattern.upper() in cell_str or method == "specific_cell"
                 ):
+                    if method == "specific_cell" and config.get("specific_cell") is None:
+                        metadata[key] = None
+                        continue
+
                     # Busca o valor do metadado com base na configuração
                     find_metadata_value(
                         row=row,
@@ -416,15 +422,14 @@ def rename_and_select_columns(
 
     # Renomeia as colunas do DataFrame
     df = rename_columns(df, rename_dict=rename_dict)
-    
+
     # Garante que todas as colunas em selected_columns existam no DataFrame
     df = ensure_columns_exist(df=df, columns=selected_columns, default_value=None)
 
     # Seleciona apenas as colunas desejadas (valores do dicionário de renomeação)
     df = select_columns(df, target_columns=selected_columns)
-    
+
     # Cria as colunas adicionais, se necessário
-    
 
     return df
 
@@ -838,7 +843,7 @@ def get_files_from_directory(
     else:
         # Busca apenas no diretório solicitado
         files = dir_path.iterdir()
-    
+
     # Filtra apenas arquivos com base nos critérios fornecidos
     if extension:
         files = filter(lambda f: f.suffix in extension, files)

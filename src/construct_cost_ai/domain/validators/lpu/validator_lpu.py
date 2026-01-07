@@ -33,12 +33,20 @@ from utils.data.data_functions import (
     cast_columns,
     transform_case,
     merge_data_with_columns,
+    select_columns,
+    rename_columns,
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
     split_regiao_grupo,
     separate_regions,
     merge_budget_lpu,
+)
+from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
+    calculate_lpu_discrepancies,
+)
+from construct_cost_ai.domain.validators.lpu.stats.validator_lpu_stats import (
+    calculate_validation_stats,
 )
 
 settings = get_settings()
@@ -130,6 +138,12 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             "module_validator_lpu.budget_data.column_unit_price", "unitario_orcado"
         ),
     )
+
+    # Verificando se há colunas para renomear
+    if settings.get("module_validator_lpu.budget_data.columns_to_rename"):
+        df = rename_columns(
+            df, rename_dict=settings.get("module_validator_lpu.budget_data.columns_to_rename")
+        )
 
     return df
 
@@ -478,9 +492,17 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     except ValueError as e:
         raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
-    return transform_case(df=df_wide, columns_to_upper=True), transform_case(
-        df=df_long, columns_to_upper=True
-    )
+    # Realizando as transformações finais dos dataframes
+    df_wide = transform_case(df=df_wide, columns_to_upper=True)
+    df_long = transform_case(df=df_long, columns_to_upper=True)
+
+    # Verificando se há colunas para renomear
+    if settings.get("module_validator_lpu.lpu_data.columns_to_rename"):
+        df_long = rename_columns(
+            df_long, rename_dict=settings.get("module_validator_lpu.lpu_data.columns_to_rename")
+        )
+
+    return df_wide, df_long
 
 
 def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
@@ -711,6 +733,25 @@ def validate_and_merge(
 
     return merged_df, matched_count, total_count
 
+def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Cria o DataFrame de resultado formatado para exportação.
+
+    Args:
+        df (pd.DataFrame): DataFrame com os resultados completos da validação.
+
+    Returns:
+        pd.DataFrame: DataFrame formatado para exportação.
+    """
+    
+    # Seleciona as colunas necessárias para o resultado final
+    list_select_columns = settings.get("module_validator_lpu.output_settings.list_columns_result", [])
+    
+    if list_select_columns:
+        df_result = select_columns(df=df, target_columns=list_select_columns)
+
+    return df_result
+
 
 def validate_lpu(
     file_path_budget: Union[str, Path] = None,
@@ -889,127 +930,59 @@ def validate_lpu(
             df_budget=df_merge_budget_metadata_agencias_constructors,
             df_lpu=df_lpu_long,
             columns_on_budget=[
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_one"), 
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_two")
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_one"),
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_budget_merge_two"),
             ],
             columns_on_lpu=[
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_one"), 
-                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_two")
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_one"),
+                settings.get("module_validator_lpu.merge_budget_lpu.columns_lpu_merge_two"),
             ],
             how=settings.get("module_validator_lpu.merge_budget_lpu.how", "left"),
-            validate=settings.get(
-                "module_validator_lpu.merge_budget_lpu.validate", "many_to_one"
-            ),
-            use_two_stage_merge=True
+            validate=settings.get("module_validator_lpu.merge_budget_lpu.validate", "many_to_one"),
+            use_two_stage_merge=True,
         )
         if verbose:
-            logger.info(
-                f"   ✅ Itens cruzados com a LPU: {len_merged}"
-            )
+            logger.info(f"   ✅ Itens cruzados com a LPU: {len_merged}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
 
+    # 3. Calcula discrepâncias
+    try:
+        df_result = calculate_lpu_discrepancies(
+            df=df_merge_budget_metadata_agencias_constructors_lpu,
+            column_quantity=settings.get("module_validator_lpu.column_quantity"),
+            column_unit_price_paid=settings.get("module_validator_lpu.column_unit_price_paid"),
+            column_unit_price_lpu=settings.get("module_validator_lpu.column_unit_price_lpu"),
+            column_total_paid=settings.get("module_validator_lpu.column_total_paid"),
+            column_total_lpu=settings.get("module_validator_lpu.column_total_lpu"),
+            column_difference=settings.get("module_validator_lpu.column_difference"),
+            column_discrepancy=settings.get(
+                "module_validator_lpu.column_discrepancy"
+            ),
+            column_status=settings.get("module_validator_lpu.column_status"),
+            tol_percentile=settings.get("module_validator_lpu.tol_percentile"),
+            verbose=settings.get("module_validator_lpu.verbose", True),
+        )
+    except Exception as e:
+        logger.error(f"Erro ao calcular discrepâncias: {e}")
+        raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
+    
+    # Formatando o resultado final
+    df_result = generate_format_result(df_result)
+    
     # Salvar o resultado em um arquivo Excel
     export_data(
-        data=df_merge_budget_metadata_agencias_constructors_lpu,
+        data=df_result,
         file_path=Path(output_dir, output_file),
         index=False,
     )
     logger.success(f"Resultado salvo em: {output_file}")
 
-    # 3. Calcula discrepâncias
-    if verbose:
-        logger.info(
-            f"🧮 Calculando discrepâncias (tolerância {settings.get('validador_lpu.tolerancia_percentual')}%)..."
-        )
-
-    try:
-        df_result = calculate_discrepancies(df_budget_lpu)
-    except Exception as e:
-        logger.error(f"Erro ao calcular discrepâncias: {e}")
-        raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
-
     # Estatísticas
-    if verbose:
-        logger.info("")
-        logger.info("📊 ESTATÍSTICAS DA VALIDAÇÃO")
-        logger.info("-" * 80)
-
-        total_items = len(df_result)
-        items_ok = (df_result["status_conciliacao"] == "OK").sum()
-        items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
-        items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
-
-        logger.info(f"   Total de itens validados: {total_items}")
-        logger.info(f"   ✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-        logger.info(
-            f"   ⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)"
-        )
-        logger.info(f"   📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
-        logger.info("")
-
-        total_budgeted_value = df_result["valor_total_orcado"].sum()
-        total_divergence = df_result["dif_total"].sum()
-        refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
-            "dif_total"
-        ].sum()
-
-        logger.info(f"   💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
-        logger.info(f"   💵 Divergência total: R$ {total_divergence:,.2f}")
-        logger.info(f"   💸 Ressarcimento potencial: R$ {refund_divergence:,.2f}")
-        logger.info("")
-
-    # Registra estatísticas no logger
-    logger.debug("📊 ESTATÍSTICAS DA VALIDAÇÃO")
-    total_items = len(df_result)
-    items_ok = (df_result["status_conciliacao"] == "OK").sum()
-    items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
-    items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
-
-    logger.debug(f"Total de itens validados: {total_items}")
-    logger.debug(f"✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-    logger.debug(f"⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)")
-    logger.debug(f"📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
-
-    total_budgeted_value = df_result["valor_total_orcado"].sum()
-    total_divergence = df_result["dif_total"].sum()
-    refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
-        "dif_total"
-    ].sum()
-
-    logger.debug(f"💰 Valor total orçado: R$ {total_budgeted_value:,.2f}")
-    logger.debug(f"💵 Divergência total: R$ {total_divergence:,.2f}")
-    logger.debug(f"💸 Ressarcimento potencial: R$ {refund_divergence:,.2f}")
-
-    # 4. Salva resultados
-    if verbose:
-        logger.info("")
-        logger.info("💾 Salvando resultados...")
-
-    try:
-        # Salva formato básico (4 planilhas)
-        save_results(df_result, output_dir)
-
-        # Salva relatório completo em Excel (11+ planilhas)
-        generate_complete_excel_report(df_result, output_dir)
-
-        # Salva relatório HTML
-        generate_html_report(df_result, output_dir)
-
-    except Exception as e:
-        logger.error(f"Erro ao salvar resultados: {e}")
-        raise ValidatorLPUError(f"Erro ao salvar resultados: {e}")
-
-    if verbose:
-        logger.info("")
-        logger.info("=" * 80)
-        logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
-        logger.info("=" * 80)
-
-    logger.debug("=" * 80)
-    logger.success("✅ VALIDAÇÃO CONCLUÍDA COM SUCESSO!")
-    logger.debug("=" * 80)
+    if settings.get("module_validator_lpu.get_lpu_status", False):
+        calculate_validation_stats(df_result, 
+                                   verbose=settings.get("module_validator_lpu.verbose", True))
 
     return df_result
 

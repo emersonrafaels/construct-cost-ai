@@ -29,6 +29,7 @@ from config.config_dynaconf import get_settings
 from utils.data.data_functions import (
     merge_data_with_columns,
     two_stage_merge,
+    rename_columns,
 )
 
 settings = get_settings()
@@ -179,7 +180,7 @@ def merge_budget_lpu(
 
     # Verifica se é desejado usar o merge em duas etapas
     if use_two_stage_merge:
-        
+
         # Realizando o cruzamento considerando dois estágios de merge
         merged_df = two_stage_merge(
             left=budget,
@@ -193,15 +194,15 @@ def merge_budget_lpu(
             validate_stage2=validate,
             handle_duplicates=True,
         )
-        
+
         if "_merge" in merged_df.columns:
             # Obtendo a quantidade de dados com cruzamento realizado com sucesso
             len_merged = len(merged_df[merged_df["_merge"] == "both"])
-    
+
     else:
         # Itera sobre as combinações de colunas para realizar múltiplos merges
         for idx, (budget_cols, lpu_cols) in enumerate(zip(columns_on_budget, columns_on_lpu)):
-            
+
             # Realizando o cruzamento considerando um único estágio de merge
             # Verifica se a coluna _merge já existe e renomeia para evitar conflitos
             if "_merge" in budget.columns:
@@ -220,7 +221,7 @@ def merge_budget_lpu(
                 indicator=True,
                 handle_duplicates=True,
             )
-            
+
             # Obtendo a quantidade de dados com cruzamento realizado com sucesso
             len_merged = len(merged_df[merged_df["_merge"] == both])
 

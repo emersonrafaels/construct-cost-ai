@@ -51,5 +51,5 @@ if __name__ == "__main__":
     orchestrate_budget_reader(
         Path(Path(__file__).parents[2], "data/inputs/orcamentos"),
         extensions=[".xlsx", ".xlsm", ".xls"],
-        recursive=True
+        recursive=True,
     )

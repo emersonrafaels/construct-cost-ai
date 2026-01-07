@@ -26,7 +26,7 @@ def get_metadata_keys():
             },
             "NUMERO_AGENCIA": {
                 "sheet_name": "LPU",
-                "pattern": "AGÊNCIA",
+                "pattern": "AGENCIA",
                 "method": "iterate",
                 "max_rows": None,
                 "specific_cell": None,
@@ -34,7 +34,7 @@ def get_metadata_keys():
             },
             "NOME_AGENCIA": {
                 "sheet_name": "LPU",
-                "pattern": "NOME AGÊNCIA",
+                "pattern": "NOME AGENCIA",
                 "method": "iterate",
                 "max_rows": None,
                 "specific_cell": None,
@@ -76,7 +76,7 @@ def get_metadata_keys():
             },
             "NUMERO_AGENCIA": {
                 "sheet_name": "Resumo",
-                "pattern": "AGÊNCIA",
+                "pattern": "AGENCIA",
                 "method": "specific_cell",
                 "max_rows": None,
                 "specific_cell": (4, 1),
@@ -84,7 +84,7 @@ def get_metadata_keys():
             },
             "NOME_AGENCIA": {
                 "sheet_name": "Resumo",
-                "pattern": "NOME AGÊNCIA",
+                "pattern": "NOME AGENCIA",
                 "method": "specific_cell",
                 "max_rows": None,
                 "specific_cell": (5, 1),
@@ -126,7 +126,7 @@ def get_metadata_keys():
             },
             "NUMERO_AGENCIA": {
                 "sheet_name": "Resumo",
-                "pattern": "AGÊNCIA",
+                "pattern": "AGENCIA",
                 "method": "specific_cell",
                 "max_rows": None,
                 "specific_cell": (4, 1),
@@ -134,7 +134,7 @@ def get_metadata_keys():
             },
             "NOME_AGENCIA": {
                 "sheet_name": "Resumo",
-                "pattern": "NOME AGÊNCIA",
+                "pattern": "NOME AGENCIA",
                 "method": "specific_cell",
                 "max_rows": None,
                 "specific_cell": (5, 1),
