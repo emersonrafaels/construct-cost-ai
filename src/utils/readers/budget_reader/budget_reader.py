@@ -88,6 +88,7 @@ from utils.data.data_functions import (
     rename_columns,
     ensure_columns_exist,
     select_columns,
+    concat_dataframes,
 )
 from utils.python_functions import convert_value
 
@@ -726,7 +727,7 @@ def append_and_save_results_json(
         None
     """
     # Concatena todas as tabelas
-    data_result = pd.concat(all_tables, ignore_index=True)
+    data_result = concat_dataframes(dataframes=all_tables, ignore_index=True)
 
     # Seleciona apenas as colunas desejadas
     data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
