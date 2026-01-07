@@ -861,3 +861,35 @@ def two_stage_merge(
 
     # Retorna o DataFrame final consolidado
     return out
+
+
+def concat_dataframes(dataframes: list, 
+                      ignore_index: bool = True, 
+                      fill_missing: bool = True) -> pd.DataFrame:
+    """
+    Concatena uma lista de DataFrames, lidando com índices duplicados e colunas inconsistentes.
+
+    Args:
+        dataframes (list): Lista de DataFrames a serem concatenados.
+        ignore_index (bool): Se deve ignorar os índices originais e criar um novo índice.
+        fill_missing (bool): Se deve preencher valores ausentes com NaN para colunas inconsistentes.
+
+    Returns:
+        pd.DataFrame: DataFrame concatenado.
+    """
+    if not dataframes:
+        raise ValueError("A lista de DataFrames está vazia.")
+
+    # Verifica se todos os elementos da lista são DataFrames
+    if not all(isinstance(df, pd.DataFrame) for df in dataframes):
+        raise TypeError("Todos os elementos da lista devem ser DataFrames.")
+
+    # Preenche valores ausentes para colunas inconsistentes, se necessário
+    if fill_missing:
+        all_columns = set(col for df in dataframes for col in df.columns)
+        dataframes = [df.reindex(columns=all_columns) for df in dataframes]
+
+    # Concatena os DataFrames
+    concatenated_df = pd.concat(dataframes, ignore_index=ignore_index)
+
+    return concatenated_df
