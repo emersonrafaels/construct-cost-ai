@@ -1,5 +1,5 @@
 """
-Modulo para obter as estatísticas de validação da LPU.
+Modulo para obter as estatísticas de validação da LPU e gerar um relatório em PDF.
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
@@ -23,61 +23,88 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
+from generate_statistics_report import generate_statistics_report
 
 settings = get_settings()
 
 
-def calculate_validation_stats(df_result: pd.DataFrame, verbose: bool = True) -> None:
+def calculate_validation_stats_and_generate_report(
+    df_result: pd.DataFrame, output_pdf: str, verbose: bool = None, validator_output_pdf: bool = True
+) -> None:
     """
-    Calculate and display validation statistics for LPU.
-
-    This function computes various statistics related to the validation of LPU data, such as the total number of items,
-    the number of items in different reconciliation statuses, and the total budgeted and divergence values. The results
-    can be displayed in the console and logged for debugging purposes.
+    Calcula estatísticas de validação da LPU e gera um relatório em PDF.
 
     Args:
-        df_result (pd.DataFrame): DataFrame containing the validation results. It must include the following columns:
-            - "status_conciliacao": Status of reconciliation (e.g., "OK", "Para ressarcimento", "Abaixo LPU").
-            - "valor_total_orcado": Total budgeted value.
-            - "dif_total": Total divergence value.
-        verbose (bool): If True, displays the statistics in the console. Defaults to True.
+        df_result (pd.DataFrame): DataFrame contendo os resultados da validação. Deve incluir as seguintes colunas:
+            - "STATUS CONCILIAÇÃO": Status da conciliação (e.g., "OK", "Para ressarcimento", "Abaixo LPU").
+            - "VALOR TOTAL PAGO": Valor total pago.
+            - "DIFERENÇA TOTAL": Valor total da divergência.
+        output_pdf (str): Caminho para salvar o relatório em PDF.
+        verbose (bool): Se True, exibe as estatísticas no console. Padrão é None, e será lido do settings.
+        validator_output_pdf (bool): Se True, salva o relatório em PDF. Caso contrário, não salva. Padrão é True.
 
     Returns:
         None
     """
-    # General statistics
+    # Define o valor padrão de verbose a partir do settings, se não for fornecido
+    if verbose is None:
+        verbose = settings.get("module_validator_lpu.verbosa")
+
+    # Estatísticas gerais
     total_items = len(df_result)
-    items_ok = (df_result["status_conciliacao"] == "OK").sum()
-    items_refund = (df_result["status_conciliacao"] == "Para ressarcimento").sum()
-    items_below = (df_result["status_conciliacao"] == "Abaixo LPU").sum()
+    items_ok = (df_result[settings.get("module_validator_lpu.column_status")] == "OK").sum()
+    items_refund = (df_result[settings.get("module_validator_lpu.column_status")] == "Para ressarcimento").sum()
+    items_below = (df_result[settings.get("module_validator_lpu.column_status")] == "Abaixo LPU").sum()
 
-    total_budgeted_value = df_result["valor_total_orcado"].sum()
-    total_divergence = df_result["dif_total"].sum()
-    refund_divergence = df_result[df_result["status_conciliacao"] == "Para ressarcimento"][
-        "dif_total"
-    ].sum()
+    total_paid_value = df_result[settings.get("module_validator_lpu.column_total_paid")].sum()
+    total_divergence = df_result[settings.get("module_validator_lpu.column_difference")].sum()
+    refund_divergence = df_result[df_result[settings.get("module_validator_lpu.column_status")] == "Para ressarcimento"]\
+        [settings.get("module_validator_lpu.column_difference")].sum()
 
-    # Display statistics in the console
+    # Exibe estatísticas no console
     if verbose:
         logger.info("")
-        logger.info("📊 VALIDATION STATISTICS")
+        logger.info("📊 ESTATÍSTICAS DE VALIDAÇÃO")
         logger.info("-" * 80)
-        logger.info(f"   Total items validated: {total_items}")
+        logger.info(f"   Total de itens validados: {total_items}")
         logger.info(f"   ✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-        logger.info(f"   ⚠️  For refund: {items_refund} ({items_refund/total_items*100:.1f}%)")
-        logger.info(f"   📉 Below LPU: {items_below} ({items_below/total_items*100:.1f}%)")
+        logger.info(f"   ⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)")
+        logger.info(f"   📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
         logger.info("")
-        logger.info(f"   💰 Total budgeted value: R$ {total_budgeted_value:,.2f}")
-        logger.info(f"   💵 Total divergence: R$ {total_divergence:,.2f}")
-        logger.info(f"   💸 Potential refund: R$ {refund_divergence:,.2f}")
+        logger.info(f"   💰 Valor total pago: R$ {total_paid_value:,.2f}")
+        logger.info(f"   💵 Divergência total: R$ {total_divergence:,.2f}")
+        logger.info(f"   💸 Potencial ressarcimento: R$ {refund_divergence:,.2f}")
         logger.info("")
 
-    # Log statistics for debugging
-    logger.debug("📊 VALIDATION STATISTICS")
-    logger.debug(f"Total items validated: {total_items}")
+    # Loga estatísticas para depuração
+    logger.debug("📊 ESTATÍSTICAS DE VALIDAÇÃO")
+    logger.debug(f"Total de itens validados: {total_items}")
     logger.debug(f"✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
-    logger.debug(f"⚠️  For refund: {items_refund} ({items_refund/total_items*100:.1f}%)")
-    logger.debug(f"📉 Below LPU: {items_below} ({items_below/total_items*100:.1f}%)")
-    logger.debug(f"💰 Total budgeted value: R$ {total_budgeted_value:,.2f}")
-    logger.debug(f"💵 Total divergence: R$ {total_divergence:,.2f}")
-    logger.debug(f"💸 Potential refund: R$ {refund_divergence:,.2f}")
+    logger.debug(f"⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)")
+    logger.debug(f"📉 Abaixo LPU: {items_below} ({items_below/total_items*100:.1f}%)")
+    logger.debug(f"💰 Valor total pago: R$ {total_paid_value:,.2f}")
+    logger.debug(f"💵 Divergência total: R$ {total_divergence:,.2f}")
+    logger.debug(f"💸 Potencial ressarcimento: R$ {refund_divergence:,.2f}")
+
+    # Gera o relatório em PDF, se permitido
+    if validator_output_pdf:
+        generate_statistics_report(df_result, output_pdf)
+        logger.info(f"Relatório gerado com sucesso: {output_pdf}")
+    else:
+        logger.info("Geração de relatório em PDF foi desativada.")
+
+# Exemplo de uso
+if __name__ == "__main__":
+    # Exemplo de DataFrame
+    data = {
+        settings.get("module_validator_lpu.column_status"): ['OK', 'Para ressarcimento', 'Abaixo LPU', 'OK', 'Para ressarcimento'],
+        settings.get("module_validator_lpu.column_total_paid"): [1000, 2000, 1500, 1200, 1800],
+        settings.get("module_validator_lpu.column_difference"): [100, 200, -150, 0, 250]
+    }
+    df_result = pd.DataFrame(data)
+
+    # Caminho para salvar o relatório
+    output_pdf = "relatorio_validacao_lpu.pdf"
+
+    # Calcula estatísticas e gera o relatório
+    calculate_validation_stats_and_generate_report(df_result, output_pdf, validator_output_pdf=True)
