@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
-from generate_statistics_report import generate_statistics_report
+from construct_cost_ai.domain.validators.lpu.stats.generate_statistics_report import generate_statistics_report
 
 settings = get_settings()
 
