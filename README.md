@@ -23,8 +23,8 @@ Este serviço valida orçamentos de obras enviados por fornecedores, aplicando:
 O **Construct Cost AI** foi projetado como uma **camada de orquestração** (não um monolito):
 
 - **Design orientado a objetos** para extensibilidade
-- **Validadores determinísticos**: Checagens baseadas em regras (LPU, Match Fuzzy, Match por Contexto)
-- **Agentes de IA**: Análise probabilística via API HTTP do StackSpot AI
+- **Validadores determinísticos**: Checagens baseadas em regras (LPU, Match Fuzzy)
+- **Agentes de IA**: Análise probabilística via API HTTP do StackSpot AI e Embeddings (Match por Contexto, Validação de Escopos, Validação da relação quantidade/metragens)
 - **Separação limpa**: Lógica de domínio, infraestrutura, API e camadas de UI
 
 ```
@@ -48,9 +48,9 @@ tests/                   # Testes com pytest
 ## ✨ Funcionalidades
 
 ### Capacidades Principais
-- ✅ **Detecção de desvios de quantidade** (comparação com dados de referência)
-- ✅ **Detecção de anomalias de preço unitário** (comparação com tabelas SINAPI/LPU)
+- ✅ **Detecção de anomalias de preço unitário** (comparação com tabelas LPU)
 - ✅ **Validação de itens fora de catálogo** (identificação de itens não padronizados)
+- ✅ **Detecção de desvios de quantidade** (comparação com dados de referência)
 - ✅ **Análise contextual com IA** (avaliação de riscos, explicações)
 - ✅ **Agregação de resultados** (por item e por grupo de serviços)
 - ✅ **Cálculo de nível de risco** (BAIXO, MÉDIO, ALTO, CRÍTICO)

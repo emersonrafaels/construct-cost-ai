@@ -45,8 +45,8 @@ from utils.lpu.lpu_functions import (
 from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
     calculate_lpu_discrepancies,
 )
-from construct_cost_ai.domain.validators.lpu.stats.validator_lpu_stats import (
-    calculate_validation_stats,
+from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
+    calculate_validation_stats_and_generate_report,
 )
 
 settings = get_settings()
@@ -733,6 +733,7 @@ def validate_and_merge(
 
     return merged_df, matched_count, total_count
 
+
 def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
     """
     Cria o DataFrame de resultado formatado para exportação.
@@ -743,10 +744,12 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame formatado para exportação.
     """
-    
+
     # Seleciona as colunas necessárias para o resultado final
-    list_select_columns = settings.get("module_validator_lpu.output_settings.list_columns_result", [])
-    
+    list_select_columns = settings.get(
+        "module_validator_lpu.output_settings.list_columns_result", []
+    )
+
     if list_select_columns:
         df_result = select_columns(df=df, target_columns=list_select_columns)
 
@@ -957,9 +960,7 @@ def validate_lpu(
             column_total_paid=settings.get("module_validator_lpu.column_total_paid"),
             column_total_lpu=settings.get("module_validator_lpu.column_total_lpu"),
             column_difference=settings.get("module_validator_lpu.column_difference"),
-            column_discrepancy=settings.get(
-                "module_validator_lpu.column_discrepancy"
-            ),
+            column_discrepancy=settings.get("module_validator_lpu.column_discrepancy"),
             column_status=settings.get("module_validator_lpu.column_status"),
             tol_percentile=settings.get("module_validator_lpu.tol_percentile"),
             verbose=settings.get("module_validator_lpu.verbose", True),
@@ -967,22 +968,40 @@ def validate_lpu(
     except Exception as e:
         logger.error(f"Erro ao calcular discrepâncias: {e}")
         raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
-    
+
     # Formatando o resultado final
     df_result = generate_format_result(df_result)
-    
+
     # Salvar o resultado em um arquivo Excel
     export_data(
         data=df_result,
         file_path=Path(output_dir, output_file),
         index=False,
     )
+
+    # Salvar o resultado em um arquivo Excel
+    export_data(
+        data=df_result,
+        file_path=Path(output_dir, output_file.replace(".xlsx", ".csv")),
+        index=False,
+    )
+
     logger.success(f"Resultado salvo em: {output_file}")
 
     # Estatísticas
     if settings.get("module_validator_lpu.get_lpu_status", False):
-        calculate_validation_stats(df_result, 
-                                   verbose=settings.get("module_validator_lpu.verbose", True))
+        output_pdf = Path(
+            output_dir,
+            settings.get("module_validator_lpu.output_settings.file_path_stats_output_pdf"),
+        )
+        calculate_validation_stats_and_generate_report(
+            df_result=df_result,
+            validator_output_pdf=settings.get(
+                "module_validator_lpu.stats.validator_output_pdf", True
+            ),
+            output_pdf=output_pdf,
+            verbose=settings.get("module_validator_lpu.verbose", True),
+        )
 
     return df_result
 
@@ -1058,26 +1077,8 @@ def orchestrate_validate_lpu(
             verbose=verbose,
         )
 
-        # Exibe primeiras linhas
-        if verbose:
-            logger.info("\n📋 VISUALIZAÇÃO DOS RESULTADOS:")
-            logger.info("-" * 80)
-            preview_columns = [
-                "cod_item",
-                "nome",
-                "unidade",
-                "qtde",
-                "unitario_orcado",
-                "unitario_lpu",
-                "dif_unitario",
-                "perc_dif",
-                "status_conciliacao",
-            ]
-            preview_columns = [col for col in preview_columns if col in df_result.columns]
-            logger.info(f"\n{df_result[preview_columns].head(10).to_string(index=False)}")
-
-        logger.success("Execução principal concluída com sucesso!")
-        return 0
+        logger.success("Verificador Inteligente executado com sucesso - Modulo LPU")
+        return df_result
 
     except ValidatorLPUError as e:
         logger.error(f"ERRO: {e}")
