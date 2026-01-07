@@ -27,4 +27,4 @@ from construct_cost_ai.domain.validators.lpu.validator_lpu import orchestrate_va
 if __name__ == "__main__":
 
     # Executa a orquestração do módulo de validação LPU
-    orchestrate_validate_lpu()
+    df_result = orchestrate_validate_lpu()
