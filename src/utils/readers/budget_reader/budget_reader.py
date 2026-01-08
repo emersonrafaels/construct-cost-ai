@@ -89,6 +89,7 @@ from utils.data.data_functions import (
     ensure_columns_exist,
     select_columns,
     concat_dataframes,
+    resolve_duplicate_columns,
 )
 from utils.python_functions import convert_value
 
@@ -533,6 +534,11 @@ def post_process_table(data: pd.DataFrame, col_filter: Dict[str, Any] = FILTROS)
     Returns:
         pd.DataFrame: DataFrame pós-processado com filtros aplicados.
     """
+    
+    # Remove colunas duplicadas, se houver
+    data = resolve_duplicate_columns(df=data, 
+                                     column_name=None, 
+                                     strategy="keep_first")
 
     # Aplica os filtros definidos no dicionário col_filter
     for col, filter_value in col_filter.items():
@@ -671,7 +677,9 @@ def append_and_save_results(
         None
     """
     # Concatena todas as tabelas
-    data_result = pd.concat(all_tables, ignore_index=True)
+    data_result = concat_dataframes(dataframes=all_tables, 
+                                    ignore_index=True, 
+                                    fill_missing=False)
 
     # Seleciona apenas as colunas desejadas
     data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
@@ -945,4 +953,6 @@ def orchestrate_budget_reader(
         )
 
     # Retorna os dados consolidados
-    return pd.concat(all_tables, ignore_index=True) if all_tables else pd.DataFrame()
+    return concat_dataframes(dataframes=all_tables, 
+                             ignore_index=True, 
+                             fill_missing=False) if all_tables else pd.DataFrame()

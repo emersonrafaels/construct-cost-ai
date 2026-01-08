@@ -893,3 +893,98 @@ def concat_dataframes(dataframes: list,
     concatenated_df = pd.concat(dataframes, ignore_index=ignore_index)
 
     return concatenated_df
+
+
+def resolve_duplicate_columns(
+    df: pd.DataFrame,
+    column_name: Optional[str] = None,  # Nome da coluna ou None para todas as colunas
+    strategy: str = "rename",  # Opções: "rename", "keep_first", "keep_last", "drop"
+    suffix: str = "_dup",
+) -> pd.DataFrame:
+    """
+    Resolve colunas duplicadas em um DataFrame com base na estratégia escolhida.
+
+    Args:
+        df (pd.DataFrame): DataFrame com possíveis colunas duplicadas.
+        column_name (Optional[str]): Nome da coluna a ser verificada para duplicatas.
+                                      Use None para aplicar a estratégia a todas as colunas.
+        strategy (str): Estratégia para lidar com duplicatas:
+            - "rename": Renomeia colunas duplicadas adicionando um sufixo.
+            - "keep_first": Mantém apenas a primeira ocorrência da coluna.
+            - "keep_last": Mantém apenas a última ocorrência da coluna.
+            - "drop": Remove todas as colunas duplicadas.
+        suffix (str): Sufixo a ser adicionado ao renomear colunas duplicadas (apenas para "rename").
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas duplicadas resolvidas.
+
+    Raises:
+        ValueError: Se a estratégia fornecida não for válida.
+    """
+    # Função auxiliar para renomear colunas duplicadas
+    def rename_duplicates(columns):
+        seen = {}
+        new_columns = []
+        for col in columns:
+            if col in seen:
+                seen[col] += 1
+                new_columns.append(f"{col}{suffix}{seen[col]}")
+            else:
+                seen[col] = 0
+                new_columns.append(col)
+        return new_columns
+    
+    logger.info(f"Colunas antes: {df.columns.tolist()}")
+
+    # Se column_name for None, aplica a estratégia a todas as colunas
+    if column_name is None:
+        if strategy == "rename":
+            # Renomeia todas as colunas duplicadas no DataFrame
+            df.columns = rename_duplicates(df.columns)
+        elif strategy in ["keep_first", "keep_last", "drop"]:
+            # Identifica colunas duplicadas
+            duplicated_mask = df.columns.duplicated(keep=strategy.split("_")[1])
+            if strategy == "drop":
+                # Remove todas as duplicatas
+                df = df.loc[:, ~df.columns.duplicated(keep=False)]
+            else:
+                # Mantém apenas a primeira ou última ocorrência
+                df = df.loc[:, ~duplicated_mask]
+        else:
+            raise ValueError(
+                f"Estratégia inválida: '{strategy}'. Use 'rename', 'keep_first', 'keep_last' ou 'drop'."
+            )
+    else:
+        # Aplica a estratégia apenas à coluna especificada
+        if column_name not in df.columns:
+            raise ValueError(f"A coluna '{column_name}' não existe no DataFrame.")
+
+        # Identifica colunas duplicadas com o mesmo nome
+        duplicate_columns = [col for col in df.columns if col == column_name]
+
+        # Se não houver duplicatas, retorna o DataFrame original
+        if len(duplicate_columns) <= 1:
+            return df
+
+        if strategy == "rename":
+            # Renomeia colunas duplicadas adicionando um sufixo
+            for i, col in enumerate(duplicate_columns[1:], start=1):
+                new_name = f"{col}{suffix}{i}"
+                df.rename(columns={col: new_name}, inplace=True)
+        elif strategy == "keep_first":
+            # Mantém apenas a primeira ocorrência da coluna
+            df = df.loc[:, ~df.columns.duplicated(keep="first")]
+        elif strategy == "keep_last":
+            # Mantém apenas a última ocorrência da coluna
+            df = df.loc[:, ~df.columns.duplicated(keep="last")]
+        elif strategy == "drop":
+            # Remove todas as colunas duplicadas
+            df = df.loc[:, ~df.columns.duplicated(keep=False)]
+        else:
+            raise ValueError(
+                f"Estratégia inválida: '{strategy}'. Use 'rename', 'keep_first', 'keep_last' ou 'drop'."
+            )
+            
+    logger.info(f"Colunas depois: {df.columns.tolist()}")
+
+    return df
