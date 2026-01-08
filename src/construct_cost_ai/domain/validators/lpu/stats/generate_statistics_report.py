@@ -66,7 +66,7 @@ def _pdf_safe_text(s: str) -> str:
     return s.encode("latin-1", "ignore").decode("latin-1")
 
 
-def format_value(value, value_type='float', ndigits=2):
+def format_value(value, value_type="float", ndigits=2):
     """
     Formata valores numéricos.
 
@@ -76,11 +76,13 @@ def format_value(value, value_type='float', ndigits=2):
     :return: Valor formatado como string.
     """
     try:
-        if value_type == 'int':
+        if value_type == "int":
             return f"{int(value):,}".replace(",", ".")
-        elif value_type == 'float':
-            return f"{float(value):,.{ndigits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        elif value_type == 'money':
+        elif value_type == "float":
+            return (
+                f"{float(value):,.{ndigits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        elif value_type == "money":
             return f"R$ {format_value(value, 'float', ndigits)}"
     except Exception:
         return "-"
@@ -154,7 +156,9 @@ def _clip_series(s: pd.Series, q_low: float, q_high: float) -> pd.Series:
     return s.clip(lower=lo, upper=hi)
 
 
-def add_table(elements, data, col_widths=None, title=None, title_style='Heading2', table_style=None):
+def add_table(
+    elements, data, col_widths=None, title=None, title_style="Heading2", table_style=None
+):
     """
     Adiciona uma tabela ao PDF.
 
@@ -168,20 +172,25 @@ def add_table(elements, data, col_widths=None, title=None, title_style='Heading2
     if title:
         elements.append(Paragraph(title, getSampleStyleSheet()[title_style]))
     table = Table(data, colWidths=col_widths)
-    table.setStyle(table_style or TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-    ]))
+    table.setStyle(
+        table_style
+        or TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.lightgrey),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+    )
     elements.append(table)
     elements.append(Spacer(1, 12))
 
 
-def add_paragraph(elements, text, style='BodyText'):
+def add_paragraph(elements, text, style="BodyText"):
     """
     Adiciona um parágrafo ao PDF.
 
@@ -207,10 +216,7 @@ def add_page_break(elements):
 
 
 def generate_statistics_report(
-    df: pd.DataFrame,
-    output_pdf: str,
-    *,
-    cfg: Optional[ReportConfig] = None
+    df: pd.DataFrame, output_pdf: str, *, cfg: Optional[ReportConfig] = None
 ) -> None:
     cfg = cfg or ReportConfig()
 
@@ -225,13 +231,13 @@ def generate_statistics_report(
     # -------------------------
     # Título e Subtítulo
     # -------------------------
-    add_paragraph(elements, cfg.title, style='Title')
-    add_paragraph(elements, cfg.subtitle, style='Heading2')
+    add_paragraph(elements, cfg.title, style="Title")
+    add_paragraph(elements, cfg.subtitle, style="Heading2")
 
     # -------------------------
     # Contextualização
     # -------------------------
-    add_paragraph(elements, "Padrão de cálculo adotado:", style='Heading2')
+    add_paragraph(elements, "Padrão de cálculo adotado:", style="Heading2")
     context_text = """DIFERENÇA = VALOR_PAGO - VALOR_LPU
     ---------------------------------------------------------------------------
     - DIFERENÇA > 0 → Pagamento acima da LPU (sobrepreço)
@@ -244,40 +250,66 @@ def generate_statistics_report(
     # Resumo Geral
     # -------------------------
     n_rows = len(df)
-    n_budgets = df['SOURCE_FILE'].nunique() if 'SOURCE_FILE' in df.columns else 1
-    total_difference = df['DIFERENÇA TOTAL'].sum() if 'DIFERENÇA TOTAL' in df.columns else 0
-    potential_recovery = df['DIFERENÇA TOTAL'][df['DIFERENÇA TOTAL'] > 0].sum() if 'DIFERENÇA TOTAL' in df.columns else 0
+    n_budgets = df["SOURCE_FILE"].nunique() if "SOURCE_FILE" in df.columns else 1
+    total_difference = df["DIFERENÇA TOTAL"].sum() if "DIFERENÇA TOTAL" in df.columns else 0
+    potential_recovery = (
+        df["DIFERENÇA TOTAL"][df["DIFERENÇA TOTAL"] > 0].sum()
+        if "DIFERENÇA TOTAL" in df.columns
+        else 0
+    )
 
     summary_data = [
         ["Indicador", "Valor"],
-        ["Orçamentos analisados", format_value(n_budgets, 'int')],
-        ["Itens analisados", format_value(n_rows, 'int')],
-        ["Diferença total (R$)", format_value(total_difference, 'money')],
-        ["Potencial de recuperação (R$)", format_value(potential_recovery, 'money')],
+        ["Orçamentos analisados", format_value(n_budgets, "int")],
+        ["Itens analisados", format_value(n_rows, "int")],
+        ["Diferença total (R$)", format_value(total_difference, "money")],
+        ["Potencial de recuperação (R$)", format_value(potential_recovery, "money")],
     ]
     add_table(elements, summary_data, col_widths=[200, 200], title="Resumo Geral:")
 
     # -------------------------
     # Resumo por Região
     # -------------------------
-    add_paragraph(elements, "Resumo por Região:", style='Heading2')
-    if 'REGIAO' in df.columns:
-        region_summary = df.groupby('REGIAO').agg(
-            quantidade=('DIFERENÇA TOTAL', 'count'),
-            soma_diferenca=('DIFERENÇA TOTAL', 'sum'),
-            potencial_recuperacao=('DIFERENÇA TOTAL', lambda x: x[x > 0].sum()),
-            orcamentos_distintos=('SOURCE_FILE', 'nunique') if 'SOURCE_FILE' in df.columns else None,
-            agencias_distintas=('NUMERO_AGENCIA', 'nunique') if 'NUMERO_AGENCIA' in df.columns else None
-        ).reset_index()
+    add_paragraph(elements, "Resumo por Região:", style="Heading2")
+    if "REGIAO" in df.columns:
+        region_summary = (
+            df.groupby("REGIAO")
+            .agg(
+                quantidade=("DIFERENÇA TOTAL", "count"),
+                soma_diferenca=("DIFERENÇA TOTAL", "sum"),
+                potencial_recuperacao=("DIFERENÇA TOTAL", lambda x: x[x > 0].sum()),
+                orcamentos_distintos=(
+                    ("SOURCE_FILE", "nunique") if "SOURCE_FILE" in df.columns else None
+                ),
+                agencias_distintas=(
+                    ("NUMERO_AGENCIA", "nunique") if "NUMERO_AGENCIA" in df.columns else None
+                ),
+            )
+            .reset_index()
+        )
 
         for _, row in region_summary.iterrows():
             region_data = [
-                ["Região", row['REGIAO']],
-                ["Orçamentos Distintos", format_value(row['orcamentos_distintos'], 'int') if row['orcamentos_distintos'] is not None else "-"],
-                ["Agências Distintas", format_value(row['agencias_distintas'], 'int') if row['agencias_distintas'] is not None else "-"],
-                ["Itens", format_value(row['quantidade'], 'int')],
-                ["Diferença Total (R$)", format_value(row['soma_diferenca'], 'money')],
-                ["Potencial Recuperação (R$)", format_value(row['potencial_recuperacao'], 'money')]
+                ["Região", row["REGIAO"]],
+                [
+                    "Orçamentos Distintos",
+                    (
+                        format_value(row["orcamentos_distintos"], "int")
+                        if row["orcamentos_distintos"] is not None
+                        else "-"
+                    ),
+                ],
+                [
+                    "Agências Distintas",
+                    (
+                        format_value(row["agencias_distintas"], "int")
+                        if row["agencias_distintas"] is not None
+                        else "-"
+                    ),
+                ],
+                ["Itens", format_value(row["quantidade"], "int")],
+                ["Diferença Total (R$)", format_value(row["soma_diferenca"], "money")],
+                ["Potencial Recuperação (R$)", format_value(row["potencial_recuperacao"], "money")],
             ]
             add_table(elements, region_data, col_widths=[200, 200])
 
@@ -293,19 +325,20 @@ def generate_statistics_report(
         ["Potencial Recuperação", "Soma das diferenças positivas."],
         ["Orçamentos Distintos", "Número de arquivos únicos."],
         ["Agências Distintas", "Número de agências únicas."],
-        ["Itens", "Quantidade total de itens analisados."]
+        ["Itens", "Quantidade total de itens analisados."],
     ]
 
-    add_paragraph(elements, "Glossário:", style='Heading1')
+    add_paragraph(elements, "Glossário:", style="Heading1")
     add_table(elements, glossary_data, col_widths=[200, 300], title="Glossário de Termos")
 
     # -------------------------
     # Finaliza o relatório
     # -------------------------
     execution_datetime = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
     def add_footer(canvas, doc):
         canvas.saveState()
-        canvas.setFont('Helvetica', 9)
+        canvas.setFont("Helvetica", 9)
         canvas.drawString(30, 15, f"Relatório gerado em: {execution_datetime}")
         canvas.restoreState()
 

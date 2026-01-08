@@ -153,9 +153,6 @@ class FileInput:
     sheet_name: Optional[str] = None  # Nome da aba (padrão: None para todas as abas)
 
 
-# Funções auxiliares
-
-
 # Função para normalizar uma lista de valores, removendo espaços, convertendo para letras minúsculas e tratando valores NaN
 def normalize_values(values: list) -> list:
     """
@@ -534,11 +531,9 @@ def post_process_table(data: pd.DataFrame, col_filter: Dict[str, Any] = FILTROS)
     Returns:
         pd.DataFrame: DataFrame pós-processado com filtros aplicados.
     """
-    
+
     # Remove colunas duplicadas, se houver
-    data = resolve_duplicate_columns(df=data, 
-                                     column_name=None, 
-                                     strategy="keep_first")
+    data = resolve_duplicate_columns(df=data, column_name=None, strategy="keep_first")
 
     # Aplica os filtros definidos no dicionário col_filter
     for col, filter_value in col_filter.items():
@@ -677,9 +672,7 @@ def append_and_save_results(
         None
     """
     # Concatena todas as tabelas
-    data_result = concat_dataframes(dataframes=all_tables, 
-                                    ignore_index=True, 
-                                    fill_missing=False)
+    data_result = concat_dataframes(dataframes=all_tables, ignore_index=True, fill_missing=False)
 
     # Seleciona apenas as colunas desejadas
     data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
@@ -940,6 +933,7 @@ def orchestrate_budget_reader(
 
     # Verifica se há tabelas processadas
     if all_tables:
+        print("-" * 50)
         # Loga o número de arquivos processados com sucesso
         logger.success(f"Processados com sucesso: {len(all_tables)} arquivos")
 
@@ -953,6 +947,8 @@ def orchestrate_budget_reader(
         )
 
     # Retorna os dados consolidados
-    return concat_dataframes(dataframes=all_tables, 
-                             ignore_index=True, 
-                             fill_missing=False) if all_tables else pd.DataFrame()
+    return (
+        concat_dataframes(dataframes=all_tables, ignore_index=True, fill_missing=False)
+        if all_tables
+        else pd.DataFrame()
+    )

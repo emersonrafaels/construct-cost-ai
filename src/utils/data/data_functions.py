@@ -863,9 +863,9 @@ def two_stage_merge(
     return out
 
 
-def concat_dataframes(dataframes: list, 
-                      ignore_index: bool = True, 
-                      fill_missing: bool = True) -> pd.DataFrame:
+def concat_dataframes(
+    dataframes: list, ignore_index: bool = True, fill_missing: bool = True
+) -> pd.DataFrame:
     """
     Concatena uma lista de DataFrames, lidando com índices duplicados e colunas inconsistentes.
 
@@ -921,6 +921,7 @@ def resolve_duplicate_columns(
     Raises:
         ValueError: Se a estratégia fornecida não for válida.
     """
+
     # Função auxiliar para renomear colunas duplicadas
     def rename_duplicates(columns):
         seen = {}
@@ -933,8 +934,8 @@ def resolve_duplicate_columns(
                 seen[col] = 0
                 new_columns.append(col)
         return new_columns
-    
-    logger.info(f"Colunas antes: {df.columns.tolist()}")
+
+    # logger.info(f"Colunas antes: {df.columns.tolist()}")
 
     # Se column_name for None, aplica a estratégia a todas as colunas
     if column_name is None:
@@ -984,7 +985,7 @@ def resolve_duplicate_columns(
             raise ValueError(
                 f"Estratégia inválida: '{strategy}'. Use 'rename', 'keep_first', 'keep_last' ou 'drop'."
             )
-            
-    logger.info(f"Colunas depois: {df.columns.tolist()}")
+
+    # logger.info(f"Colunas depois: {df.columns.tolist()}")
 
     return df
