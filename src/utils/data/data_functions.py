@@ -492,42 +492,6 @@ def export_to_json(
         raise RuntimeError(f"Erro ao exportar para JSON em {file_path}: {str(e)}")
 
 
-# Example usage:
-if __name__ == "__main__":
-    # Reading example
-    try:
-        df = read_data("sample.csv")
-        print("Data read successfully")
-    except Exception as e:
-        print(f"Error reading data: {e}")
-
-    # Single DataFrame export example
-    try:
-        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
-        export_data(df, "output/single_sheet.xlsx", create_dirs=True)
-        print("Single sheet exported successfully")
-    except Exception as e:
-        print(f"Error exporting single sheet: {e}")
-
-    # Multi-sheet Excel export example
-    try:
-        sheets = {
-            "Sheet1": pd.DataFrame({"A": [1, 2], "B": [3, 4]}),
-            "Sheet2": pd.DataFrame({"C": [5, 6], "D": [7, 8]}),
-        }
-        export_data(sheets, "output/multi_sheet.xlsx", create_dirs=True)
-        print("Multiple sheets exported successfully")
-    except Exception as e:
-        print(f"Error exporting multiple sheets: {e}")
-
-    # JSON export example
-    try:
-        export_to_json(df, "output/data.json", create_dirs=True)
-        print("Data exported to JSON successfully")
-    except Exception as e:
-        print(f"Error exporting to JSON: {e}")
-
-
 def cast_columns(df: pd.DataFrame, column_types: Dict[str, Union[str, type]]) -> pd.DataFrame:
     """
     Tenta converter as colunas de um DataFrame para os tipos especificados.
