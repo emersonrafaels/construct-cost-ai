@@ -1034,27 +1034,42 @@ def orchestrate_validate_lpu(
     """
     # Configura caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
+    
+    # Define os caminhos dos arquivos com base nas configurações ou argumentos fornecidos
+    # Arquivo de orçamento
     path_file_budget = Path(
         base_dir,
         file_path_budget or settings.get("module_validator_lpu.budget_data.file_path"),
     )
+    
+    # Arquivo de metadados
     path_file_metadata = Path(
         base_dir,
         file_path_metadata or settings.get("module_validator_lpu.budget_metadados.file_path"),
     )
+    
+    # Arquivo da LPU
     path_file_lpu = Path(
         base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path")
     )
+    
+    # Arquivo de com as informações das agências
     path_file_agencies = Path(
         base_dir, file_path_agencies or settings.get("module_validator_lpu.agencies_data.file_path")
     )
+    
+    # Arquivo com as informações das construtoras
     path_file_constructors = Path(
         base_dir,
         file_path_constructors or settings.get("module_validator_lpu.constructors_data.file_path"),
     )
+    
+    # Diretório de outputs dos resultados
     output_dir = Path(
         base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir")
     )
+    
+    # Nome do arquivo de output
     output_file = output_file or settings.get(
         "module_validator_lpu.output_settings.file_path_output"
     )
