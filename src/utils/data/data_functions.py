@@ -234,10 +234,12 @@ def transform_case(
     cells_to_remove_spaces: Union[List[str], str, bool] = None,
     columns_to_remove_accents: Union[List[str], str, bool] = None,
     cells_to_remove_accents: Union[List[str], str, bool] = None,
+    columns_to_strip: Union[List[str], str, bool] = None,
+    cells_to_strip: Union[List[str], str, bool] = None,
 ) -> pd.DataFrame:
     """
     Aplica transformações específicas em colunas e células de um DataFrame, como transformar em maiúsculas/minúsculas,
-    remover espaços e remover acentos.
+    remover espaços, remover acentos e aplicar strip.
 
     Args:
         df (pd.DataFrame): DataFrame a ser transformado.
@@ -249,13 +251,15 @@ def transform_case(
         cells_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos valores das células. Use True para todas.
         columns_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos nomes. Use True para todas.
         cells_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos valores das células. Use True para todas.
+        columns_to_strip (Union[List[str], str, bool]): Colunas para aplicar strip nos nomes. Use True para todas.
+        cells_to_strip (Union[List[str], str, bool]): Colunas para aplicar strip nos valores das células. Use True para todas.
 
     Returns:
         pd.DataFrame: DataFrame com as transformações aplicadas.
     """
 
     def transform_value(
-        value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False
+        value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False, strip=False
     ):
         """Aplica transformações a um único valor."""
         if isinstance(value, str):
@@ -267,6 +271,8 @@ def transform_case(
                 value = value.upper()
             if to_lower:
                 value = value.lower()
+            if strip:
+                value = value.strip()
         return value
 
     def resolve_columns(param):
@@ -291,6 +297,8 @@ def transform_case(
     cells_to_remove_spaces = resolve_columns(cells_to_remove_spaces)
     columns_to_remove_accents = resolve_columns(columns_to_remove_accents)
     cells_to_remove_accents = resolve_columns(cells_to_remove_accents)
+    columns_to_strip = resolve_columns(columns_to_strip)
+    cells_to_strip = resolve_columns(cells_to_strip)
 
     # Mapeamento para rastrear mudanças nos nomes das colunas
     column_mapping = {col: col for col in df.columns}
@@ -312,6 +320,10 @@ def transform_case(
         column_mapping.update(
             {col: unidecode(col) for col in columns_to_remove_accents if col in column_mapping}
         )
+    if columns_to_strip:
+        column_mapping.update(
+            {col: col.strip() for col in columns_to_strip if col in column_mapping}
+        )
 
     # Atualizar os nomes das colunas no DataFrame
     df.rename(columns=column_mapping, inplace=True)
@@ -326,6 +338,7 @@ def transform_case(
     cells_to_lower = update_column_list(cells_to_lower)
     cells_to_remove_spaces = update_column_list(cells_to_remove_spaces)
     cells_to_remove_accents = update_column_list(cells_to_remove_accents)
+    cells_to_strip = update_column_list(cells_to_strip)
 
     # Transformar valores das células
     if cells_to_upper:
@@ -344,6 +357,10 @@ def transform_case(
         for col in cells_to_remove_accents:
             if col in df.columns:
                 df[col] = df[col].apply(lambda x: transform_value(x, remove_accents=True))
+    if cells_to_strip:
+        for col in cells_to_strip:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: transform_value(x, strip=True))
 
     return df
 

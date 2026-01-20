@@ -112,6 +112,7 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             cells_to_remove_accents=settings.get(
                 "module_validator_lpu.budget_data.cells_to_remove_accents", []
             ),
+            cells_to_strip=True
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -461,6 +462,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             cells_to_remove_accents=settings.get(
                 "module_validator_lpu.lpu_data.cells_to_remove_accents", []
             ),
+            cells_to_strip=True
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
