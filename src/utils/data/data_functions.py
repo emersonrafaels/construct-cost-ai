@@ -70,6 +70,7 @@ base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
+from src.utils.python_functions import to_float_resilient
 
 
 def read_data(
@@ -290,6 +291,12 @@ def transform_case(
         elif isinstance(param, list):
             return param
         return []
+    
+    """
+    
+        Etapa 1 - Transformações nos nomes das colunas
+    
+    """
 
     # Garantir nomes de colunas como string
     df.columns = df.columns.map(str)
@@ -297,13 +304,22 @@ def transform_case(
     col_map = {col: col for col in col_names}
     
     def apply_col_transform(cols, func):
+        
         nonlocal col_names, col_map
         updated = []
+        
         for col in cols:
             if col in col_names:
+                
+                # Aplicando a função de transformação
                 new_col = func(col)
+                
+                # Obtendo o idx da coluna original
                 idx = col_names.index(col)
+                
+                # Atualizando o nome da coluna no mapeamento
                 col_names[idx] = new_col
+                
                 for k, v in col_map.items():
                     if v == col:
                         col_map[k] = new_col
@@ -331,7 +347,14 @@ def transform_case(
         cols = resolve_columns(params[key], df.columns)
         params[key] = apply_col_transform(cols, func)
 
+    # Atualiza os nomes das colunas no DataFrame, após as transformações
     df.columns = col_names
+    
+    """
+    
+        Etapa 2 - Transformações nos valores das células
+    
+    """
 
     # Atualiza listas de colunas para células com nomes finais
     cells_params = {
@@ -341,8 +364,9 @@ def transform_case(
         "cells_to_remove_accents": cells_to_remove_accents,
         "cells_to_strip": cells_to_strip,
     }
+    
     for key in cells_params:
-        cols = resolve_columns(cells_params[key], df.columns)
+        cells_params[key] = resolve_columns(cells_params[key], df.columns)
         
     # Aplica transformações nas células
     cells_ops = [
@@ -352,6 +376,7 @@ def transform_case(
         ("cells_to_remove_accents", dict(remove_accents=True)),
         ("cells_to_strip", dict(strip=True)),
     ]
+    
     for key, kwargs in cells_ops:
         for col in cells_params[key]:
             if col in df.columns:
@@ -553,7 +578,11 @@ def cast_columns(df: pd.DataFrame, column_types: Dict[str, Union[str, type]]) ->
                             {0: ""} if col_type == "int" else {pd.NA: "", None: ""}
                         )
                     else:
-                        df[column] = df[column].astype(col_type)
+                        if col_type in ["float64", "float32", "float"]:
+                            # Aplica a conversão para float
+                            df[column] = df[column].apply(to_float_resilient)
+                        else:
+                            df[column] = df[column].astype(col_type)
             except Exception as e:
                 raise ValueError(
                     f"Erro ao converter a coluna '{column}' para o tipo '{col_type}': {e}"

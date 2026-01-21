@@ -48,6 +48,7 @@ from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
 from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
     calculate_validation_stats_and_generate_report,
 )
+from utils.python_functions import get_item_safe
 
 settings = get_settings()
 
@@ -225,6 +226,7 @@ def identify_lpu_format(
     *,
     expected_core_cols: Tuple[str, str, str] = ("CÓD ITEM", "ITEM", "UN"),
     long_required_cols: Tuple[str, str, str] = ("REGIAO", "GRUPO", "PRECO"),
+    filter_columns_not_matching: bool = True,
 ) -> "LPUFormatReport":
     """
     Identifica se a base está no formato:
@@ -236,6 +238,7 @@ def identify_lpu_format(
         df (pd.DataFrame): DataFrame a ser analisado.
         expected_core_cols (Tuple[str, str, str]): Colunas principais esperadas no DataFrame.
         long_required_cols (Tuple[str, str, str]): Colunas esperadas no formato long.
+        filter_columns_not_matching (bool): Se True, filtra colunas que não correspondem ao padrão esperado.
 
     Returns:
         LPUFormatReport: Relatório contendo o formato identificado e as colunas encontradas.
@@ -254,10 +257,19 @@ def identify_lpu_format(
     found_wide_cols = [col for col in df.columns if col in expected_wide_cols]
 
     # Verifica se todas as colunas principais estão presentes
-    if all(col in df.columns for col in expected_core_cols):
+    if any(col in df.columns for col in expected_core_cols):
+        
+        if filter_columns_not_matching:
+            # Filtra colunas que não correspondem ao padrão esperado
+            df = select_columns(
+                df,
+                target_columns=found_wide_cols
+            )
+        
         # Se as colunas de preço seguem o padrão esperado, é wide
         if found_wide_cols:
             return LPUFormatReport(format="wide", columns=found_wide_cols)
+        
         # Se as colunas 'regiao', 'grupo' e 'preco' estão presentes, é long
         elif all(col in df.columns for col in long_required_cols):
             return LPUFormatReport(
@@ -440,11 +452,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     # Colunas obrigatórias
     required_columns = settings.get(
         "module_validator_lpu.lpu_data.required_columns_with_types",
-        [
-            "CÓD ITEM",
-            "ITEM",
-            "UN",
-        ],
+       {"CÓD ITEM": "object", "ITEM": "object", "UNID.": "object"}
     )
 
     try:
@@ -476,8 +484,13 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
 
     # Detecta formato e converte se necessário
     report = identify_lpu_format(df)
+    
     if report.format == "wide":
-        df_wide, df_long = wide_to_long(df, col_to_regiao_grupo=report.columns)
+        df_wide, df_long = wide_to_long(df, 
+                                        id_col=get_item_safe(required_columns, 0, return_key=True),
+                                        item_col=get_item_safe(required_columns, 1, return_key=True),
+                                        unit_col=get_item_safe(required_columns, 2, return_key=True),
+                                        col_to_regiao_grupo=report.columns)
         logger.info("Convertido LPU de WIDE para LONG.")
     elif report.format == "long":
         # df = long_to_wide(df)
@@ -540,6 +553,7 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
             read_data(
                 file_path=file_path,
                 sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
+                header=settings.get("module_validator_lpu.agencies_data.header", 1),
             ),
             columns_to_upper=True,
             cells_to_upper=True,
@@ -609,6 +623,9 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
             ),
             columns_to_upper=True,
             cells_to_upper=True,
+            columns_to_remove_accents=settings.get(
+                "module_validator_lpu.constructors_data.columns_to_remove_accents", []
+            ),
             cells_to_remove_spaces=settings.get(
                 "module_validator_lpu.constructors_data.cells_to_remove_spaces", []
             ),
@@ -652,10 +669,24 @@ def calculate_total_item(
     Returns:
         pd.DataFrame: DataFrame atualizado com a coluna de valor total orçado calculada ou convertida.
     """
+    
+    # Verifica se a coluna de valor total orçado existe
     if column_total_value not in df.columns:
+        
+        # Se não existe, ele calcula usando quantidade * preço unitário
         df[column_total_value] = df[column_quantity] * df[column_unit_price]
     else:
+        # Nesse caso a coluna existe, então:
+        # 1 - Garante que está no formato numérico
         df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
+
+        # Filtra linhas onde o valor total é nulo ou menor/igual a zero
+        mask = df[column_total_value].isna() | (df[column_total_value] <= 0)
+        
+        # 2 - Recalcula o valor total apenas para essas linhas
+        df.loc[mask, column_total_value] = (
+            df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
+        )
 
     return df
 

@@ -71,7 +71,7 @@ cells_to_remove_spaces = []
 cells_to_remove_accents = []
 
 column_quantity = "QUANTIDADE"
-column_unit_price = "PREÇO PAGO"
+column_unit_price = "PRECO PAGO"
 column_total_value = "VALOR TOTAL"
 
 [default.module_validator_lpu.budget_metadados]
@@ -172,6 +172,7 @@ output_dir = "data/outputs"
 file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
 file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
 file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
+
 file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
 file_path_stats_output_pdf = "RELATORIO_VALIDADOR_ESTATISTICAS_LPU.pdf"
 
