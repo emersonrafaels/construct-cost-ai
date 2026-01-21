@@ -259,108 +259,103 @@ def transform_case(
     """
 
     def transform_value(
-        value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False, strip=False
+        value, 
+        to_upper=False, 
+        to_lower=False, 
+        remove_spaces=False, 
+        remove_accents=False, 
+        strip=False
     ):
         """Aplica transformações a um único valor."""
-        if isinstance(value, str):
-            if remove_accents:
-                value = unidecode(value)
-            if remove_spaces:
-                value = value.replace(" ", "")
-            if to_upper:
-                value = value.upper()
-            if to_lower:
-                value = value.lower()
-            if strip:
-                value = value.strip()
+        if not isinstance(value, str):
+            return value
+        if remove_accents:
+            value = unidecode(value)
+        if remove_spaces:
+            value = value.replace(" ", "")
+        if to_upper:
+            value = value.upper()
+        if to_lower:
+            value = value.lower()
+        if strip:
+            value = value.strip()
         return value
 
-    def resolve_columns(param):
+    def resolve_columns(param, current_columns):
         """Resolve o parâmetro para retornar uma lista de colunas."""
         if param in [True, "true", "True"]:
-            return df.columns.tolist()
+            return list(current_columns)
         elif isinstance(param, str):
             return [param]
         elif isinstance(param, list):
             return param
         return []
 
-    # Garantir que os nomes das colunas sejam strings
+    # Garantir nomes de colunas como string
     df.columns = df.columns.map(str)
+    col_names = list(df.columns)
+    col_map = {col: col for col in col_names}
+    
+    def apply_col_transform(cols, func):
+        nonlocal col_names, col_map
+        updated = []
+        for col in cols:
+            if col in col_names:
+                new_col = func(col)
+                idx = col_names.index(col)
+                col_names[idx] = new_col
+                for k, v in col_map.items():
+                    if v == col:
+                        col_map[k] = new_col
+                updated.append(new_col)
+        return updated
+    
+    # Resolve listas de colunas para cada transformação
+    col_transforms = [
+        ("columns_to_upper", lambda c: c.upper()),
+        ("columns_to_lower", lambda c: c.lower()),
+        ("columns_to_remove_spaces", lambda c: c.replace(" ", "")),
+        ("columns_to_remove_accents", unidecode),
+        ("columns_to_strip", lambda c: c.strip()),
+    ]
+    params = {
+        "columns_to_upper": columns_to_upper,
+        "columns_to_lower": columns_to_lower,
+        "columns_to_remove_spaces": columns_to_remove_spaces,
+        "columns_to_remove_accents": columns_to_remove_accents,
+        "columns_to_strip": columns_to_strip,
+    }
 
-    # Resolver colunas para cada transformação
-    columns_to_upper = resolve_columns(columns_to_upper)
-    cells_to_upper = resolve_columns(cells_to_upper)
-    columns_to_lower = resolve_columns(columns_to_lower)
-    cells_to_lower = resolve_columns(cells_to_lower)
-    columns_to_remove_spaces = resolve_columns(columns_to_remove_spaces)
-    cells_to_remove_spaces = resolve_columns(cells_to_remove_spaces)
-    columns_to_remove_accents = resolve_columns(columns_to_remove_accents)
-    cells_to_remove_accents = resolve_columns(cells_to_remove_accents)
-    columns_to_strip = resolve_columns(columns_to_strip)
-    cells_to_strip = resolve_columns(cells_to_strip)
+    # Aplica transformações sequenciais e atualiza listas
+    for key, func in col_transforms:
+        cols = resolve_columns(params[key], df.columns)
+        params[key] = apply_col_transform(cols, func)
 
-    # Mapeamento para rastrear mudanças nos nomes das colunas
-    column_mapping = {col: col for col in df.columns}
+    df.columns = col_names
 
-    # Transformar nomes de colunas
-    if columns_to_upper:
-        column_mapping.update(
-            {col: col.upper() for col in columns_to_upper if col in column_mapping}
-        )
-    if columns_to_lower:
-        column_mapping.update(
-            {col: col.lower() for col in columns_to_lower if col in column_mapping}
-        )
-    if columns_to_remove_spaces:
-        column_mapping.update(
-            {col: col.replace(" ", "") for col in columns_to_remove_spaces if col in column_mapping}
-        )
-    if columns_to_remove_accents:
-        column_mapping.update(
-            {col: unidecode(col) for col in columns_to_remove_accents if col in column_mapping}
-        )
-    if columns_to_strip:
-        column_mapping.update(
-            {col: col.strip() for col in columns_to_strip if col in column_mapping}
-        )
-
-    # Atualizar os nomes das colunas no DataFrame
-    df.rename(columns=column_mapping, inplace=True)
-
-    # Atualizar os parâmetros de células com os novos nomes das colunas
-    def update_column_list(columns):
-        if columns:
-            return [column_mapping.get(col, col) for col in columns]
-        return []
-
-    cells_to_upper = update_column_list(cells_to_upper)
-    cells_to_lower = update_column_list(cells_to_lower)
-    cells_to_remove_spaces = update_column_list(cells_to_remove_spaces)
-    cells_to_remove_accents = update_column_list(cells_to_remove_accents)
-    cells_to_strip = update_column_list(cells_to_strip)
-
-    # Transformar valores das células
-    if cells_to_upper:
-        for col in cells_to_upper:
+    # Atualiza listas de colunas para células com nomes finais
+    cells_params = {
+        "cells_to_upper": cells_to_upper,
+        "cells_to_lower": cells_to_lower,
+        "cells_to_remove_spaces": cells_to_remove_spaces,
+        "cells_to_remove_accents": cells_to_remove_accents,
+        "cells_to_strip": cells_to_strip,
+    }
+    for key in cells_params:
+        cols = resolve_columns(cells_params[key], df.columns)
+        
+    # Aplica transformações nas células
+    cells_ops = [
+        ("cells_to_upper", dict(to_upper=True)),
+        ("cells_to_lower", dict(to_lower=True)),
+        ("cells_to_remove_spaces", dict(remove_spaces=True)),
+        ("cells_to_remove_accents", dict(remove_accents=True)),
+        ("cells_to_strip", dict(strip=True)),
+    ]
+    for key, kwargs in cells_ops:
+        for col in cells_params[key]:
             if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, to_upper=True))
-    if cells_to_lower:
-        for col in cells_to_lower:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, to_lower=True))
-    if cells_to_remove_spaces:
-        for col in cells_to_remove_spaces:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, remove_spaces=True))
-    if cells_to_remove_accents:
-        for col in cells_to_remove_accents:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, remove_accents=True))
-    if cells_to_strip:
-        for col in cells_to_strip:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, strip=True))
+                df[col] = df[col].apply(lambda x: transform_value(x, **kwargs))
 
     return df
 

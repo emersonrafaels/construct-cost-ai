@@ -811,7 +811,7 @@ def validate_lpu(
         logger.info(f"Carregando orçamento de: {file_path_budget}")
         df_budget = load_budget(file_path_budget)
         if verbose:
-            logger.info(f"   ✅ Orçamento carregado: {len(df_budget)} itens")
+            logger.info(f"✅ Orçamento carregado: {len(df_budget)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar orçamento: {e}")
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -821,7 +821,7 @@ def validate_lpu(
         df_budget_metadata = load_metadata(file_path_metadata)
         if verbose:
             logger.info(
-                f"   ✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens"
+                f"✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens"
             )
     except Exception as e:
         logger.error(f"Erro ao carregar metadados dos orçamentos: {e}")
@@ -831,7 +831,7 @@ def validate_lpu(
         logger.info(f"Carregando LPU de: {file_path_lpu}")
         df_lpu_wide, df_lpu_long = load_lpu(file_path_lpu)
         if verbose:
-            logger.info(f"   ✅ LPU carregada: {len(df_lpu_long)} itens")
+            logger.info(f"✅ LPU carregada: {len(df_lpu_long)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar LPU: {e}")
         raise ValidatorLPUError(f"Erro ao carregar LPU: {e}")
@@ -840,7 +840,7 @@ def validate_lpu(
         logger.info(f"Carregando agências de: {file_path_agencies}")
         df_agencies = load_agencies(file_path_agencies)
         if verbose:
-            logger.info(f"   ✅ Agências carregadas: {len(df_agencies)} itens")
+            logger.info(f"✅ Agências carregadas: {len(df_agencies)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar agências: {e}")
         raise ValidatorLPUError(f"Erro ao carregar agências: {e}")
@@ -849,7 +849,7 @@ def validate_lpu(
         logger.info(f"Carregando construtoras de: {file_path_constructors}")
         df_constructors = load_constructors(file_path_constructors)
         if verbose:
-            logger.info(f"   ✅ Construtoras carregadas: {len(df_constructors)} itens")
+            logger.info(f"✅ Construtoras carregadas: {len(df_constructors)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar construtoras: {e}")
         raise ValidatorLPUError(f"Erro ao carregar construtoras: {e}")
@@ -869,8 +869,8 @@ def validate_lpu(
             ),
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata.shape}")
+            logger.info(f"✅ Itens cruzados: {len(df_merge_budget_metadata)}")
+            logger.info(f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata.shape}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -890,8 +890,8 @@ def validate_lpu(
             ),
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias.shape}")
+            logger.info(f"✅ Itens cruzados: {len(df_merge_budget_metadata_agencias)}")
+            logger.info(f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias.shape}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -919,10 +919,10 @@ def validate_lpu(
         )
         if verbose:
             logger.info(
-                f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}"
+                f"✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}"
             )
             logger.info(
-                f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias_constructors.shape}"
+                f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias_constructors.shape}"
             )
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
@@ -947,7 +947,7 @@ def validate_lpu(
             use_two_stage_merge=True,
         )
         if verbose:
-            logger.info(f"   ✅ Itens cruzados com a LPU: {len_merged}")
+            logger.info(f"✅ Itens cruzados com a LPU: {len_merged}")
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")

@@ -169,10 +169,10 @@ gerar_relatorio_html(df_resultado, output_dir)  # HTML interativo
 #### Mensagem de conclusão aprimorada
 ```python
 print("\n📁 ARQUIVOS GERADOS:")
-print("   ✅ validacao_lpu.xlsx (4 abas)")
-print("   ✅ validacao_lpu.csv")
-print("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
-print("   ✅ relatorio_validacao_lpu.html")
+print("✅ validacao_lpu.xlsx (4 abas)")
+print("✅ validacao_lpu.csv")
+print("✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
+print("✅ relatorio_validacao_lpu.html")
 ```
 
 #### Documentação atualizada (`exibir_ajuda()`)

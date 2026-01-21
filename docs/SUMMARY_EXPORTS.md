@@ -32,9 +32,9 @@
   def executar_validacao():
     # ... validação ...
 +   print("📁 ARQUIVOS GERADOS:")
-+   print("   ✅ validacao_lpu.xlsx (4 abas)")
-+   print("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
-+   print("   ✅ relatorio_validacao_lpu.html")
++   print("✅ validacao_lpu.xlsx (4 abas)")
++   print("✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
++   print("✅ relatorio_validacao_lpu.html")
 
   def exibir_ajuda():
 +   # Seção "📁 ARQUIVOS DE SAÍDA" adicionada

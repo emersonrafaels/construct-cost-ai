@@ -64,12 +64,12 @@ def test_exports():
 
     logger.info(f"📁 Arquivos gerados em: {output_dir.resolve()}")
     logger.debug("Arquivos criados:")
-    logger.debug("   ✅ validacao_lpu.xlsx (4 abas)")
-    logger.debug("   ✅ validacao_lpu.csv")
-    logger.debug("   ✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
-    logger.debug("   ✅ relatorio_validacao_lpu.html")
-    logger.debug("   ✅ teste_excel_completo.xlsx (teste individual)")
-    logger.debug("   ✅ teste_html.html (teste individual)")
+    logger.debug("✅ validacao_lpu.xlsx (4 abas)")
+    logger.debug("✅ validacao_lpu.csv")
+    logger.debug("✅ relatorio_completo_validacao_lpu.xlsx (11+ abas)")
+    logger.debug("✅ relatorio_validacao_lpu.html")
+    logger.debug("✅ teste_excel_completo.xlsx (teste individual)")
+    logger.debug("✅ teste_html.html (teste individual)")
     logger.debug("=" * 80)
 
 

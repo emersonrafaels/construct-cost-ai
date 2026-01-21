@@ -26,15 +26,15 @@ column_status = "STATUS CONCILIAÇÃO"
 # Opção para obter as estatísticas de status LPU
 get_lpu_status = true
 
-
 [default.module_validator_lpu.agencies_data]
 
 # Base de Agências
 file_path = "data/inputs/agencias/BASE_AGENCIAS.xlsx"
 sheet_name = "Sheet1"
+header = 1
 
 # Colunas obrigatórias com tipos
-required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "REGIAO" = "object", "UF" = "object", "CIDADE" = "object"}
+required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "REGIAO" = "object", "UF" = "object", "MUNICIPIO" = "object"}
 
 # Colunas para normalização de valores
 cells_to_remove_spaces = []
@@ -43,13 +43,14 @@ cells_to_remove_accents = []
 [default.module_validator_lpu.constructors_data]
 
 # Base de Construtoras
-file_path = "data/inputs/construtoras/BASE_CONSTRUTORAS.xlsx"
+file_path = "data/inputs/construtoras/BASE_GRUPOS_CONSTRUTORAS.xlsx"
 sheet_name = "Sheet1"
 
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GRUPO" = "object"}
 
 # Colunas para normalização de valores
+columns_to_remove_accents = true
 cells_to_remove_spaces = ["GRUPO"]
 cells_to_remove_accents = []
 
@@ -96,7 +97,7 @@ file_path = "data/inputs/lpu/BASE_LPU.xlsx"
 sheet_name = "LPU"
 
 # Colunas obrigatórias com tipos
-required_columns_with_types = {"CÓD ITEM" = "object", "ITEM" = "object", "UN" = "object"}
+required_columns_with_types = {"CÓD ITEM" = "object", "ITEM" = "object", "UNID." = "object"}
 
 # Colunas para normalização de valores
 cells_to_remove_spaces = []
@@ -129,6 +130,7 @@ left_on = ["CONSTRUTORA", "REGIAO"]
 right_on = ["FORNECEDOR", "REGIAO"]
 how = "left"
 validate = "many_to_one"
+handle_duplicates = true
 
 [default.module_validator_lpu.merge_budget_lpu]
 
@@ -151,7 +153,7 @@ columns_budget_merge_two = ["NOME", "REGIAO", "GRUPO"]
 # Colunas da LPU (df_lpu)
 columns_on_lpu_id = "CÓD ITEM"
 columns_on_lpu_nome = "ITEM"
-columns_on_lpu_region = "REGIÃO"
+columns_on_lpu_region = "REGIAO"
 columns_on_lpu_group = "GRUPO"
 
 # Primeiro conjunto de colunas testadas no merge (na ordem)
@@ -163,17 +165,13 @@ columns_lpu_merge_two = ["ITEM", "REGIAO", "GRUPO"]
 [default.module_validator_lpu.output_settings]
 
 # Lista de colunas no resultado final
-list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'CIDADE', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'STATUS CONCILIAÇÃO', 'SOURCE_FILE', 'SHEET_NAME_orc']
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'STATUS CONCILIAÇÃO', 'SOURCE_FILE', 'SHEET_NAME_orc']
 
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"
-
-# Bases de output
 file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
 file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
 file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
-
-# Anaytics de outpuit
 file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
 file_path_stats_output_pdf = "RELATORIO_VALIDADOR_ESTATISTICAS_LPU.pdf"
 
