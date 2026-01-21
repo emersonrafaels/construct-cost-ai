@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from create_sample_dataset_budget import (
+from utils.datasets.samples.lpu.create_sample_dataset_budget import (
     BankBranchBudgetGenerator,
     BudgetMetadata,
 )
-from create_sample_dataset_lpu import BankBranchLPUGenerator
-from create_sample_dataset_realistic_budget import (
+from utils.datasets.samples.lpu.create_sample_dataset_lpu import BankBranchLPUGenerator
+from utils.datasets.samples.lpu.create_sample_dataset_realistic_budget import (
     gerar_sample_padrao1,
     gerar_sample_padrao2_japj,
     gerar_sample_padrao2_fg,
