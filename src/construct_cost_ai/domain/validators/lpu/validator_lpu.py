@@ -978,6 +978,11 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget e metadados
         logger.info(f"🔗 Cruzando orçamento com Metadados")
+        
+        indicator = settings.get(
+                "module_validator_lpu.merge_budget_metadata.indicator", "_merge_bud_met"
+            )
+        
         df_merge_budget_metadata = merge_data_with_columns(
             df_left=df_budget,
             df_right=df_budget_metadata,
@@ -988,15 +993,13 @@ def validate_lpu(
             validate=settings.get(
                 "module_validator_lpu.merge_budget_metadata.validate", "many_to_one"
             ),
-            indicator=settings.get(
-                "module_validator_lpu.merge_budget_metadata.indicator", "_merge_bud_met"
-            ),
+            indicator=indicator,
         )
 
         if verbose:
 
             logger.info(
-                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata, merge_column=settings.get("module_validator_lpu.merge_budget_metadata.indicator", "_merge_bud_met"))}"
+                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata, merge_column=indicator)}"
             )
             logger.info(f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata.shape}")
 
@@ -1007,6 +1010,12 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget/metadados e agencias
         logger.info(f"🔗 Cruzando orçamento com Agências")
+        
+        indicator = settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies.indicator",
+                "_merge_bud_met_age",
+            )
+        
         df_merge_budget_metadata_agencias = merge_data_with_columns(
             df_left=df_merge_budget_metadata,
             df_right=df_agencies,
@@ -1017,16 +1026,13 @@ def validate_lpu(
             validate=settings.get(
                 "module_validator_lpu.merge_budget_metadata_agencies.validate", "many_to_one"
             ),
-            indicator=settings.get(
-                "module_validator_lpu.merge_budget_metadata_agencies.indicator",
-                "_merge_bud_met_age",
-            ),
+            indicator=indicator,
         )
 
         if verbose:
 
             logger.info(
-                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata_agencias, merge_column=settings.get("module_validator_lpu.merge_budget_metadata_agencies.indicator", "_merge_bud_met_age"))}"
+                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata_agencias, merge_column=indicator)}"
             )
 
             logger.info(f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias.shape}")
@@ -1038,6 +1044,12 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget/metadados/construtoras e agencias
         logger.info(f"🔗 Cruzando orçamento com Construtoras")
+        
+        indicator = settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies_constructors.indicator",
+                "_merge_bud_met_age_constr",
+            )
+        
         df_merge_budget_metadata_agencias_constructors = merge_data_with_columns(
             df_left=df_merge_budget_metadata_agencias,
             df_right=df_constructors,
@@ -1055,10 +1067,7 @@ def validate_lpu(
                 "module_validator_lpu.merge_budget_metadata_agencies_constructors.validate",
                 "many_to_one",
             ),
-            indicator=settings.get(
-                "module_validator_lpu.merge_budget_metadata_agencies_constructors.indicator",
-                "_merge_bud_met_age_constr",
-            ),
+            indicator=indicator,
             use_similarity_for_unmatched=True,
             similarity_threshold=70,
         )
@@ -1066,7 +1075,7 @@ def validate_lpu(
         if verbose:
 
             logger.info(
-                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata_agencias_constructors, merge_column=settings.get("module_validator_lpu.merge_budget_metadata_agencies_constructors.indicator", "_merge_bud_met_age_constr"))}"
+                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata_agencias_constructors, merge_column=indicator)}"
             )
 
             logger.info(
