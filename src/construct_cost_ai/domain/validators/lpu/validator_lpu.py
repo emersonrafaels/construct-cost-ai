@@ -1012,13 +1012,6 @@ def validate_lpu(
         index=False,
     )
 
-    # Salvar o resultado em um arquivo Excel
-    export_data(
-        data=df_result,
-        file_path=Path(output_dir, output_file.replace(".xlsx", ".csv")),
-        index=False,
-    )
-
     logger.success(f"Resultado salvo em: {output_file}")
 
     # Estatísticas

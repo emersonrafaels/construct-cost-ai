@@ -78,6 +78,7 @@ def read_data(
     sheet_name: Optional[Union[str, int]] = None,
     header: Optional[Union[int, List[int]]] = 0,
     default_sheet: Optional[Union[str, List[str]]] = ["Sheet1", "Planilha1", "Plan1"],
+    engine: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Lê dados de vários formatos de arquivo usando a extensão do arquivo para determinar o método apropriado.
@@ -88,6 +89,7 @@ def read_data(
         sheet_name (Optional[Union[str, int]]): Nome ou índice da aba a ser lida (para arquivos Excel). Padrão é None.
         header (Optional[Union[int, List[int]]]): Número(s) da(s) linha(s) a ser(em) usada(s) como nomes das colunas. Padrão é 0.
         default_sheet (Optional[Union[str, List[str]]]): Nome ou lista de nomes das abas padrão a serem lidas se a aba especificada não for encontrada.
+        engine (Optional[str]): Motor a ser usado para leitura de arquivos Excel. Padrão é None.
 
     Returns:
         pd.DataFrame: DataFrame contendo os dados lidos.
@@ -107,8 +109,13 @@ def read_data(
     # Definindo os leitores disponíveis no data functions
     readers = {
         ".csv": lambda path: pd.read_csv(path, header=header),
-        ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
-        ".xls": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
+        ".xlsx": lambda path: pd.read_excel(path, 
+                                            sheet_name=sheet_name, 
+                                            header=header, 
+                                            engine=engine),
+        ".xls": lambda path: pd.read_excel(path, 
+                                           sheet_name=sheet_name, 
+                                           header=header),
         ".xlsm": lambda path: pd.read_excel(
             path, sheet_name=sheet_name, header=header
         ),  # Added support for .xlsm files
