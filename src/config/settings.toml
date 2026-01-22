@@ -40,6 +40,10 @@ required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "
 cells_to_remove_spaces = []
 cells_to_remove_accents = []
 
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/BASE_AGENCIAS.xlsx"
+
 [default.module_validator_lpu.constructors_data]
 
 # Base de Construtoras
@@ -53,6 +57,10 @@ required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GR
 columns_to_remove_accents = true
 cells_to_remove_spaces = ["GRUPO"]
 cells_to_remove_accents = []
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/BASE_GRUPOS_CONSTRUTORAS.xlsx"
 
 [default.module_validator_lpu.budget_data]
 
@@ -74,6 +82,10 @@ column_quantity = "QUANTIDADE"
 column_unit_price = "PRECO PAGO"
 column_total_value = "VALOR TOTAL"
 
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+
 [default.module_validator_lpu.budget_metadados]
 
 # Caminhos padrão
@@ -90,6 +102,10 @@ cells_to_remove_accents = []
 column_code_upe = "CÓDIGO_UPE"
 column_constructor = "CONSTRUTORA"
 column_source_file = "SOURCE_FILE"
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/01_BASE_RESULTADO_ORCAMENTOS_METADADOS.xlsx"
 
 [default.module_validator_lpu.lpu_data]
 
@@ -112,6 +128,10 @@ columns_to_rename = {"PRECO" = "PRECO LPU"}
 # Adiciona as variáveis necessárias para regiões e grupos
 regions = ["NORTE", "NORDESTE", "CENTRO-OESTE", "SUDESTE", "SUL"]
 groups = ["GRUPO1", "GRUPO2", "GRUPO3", "GRUPO 1", "GRUPO 2", "GRUPO 3"]
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/BASE_LPU.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata]
 left_on = "SOURCE_FILE"

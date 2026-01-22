@@ -63,6 +63,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import json
 
 import pandas as pd
+from rapidfuzz import process, fuzz
 from unidecode import unidecode
 
 # Adiciona o diretório src ao path
@@ -603,25 +604,30 @@ def merge_data(
     right_on: list,
     how: str = "inner",
     suffixes: tuple = ("_left", "_right"),
+    use_similarity_for_unmatched: bool = False,  # Renomeado para indicar uso em cenários de não correspondência
+    similarity_threshold: float = 90.0
 ) -> pd.DataFrame:
     """
-    Perform a generic merge between two DataFrames.
+    Realiza um merge genérico entre dois DataFrames, com opção de correspondência baseada em similaridade para linhas não correspondidas.
 
     Args:
-        df_left (pd.DataFrame): The left DataFrame.
-        df_right (pd.DataFrame): The right DataFrame.
-        left_on (list): Columns to merge on from the left DataFrame.
-        right_on (list): Columns to merge on from the right DataFrame.
-        how (str): Type of merge to perform. Defaults to "inner".
-        suffixes (tuple): Suffixes to apply to overlapping column names. Defaults to ("_left", "_right").
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        how (str): Tipo de merge a ser realizado. Padrão é "inner".
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
+        use_similarity_for_unmatched (bool): Se True, realiza um merge secundário usando similaridade para linhas não correspondidas. Padrão é False.
+        similarity_threshold (float): Pontuação mínima de similaridade (0-100) para considerar uma correspondência. Padrão é 90.0.
 
     Returns:
-        pd.DataFrame: The merged DataFrame.
+        pd.DataFrame: O DataFrame resultante do merge.
 
     Raises:
-        ValueError: If the merge operation fails.
+        ValueError: Se ocorrer um erro durante a operação de merge.
     """
     try:
+        # Realiza o merge inicial
         merged_df = pd.merge(
             df_left,
             df_right,
@@ -630,10 +636,43 @@ def merge_data(
             how=how,
             suffixes=suffixes,
         )
+
+        # Se o uso de similaridade para linhas não correspondidas estiver ativado
+        if use_similarity_for_unmatched and how in ["inner", "left"]:
+            # Identifica as linhas não correspondidas no DataFrame da esquerda
+            unmatched_left = df_left[~df_left[left_on[0]].isin(merged_df[left_on[0]])]
+
+            # Realiza a correspondência baseada em similaridade para as linhas não correspondidas
+            for l_col, r_col in zip(left_on, right_on):
+                unmatched_left[f"{l_col}_matched"] = unmatched_left[l_col].apply(
+                    lambda x: process.extractOne(
+                        x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                    )[0]
+                    if x is not None else None
+                )
+
+            # Substitui as colunas para usar os valores correspondidos
+            similarity_left_on = [f"{col}_matched" for col in left_on]
+
+            # Realiza o merge das linhas não correspondidas usando similaridade
+            similarity_merged = pd.merge(
+                unmatched_left,
+                df_right,
+                left_on=similarity_left_on,
+                right_on=right_on,
+                how="inner",
+                suffixes=suffixes,
+            )
+
+            # Combina o merge original com o merge baseado em similaridade
+            merged_df = pd.concat([merged_df, similarity_merged], ignore_index=True)
+
         return merged_df
+
     except Exception as e:
-        logger.error(f"Error during merge: {e}")
-        raise ValueError(f"Error during merge: {e}")
+        # Loga o erro e levanta uma exceção com a mensagem
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
 
 
 def perform_merge(
@@ -705,13 +744,34 @@ def merge_data_with_columns(
     validate: str = None,
     indicator: bool = False,
     handle_duplicates: bool = False,
+    use_similarity_for_unmatched: bool = False,  # Adicionado para habilitar similaridade
+    similarity_threshold: float = 90.0  # Adicionado para definir o limite de similaridade
 ) -> pd.DataFrame:
     """
-    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas e lidar com duplicidades.
+    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas, lidar com duplicidades e usar similaridade para linhas não correspondidas.
 
     Parâmetros:
-        (mesmos parâmetros da função original)
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        selected_left_columns (list, opcional): Colunas adicionais do DataFrame da esquerda a serem incluídas no merge.
+        selected_right_columns (list, opcional): Colunas adicionais do DataFrame da direita a serem incluídas no merge.
+        how (str): Tipo de merge a ser realizado. Padrão é "inner".
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
+        validate (str, opcional): Valida o tipo de relacionamento entre os DataFrames.
+        indicator (bool): Se True, adiciona uma coluna indicando a origem de cada linha no merge.
+        handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
+        use_similarity_for_unmatched (bool): Se True, realiza um merge secundário usando similaridade para linhas não correspondidas. Padrão é False.
+        similarity_threshold (float): Pontuação mínima de similaridade (0-100) para considerar uma correspondência. Padrão é 90.0.
+
+    Returns:
+        pd.DataFrame: O DataFrame resultante do merge.
+
+    Raises:
+        ValueError: Se ocorrer um erro durante a operação de merge.
     """
+    
     # Filtra as colunas do DataFrame da esquerda, se especificado
     if selected_left_columns:
         df_left = df_left[left_on + selected_left_columns]
@@ -720,18 +780,59 @@ def merge_data_with_columns(
     if selected_right_columns:
         df_right = df_right[right_on + selected_right_columns]
 
-    # Realiza o merge usando a função auxiliar
-    return perform_merge(
-        df_left=df_left,
-        df_right=df_right,
-        left_on=left_on,
-        right_on=right_on,
-        how=how,
-        suffixes=suffixes,
-        validate=validate,
-        indicator=indicator,
-        handle_duplicates=handle_duplicates,
-    )
+    try:
+        # Realiza o merge inicial usando a função perform_merge
+        merged_df = perform_merge(
+            df_left=df_left,
+            df_right=df_right,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=suffixes,
+            validate=validate,
+            indicator=indicator,
+            handle_duplicates=handle_duplicates,
+        )
+
+        # Se o uso de similaridade para linhas não correspondidas estiver ativado
+        if use_similarity_for_unmatched and how in ["inner", "left"]:
+            # Identifica as linhas não correspondidas no DataFrame da esquerda
+            unmatched_left = df_left[~df_left[left_on[0]].isin(merged_df[left_on[0]])]
+
+            # Realiza a correspondência baseada em similaridade para as linhas não correspondidas
+            for l_col, r_col in zip(left_on, right_on):
+                unmatched_left[f"{l_col}_matched"] = unmatched_left[l_col].apply(
+                    lambda x: process.extractOne(
+                        x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                    )[0]
+                    if x is not None else None
+                )
+
+            # Substitui as colunas para usar os valores correspondidos
+            similarity_left_on = [f"{col}_matched" for col in left_on]
+
+            # Realiza o merge das linhas não correspondidas usando a função perform_merge
+            similarity_merged = perform_merge(
+                df_left=unmatched_left,
+                df_right=df_right,
+                left_on=similarity_left_on,
+                right_on=right_on,
+                how="inner",
+                suffixes=suffixes,
+                validate=validate,
+                indicator=indicator,
+                handle_duplicates=handle_duplicates,
+            )
+
+            # Combina o merge original com o merge baseado em similaridade
+            merged_df = pd.concat([merged_df, similarity_merged], ignore_index=True)
+
+        return merged_df
+
+    except Exception as e:
+        # Loga o erro e levanta uma exceção com a mensagem
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
 
 
 def two_stage_merge(
@@ -870,6 +971,65 @@ def two_stage_merge(
 
     # Retorna o DataFrame final consolidado
     return out
+
+
+def merge_data_with_similarity(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: list,
+    right_on: list,
+    how: str = "inner",
+    suffixes: tuple = ("_left", "_right"),
+    similarity_threshold: float = 90.0,  # Similaridade mínima para considerar um match
+    use_similarity: bool = False,  # Ativa ou desativa o merge por similaridade
+) -> pd.DataFrame:
+    """
+    Realiza um merge entre dois DataFrames, com suporte para similaridade entre colunas.
+
+    Args:
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        how (str): Tipo de merge a ser realizado. Default é "inner".
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Default é ("_left", "_right").
+        similarity_threshold (float): Similaridade mínima (0-100) para considerar um match. Default é 90.0.
+        use_similarity (bool): Se True, realiza o merge considerando similaridade. Default é False.
+
+    Returns:
+        pd.DataFrame: DataFrame resultante do merge.
+
+    Raises:
+        ValueError: Se o merge falhar ou os parâmetros forem inválidos.
+    """
+    if use_similarity:
+        # Cria colunas temporárias para armazenar os matches por similaridade
+        for l_col, r_col in zip(left_on, right_on):
+            print(f"Calculando similaridade entre '{l_col}' e '{r_col}'...")
+            df_left[f"{l_col}_matched"] = df_left[l_col].apply(
+                lambda x: process.extractOne(
+                    x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                )[0]
+                if x is not None else None
+            )
+
+        # Substitui as colunas de merge pelas colunas com os valores correspondentes
+        left_on = [f"{col}_matched" for col in left_on]
+
+    # Realiza o merge usando as colunas ajustadas
+    try:
+        merged_df = pd.merge(
+            df_left,
+            df_right,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=suffixes,
+        )
+        return merged_df
+    except Exception as e:
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
 
 
 def concat_dataframes(
