@@ -445,6 +445,35 @@ def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.Data
 
     return df
 
+def drop_columns(df: pd.DataFrame, drop_column_list: Union[str, List[str]], inplace: bool = False) -> pd.DataFrame:
+    """
+    Remove colunas de um DataFrame de forma resiliente, ignorando colunas que não existem.
+
+    Args:
+        df (pd.DataFrame): DataFrame original.
+        columns (Union[str, List[str]]): Nome ou lista de nomes das colunas a serem removidas.
+        inplace (bool): Se True, modifica o DataFrame original. Caso contrário, retorna uma cópia. Default é False.
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas removidas (se inplace=False).
+
+    Raises:
+        ValueError: Se `columns` não for uma string ou uma lista de strings.
+    """
+    if isinstance(drop_column_list, str):
+        drop_column_list = [drop_column_list]
+    elif not isinstance(drop_column_list, list):
+        raise ValueError("O parâmetro 'columns' deve ser uma string ou uma lista de strings.")
+
+    # Filtra apenas as colunas que existem no DataFrame
+    existing_columns = [col for col in drop_column_list if col in df.columns]
+
+    if inplace:
+        df.drop(columns=existing_columns, inplace=True)
+        return df
+    else:
+        return df.drop(columns=existing_columns, inplace=False)
+
 
 def ensure_columns_exist(df: pd.DataFrame, columns: list, default_value=None) -> pd.DataFrame:
     """
@@ -689,7 +718,7 @@ def perform_merge(
     validate: Optional[str],
     indicator: bool,
     handle_duplicates: bool,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, List[str]]:
     """
     Função auxiliar para realizar o merge entre dois DataFrames, com tratamento de duplicidades.
 
@@ -705,7 +734,7 @@ def perform_merge(
         handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
 
     Returns:
-        pd.DataFrame: DataFrame resultante do merge.
+        Tuple[pd.DataFrame, List[str]]: DataFrame resultante do merge e lista de colunas criadas no processo.
     """
     try:
         # Remove a coluna '_merge' se indicator estiver ativado e ela já existir
@@ -714,8 +743,12 @@ def perform_merge(
                 "A coluna '_merge' já existe no DataFrame da esquerda. Ela será removida."
             )
             df_left = df_left.drop(columns=["_merge"])
+        
+        # Lista de colunas antes do merge
+        original_columns = list(df_left.columns)
 
-        return pd.merge(
+        # Realiza o merge
+        df_merged = pd.merge(
             df_left,
             df_right,
             left_on=left_on,
@@ -725,11 +758,16 @@ def perform_merge(
             validate=validate,
             indicator=indicator,
         )
+
+        # Identifica as colunas criadas após o merge, preservando a ordem
+        new_columns = [col for col in df_merged.columns if col not in original_columns]
+
+        return df_merged, new_columns
     except pd.errors.MergeError as e:
         if handle_duplicates and "not a many-to-one merge" in str(e):
             logger.warning("Removendo duplicidades para tentar novamente o merge.")
             df_right = df_right.drop_duplicates(subset=right_on)
-            return pd.merge(
+            df_merged = pd.merge(
                 df_left,
                 df_right,
                 left_on=left_on,
@@ -739,6 +777,9 @@ def perform_merge(
                 validate=validate,
                 indicator=indicator,
             )
+            # Identifica as colunas criadas após o merge, preservando a ordem
+            new_columns = [col for col in df_merged.columns if col not in original_columns]
+            return df_merged, new_columns
         logger.error(f"Erro durante o merge: {e}")
         raise ValueError(f"Erro durante o merge: {e}")
 
@@ -793,7 +834,7 @@ def merge_data_with_columns(
 
     try:
         # Realiza o merge inicial usando a função perform_merge
-        merged_df = perform_merge(
+        merged_df, new_cols = perform_merge(
             df_left=df_left,
             df_right=df_right,
             left_on=left_on,
@@ -809,7 +850,7 @@ def merge_data_with_columns(
         if use_similarity_for_unmatched and how in ["inner", "left"]:
             if not indicator:
                 # Realiza o merge inicial usando a função perform_merge
-                merged_df = perform_merge(
+                merged_df, new_cols = perform_merge(
                     df_left=df_left,
                     df_right=df_right,
                     left_on=left_on,
@@ -823,6 +864,9 @@ def merge_data_with_columns(
 
             # Identifica as linhas não correspondidas no DataFrame da esquerda
             unmatched_left = merged_df[merged_df["_merge"] == "left_only"].copy()
+            
+            # Dos dados unmatched, dropa as colunas antes de testar similaridade
+            unmatched_left = drop_columns(df=unmatched_left, drop_column_list=new_cols)
             
             # Armazenamos os dados que deram match (que a condição anterior não satisfeita)
             matched = merged_df[merged_df["_merge"] != "left_only"].copy()
@@ -953,7 +997,7 @@ def two_stage_merge(
         logger.info(f"[two_stage_merge] Tentativa {i} | LEFT={lkeys} <-> RIGHT={rkeys}")
 
         # Executando o merge
-        merged = perform_merge(
+        merged, new_cols = perform_merge(
             df_left=remaining,
             df_right=right,
             left_on=lkeys,
@@ -1025,7 +1069,7 @@ def merge_data_with_similarity(
     usando valores do df_right apenas quando houver match.
 
     NOVO:
-      - canonical_cols: colunas que DEVEM existir no output com o nome original (ex.: ["FORNECEDOR","REGIAO","GRUPO"])
+      - canonical_cols: colunas que DEVEM existir no output com o nome original)
       - canonical_priority:
           * "right": canonical = valor do right (quando existe), senão left
           * "left": canonical = valor do left (já atualizado), senão right
@@ -1077,12 +1121,14 @@ def merge_data_with_similarity(
     temp_key_cols: list[str] = []
 
     if use_similarity:
+        # Percorrendo as colunas para testar match,
         for l_col, r_col in zip(left_on, right_on):
             unique_left = left[l_col].dropna().unique()
             unique_right = right[r_col].dropna().unique()
 
             match_dict = {}
             for value in unique_left:
+                # Percorrendo os dados do dataframe left, que precisam de match
                 res = fuzzy_match(
                     value=value,
                     choices=unique_right,
@@ -1090,8 +1136,11 @@ def merge_data_with_similarity(
                     threshold=similarity_threshold,
                     normalize=True,
                 )
+                
+                # Salvando no dict o resultado obtido
                 match_dict[value] = res.choice if res else None
 
+            # Salvando no dataframe left usando colunas temporárias
             key_col = f"__key_{r_col}"
             left[key_col] = left[l_col].map(match_dict)
 
