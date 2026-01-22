@@ -138,12 +138,14 @@ left_on = "SOURCE_FILE"
 right_on = "SOURCE_FILE"
 how = "left"
 validate = "many_to_one"
+indicator = "_merge_bud_met"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies]
 left_on = "NUMERO_AGENCIA"
 right_on = "CD_PONTO"
 how = "left"
 validate = "many_to_one"
+indicator = "_merge_bud_met_age"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies_constructors]
 left_on = ["CONSTRUTORA", "REGIAO"]
@@ -151,6 +153,7 @@ right_on = ["FORNECEDOR", "REGIAO"]
 how = "left"
 validate = "many_to_one"
 handle_duplicates = true
+indicator = "_merge_bud_met_age_constr"
 
 [default.module_validator_lpu.merge_budget_lpu]
 

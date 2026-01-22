@@ -445,7 +445,10 @@ def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.Data
 
     return df
 
-def drop_columns(df: pd.DataFrame, drop_column_list: Union[str, List[str]], inplace: bool = False) -> pd.DataFrame:
+
+def drop_columns(
+    df: pd.DataFrame, drop_column_list: Union[str, List[str]], inplace: bool = False
+) -> pd.DataFrame:
     """
     Remove colunas de um DataFrame de forma resiliente, ignorando colunas que não existem.
 
@@ -738,12 +741,13 @@ def perform_merge(
     """
     try:
         # Remove a coluna '_merge' se indicator estiver ativado e ela já existir
-        if indicator and "_merge" in df_left.columns:
-            logger.warning(
-                "A coluna '_merge' já existe no DataFrame da esquerda. Ela será removida."
-            )
-            df_left = df_left.drop(columns=["_merge"])
-        
+        if indicator:
+            if (indicator in df_left.columns) or ("_merge" in df_left.columns):
+                logger.warning(
+                    "A coluna '_merge' já existe no DataFrame da esquerda. Ela será removida."
+                )
+                df_left = drop_columns(df=df_left, drop_column_list=[indicator, "_merge"])
+
         # Lista de colunas antes do merge
         original_columns = list(df_left.columns)
 
@@ -863,13 +867,13 @@ def merge_data_with_columns(
                 )
 
             # Identifica as linhas não correspondidas no DataFrame da esquerda
-            unmatched_left = merged_df[merged_df["_merge"] == "left_only"].copy()
-            
+            unmatched_left = merged_df[merged_df[indicator] == "left_only"].copy()
+
             # Dos dados unmatched, dropa as colunas antes de testar similaridade
             unmatched_left = drop_columns(df=unmatched_left, drop_column_list=new_cols)
-            
+
             # Armazenamos os dados que deram match (que a condição anterior não satisfeita)
-            matched = merged_df[merged_df["_merge"] != "left_only"].copy()
+            matched = merged_df[merged_df[indicator] != "left_only"].copy()
 
             # Realiza o merge das linhas não correspondidas usando a função merge_data_with_similarity
             similarity_merged = merge_data_with_similarity(
@@ -893,9 +897,7 @@ def merge_data_with_columns(
 
             # Concatena os DataFrames usando a função concat_dataframes
             try:
-                merged_df = concat_dataframes(dataframes, 
-                                              ignore_index=True, 
-                                              fill_missing=True)
+                merged_df = concat_dataframes(dataframes, ignore_index=True, fill_missing=True)
                 print("DataFrames concatenados com sucesso!")
             except Exception as e:
                 logger.error(f"Erro ao concatenar DataFrames: {e}")
@@ -1060,8 +1062,8 @@ def merge_data_with_similarity(
     overwrite: bool = True,
     keep_match_info: bool = False,
     drop_right_updated_cols: bool = True,
-    canonical_cols: list[str] | None = None,  
-    canonical_priority: str = "right",          
+    canonical_cols: list[str] | None = None,
+    canonical_priority: str = "right",
     drop_canonical_suffix_variants: bool = True,
     verbose=True,
 ) -> pd.DataFrame:
@@ -1110,7 +1112,9 @@ def merge_data_with_similarity(
         if left_col is None:
             raise KeyError(f"Não achei coluna do LEFT para '{base}'. Candidatas: {left_candidates}")
         if right_col is None:
-            raise KeyError(f"Não achei coluna do RIGHT para '{base}'. Candidatas: {right_candidates}")
+            raise KeyError(
+                f"Não achei coluna do RIGHT para '{base}'. Candidatas: {right_candidates}"
+            )
 
         return left_col, right_col
 
@@ -1137,13 +1141,13 @@ def merge_data_with_similarity(
                     threshold=similarity_threshold,
                     normalize=True,
                 )
-                
+
                 # Salvando no dict o resultado obtido
                 match_dict[value] = res.choice if res else None
-                
+
                 if verbose:
                     if res:
-                        logger.info(f"Valor: {value} - Match: {res.choice} - Score: {res.score}")
+                        logger.info(f"Valor: {value} - Match: {res} - Score: {res.score}")
 
             # Salvando no dataframe left usando colunas temporárias
             key_col = f"__key_{r_col}"
@@ -1185,7 +1189,11 @@ def merge_data_with_similarity(
     # =========================
     for base in update_cols:
         # se não veio do right, pula
-        if base not in right.columns and f"{base}{suffixes[1]}" not in merged.columns and base not in merged.columns:
+        if (
+            base not in right.columns
+            and f"{base}{suffixes[1]}" not in merged.columns
+            and base not in merged.columns
+        ):
             continue
 
         lcol, rcol = _resolve_lr_cols(merged, base)
@@ -1387,13 +1395,17 @@ def resolve_duplicate_columns(
 
 
 def filter_by_merge_column(
-    df: pd.DataFrame, value: Union[str, List[str]] = "both", raise_on_missing: bool = False
+    df: pd.DataFrame,
+    merge_column: str = "_merge",
+    value: Union[str, List[str]] = "both",
+    raise_on_missing: bool = False,
 ) -> Optional[pd.DataFrame]:
     """
     Filtra um DataFrame com base nos valores da coluna '_merge'.
 
     Args:
         df (pd.DataFrame): DataFrame a ser filtrado.
+        merge_column (str): Nome da coluna de merge a ser utilizada. Padrão é '_merge'.
         value (Union[str, List[str]]): Valor ou lista de valores a serem buscados na coluna '_merge' (ex.: 'both', ['both', 'left']).
         raise_on_missing (bool): Se True, lança um erro se a coluna '_merge' não for encontrada. Caso contrário, retorna None.
 
@@ -1404,8 +1416,8 @@ def filter_by_merge_column(
     Raises:
         ValueError: Se a coluna '_merge' não for encontrada e `raise_on_missing` for True.
     """
-    if "_merge" not in df.columns:
-        message = "A coluna '_merge' não foi encontrada no DataFrame."
+    if merge_column not in df.columns:
+        message = f"A coluna '{merge_column}' não foi encontrada no DataFrame."
         if raise_on_missing:
             raise ValueError(message)
         else:
@@ -1418,6 +1430,6 @@ def filter_by_merge_column(
 
     # Filtra o DataFrame com base nos valores especificados
     try:
-        return len(df[df["_merge"].isin(value)])
+        return len(df[df[merge_column].isin(value)])
     except Exception as e:
         return None
