@@ -809,7 +809,7 @@ def append_data(list_all_tables, list_all_metadata, file_input, table, metadata)
     logger.info(
         f"Tabela e metadados extraídos com sucesso do arquivo: {file_input.file_path}, aba: {file_input.sheet_name}"
     )
-    
+
     logger.info(f"Quantidade de itens obtidos: {table.shape[0]} itens orçados.")
 
     return list_all_tables, list_all_metadata

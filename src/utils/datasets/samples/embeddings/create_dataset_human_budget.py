@@ -44,12 +44,10 @@ SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
 
-DEFAULT_LPU_PATH = Path(Path(__file__).parents[0], 
-                        "BASE_LPU_EMBEDDINGS.xlsx")
+DEFAULT_LPU_PATH = Path(Path(__file__).parents[0], "BASE_LPU_EMBEDDINGS.xlsx")
 DEFAULT_LPU_SHEET = "BASE_LPU"
 
-DEFAULT_OUT_PATH = Path(Path(__file__).parents[0], 
-                        "BASE_HUMAN_BUDGET_EMBEDDINGS.xlsx")
+DEFAULT_OUT_PATH = Path(Path(__file__).parents[0], "BASE_HUMAN_BUDGET_EMBEDDINGS.xlsx")
 DEFAULT_OUT_SHEET = "BASE_ORCAMENTO"
 
 
@@ -109,10 +107,10 @@ def sample_qty_for_unit(un: str) -> float | int:
         qtd = lognormal_qty(30, 0.7)  # m
         return round(qtd, 2)
     if fam == "VOLUME":
-        qtd = lognormal_qty(2, 0.6)   # m3
+        qtd = lognormal_qty(2, 0.6)  # m3
         return round(qtd, 2)
     if fam == "PESO":
-        qtd = lognormal_qty(120, 0.8) # kg
+        qtd = lognormal_qty(120, 0.8)  # kg
         return round(qtd, 2)
     # UNIDADE
     qtd = max(1, int(round(lognormal_qty(2, 0.7))))
@@ -121,8 +119,13 @@ def sample_qty_for_unit(un: str) -> float | int:
 
 def paid_price_from_ref(preco_ref: float) -> float:
     # preço pago como ref +/- ~12% com clipping
-    p = float(np.clip(np.random.normal(loc=preco_ref, scale=preco_ref * 0.12),
-                      preco_ref * 0.6, preco_ref * 1.6))
+    p = float(
+        np.clip(
+            np.random.normal(loc=preco_ref, scale=preco_ref * 0.12),
+            preco_ref * 0.6,
+            preco_ref * 1.6,
+        )
+    )
     return round(p, 2)
 
 
@@ -275,7 +278,9 @@ def generate_orcamento_from_lpu(
     if missing:
         raise ValueError(f"LPU está faltando colunas obrigatórias: {missing}")
 
-    sample = lpu_df.sample(n=min(n_lines_from_lpu, len(lpu_df)), random_state=SEED).reset_index(drop=True)
+    sample = lpu_df.sample(n=min(n_lines_from_lpu, len(lpu_df)), random_state=SEED).reset_index(
+        drop=True
+    )
 
     rows = []
     id_item = 1
@@ -382,9 +387,9 @@ if __name__ == "__main__":
     # Gera orçamento
     orc_df = generate_orcamento_from_lpu(
         lpu_df=lpu_df,
-        n_lines_from_lpu=300,   # ajuste
-        n_noise_lines=40,       # ajuste
-        prob_non_lpu=0.65,      # 65% humanizado (não-LPU)
+        n_lines_from_lpu=300,  # ajuste
+        n_noise_lines=40,  # ajuste
+        prob_non_lpu=0.65,  # 65% humanizado (não-LPU)
     )
 
     # Salva o orçamento gerado

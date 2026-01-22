@@ -109,13 +109,10 @@ def read_data(
     # Definindo os leitores disponíveis no data functions
     readers = {
         ".csv": lambda path: pd.read_csv(path, header=header),
-        ".xlsx": lambda path: pd.read_excel(path, 
-                                            sheet_name=sheet_name, 
-                                            header=header, 
-                                            engine=engine),
-        ".xls": lambda path: pd.read_excel(path, 
-                                           sheet_name=sheet_name, 
-                                           header=header),
+        ".xlsx": lambda path: pd.read_excel(
+            path, sheet_name=sheet_name, header=header, engine=engine
+        ),
+        ".xls": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
         ".xlsm": lambda path: pd.read_excel(
             path, sheet_name=sheet_name, header=header
         ),  # Added support for .xlsm files
@@ -267,12 +264,12 @@ def transform_case(
     """
 
     def transform_value(
-        value, 
-        to_upper=False, 
-        to_lower=False, 
-        remove_spaces=False, 
-        remove_accents=False, 
-        strip=False
+        value,
+        to_upper=False,
+        to_lower=False,
+        remove_spaces=False,
+        remove_accents=False,
+        strip=False,
     ):
         """Aplica transformações a um único valor."""
         if not isinstance(value, str):
@@ -298,7 +295,7 @@ def transform_case(
         elif isinstance(param, list):
             return param
         return []
-    
+
     """
     
         Etapa 1 - Transformações nos nomes das colunas
@@ -309,30 +306,30 @@ def transform_case(
     df.columns = df.columns.map(str)
     col_names = list(df.columns)
     col_map = {col: col for col in col_names}
-    
+
     def apply_col_transform(cols, func):
-        
+
         nonlocal col_names, col_map
         updated = []
-        
+
         for col in cols:
             if col in col_names:
-                
+
                 # Aplicando a função de transformação
                 new_col = func(col)
-                
+
                 # Obtendo o idx da coluna original
                 idx = col_names.index(col)
-                
+
                 # Atualizando o nome da coluna no mapeamento
                 col_names[idx] = new_col
-                
+
                 for k, v in col_map.items():
                     if v == col:
                         col_map[k] = new_col
                 updated.append(new_col)
         return updated
-    
+
     # Resolve listas de colunas para cada transformação
     col_transforms = [
         ("columns_to_upper", lambda c: c.upper()),
@@ -356,7 +353,7 @@ def transform_case(
 
     # Atualiza os nomes das colunas no DataFrame, após as transformações
     df.columns = col_names
-    
+
     """
     
         Etapa 2 - Transformações nos valores das células
@@ -371,10 +368,10 @@ def transform_case(
         "cells_to_remove_accents": cells_to_remove_accents,
         "cells_to_strip": cells_to_strip,
     }
-    
+
     for key in cells_params:
         cells_params[key] = resolve_columns(cells_params[key], df.columns)
-        
+
     # Aplica transformações nas células
     cells_ops = [
         ("cells_to_upper", dict(to_upper=True)),
@@ -383,7 +380,7 @@ def transform_case(
         ("cells_to_remove_accents", dict(remove_accents=True)),
         ("cells_to_strip", dict(strip=True)),
     ]
-    
+
     for key, kwargs in cells_ops:
         for col in cells_params[key]:
             if col in df.columns:

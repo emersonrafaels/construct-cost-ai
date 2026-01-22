@@ -27,6 +27,7 @@ def measure_execution_time(func):
 
     return wrapper
 
+
 def get_item_safe(obj, idx, return_key=False):
     """
     Obtém um item de forma segura de uma lista ou dicionário.
@@ -71,18 +72,17 @@ def get_item_safe(obj, idx, return_key=False):
 
 
 def to_float_resilient(value, default=None):
-    
     """
     Converte um valor para float de forma resiliente, lidando com diferentes formatos.
 
     Args:
         value (Any): O valor a ser convertido.
         default (Any, opcional): Valor padrão a ser retornado em caso de falha na conversão. Padrão é None.
-        
+
     Returns:
         float | Any: O valor convertido para float ou o valor padrão em caso de falha na conversão.
     """
-    
+
     if value is None or isinstance(value, float) and np.isnan(value):
         return default
     try:
@@ -91,6 +91,7 @@ def to_float_resilient(value, default=None):
         return float(value)
     except Exception:
         return default
+
 
 def convert_value(value: Any, expected_type: str) -> Any:
     """

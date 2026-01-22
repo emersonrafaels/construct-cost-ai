@@ -113,7 +113,7 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             cells_to_remove_accents=settings.get(
                 "module_validator_lpu.budget_data.cells_to_remove_accents", []
             ),
-            cells_to_strip=True
+            cells_to_strip=True,
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -258,18 +258,15 @@ def identify_lpu_format(
 
     # Verifica se todas as colunas principais estão presentes
     if any(col in df.columns for col in expected_core_cols):
-        
+
         if filter_columns_not_matching:
             # Filtra colunas que não correspondem ao padrão esperado
-            df = select_columns(
-                df,
-                target_columns=found_wide_cols
-            )
-        
+            df = select_columns(df, target_columns=found_wide_cols)
+
         # Se as colunas de preço seguem o padrão esperado, é wide
         if found_wide_cols:
             return LPUFormatReport(format="wide", columns=found_wide_cols)
-        
+
         # Se as colunas 'regiao', 'grupo' e 'preco' estão presentes, é long
         elif all(col in df.columns for col in long_required_cols):
             return LPUFormatReport(
@@ -452,7 +449,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     # Colunas obrigatórias
     required_columns = settings.get(
         "module_validator_lpu.lpu_data.required_columns_with_types",
-       {"CÓD ITEM": "object", "ITEM": "object", "UNID.": "object"}
+        {"CÓD ITEM": "object", "ITEM": "object", "UNID.": "object"},
     )
 
     try:
@@ -470,7 +467,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             cells_to_remove_accents=settings.get(
                 "module_validator_lpu.lpu_data.cells_to_remove_accents", []
             ),
-            cells_to_strip=True
+            cells_to_strip=True,
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
@@ -484,13 +481,15 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
 
     # Detecta formato e converte se necessário
     report = identify_lpu_format(df)
-    
+
     if report.format == "wide":
-        df_wide, df_long = wide_to_long(df, 
-                                        id_col=get_item_safe(required_columns, 0, return_key=True),
-                                        item_col=get_item_safe(required_columns, 1, return_key=True),
-                                        unit_col=get_item_safe(required_columns, 2, return_key=True),
-                                        col_to_regiao_grupo=report.columns)
+        df_wide, df_long = wide_to_long(
+            df,
+            id_col=get_item_safe(required_columns, 0, return_key=True),
+            item_col=get_item_safe(required_columns, 1, return_key=True),
+            unit_col=get_item_safe(required_columns, 2, return_key=True),
+            col_to_regiao_grupo=report.columns,
+        )
         logger.info("Convertido LPU de WIDE para LONG.")
     elif report.format == "long":
         # df = long_to_wide(df)
@@ -669,10 +668,10 @@ def calculate_total_item(
     Returns:
         pd.DataFrame: DataFrame atualizado com a coluna de valor total orçado calculada ou convertida.
     """
-    
+
     # Verifica se a coluna de valor total orçado existe
     if column_total_value not in df.columns:
-        
+
         # Se não existe, ele calcula usando quantidade * preço unitário
         df[column_total_value] = df[column_quantity] * df[column_unit_price]
     else:
@@ -682,7 +681,7 @@ def calculate_total_item(
 
         # Filtra linhas onde o valor total é nulo ou menor/igual a zero
         mask = df[column_total_value].isna() | (df[column_total_value] <= 0)
-        
+
         # 2 - Recalcula o valor total apenas para essas linhas
         df.loc[mask, column_total_value] = (
             df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
@@ -851,9 +850,7 @@ def validate_lpu(
         logger.info(f"Carregando metadados de orçamentos de: {file_path_metadata}")
         df_budget_metadata = load_metadata(file_path_metadata)
         if verbose:
-            logger.info(
-                f"✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens"
-            )
+            logger.info(f"✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar metadados dos orçamentos: {e}")
         raise ValidatorLPUError(f"Erro ao carregar metadados dos orçamentos: {e}")
@@ -949,9 +946,7 @@ def validate_lpu(
             ),
         )
         if verbose:
-            logger.info(
-                f"✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}"
-            )
+            logger.info(f"✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}")
             logger.info(
                 f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias_constructors.shape}"
             )
@@ -1060,41 +1055,41 @@ def orchestrate_validate_lpu(
     """
     # Configura caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
-    
+
     # Define os caminhos dos arquivos com base nas configurações ou argumentos fornecidos
     # Arquivo de orçamento
     path_file_budget = Path(
         base_dir,
         file_path_budget or settings.get("module_validator_lpu.budget_data.file_path"),
     )
-    
+
     # Arquivo de metadados
     path_file_metadata = Path(
         base_dir,
         file_path_metadata or settings.get("module_validator_lpu.budget_metadados.file_path"),
     )
-    
+
     # Arquivo da LPU
     path_file_lpu = Path(
         base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path")
     )
-    
+
     # Arquivo de com as informações das agências
     path_file_agencies = Path(
         base_dir, file_path_agencies or settings.get("module_validator_lpu.agencies_data.file_path")
     )
-    
+
     # Arquivo com as informações das construtoras
     path_file_constructors = Path(
         base_dir,
         file_path_constructors or settings.get("module_validator_lpu.constructors_data.file_path"),
     )
-    
+
     # Diretório de outputs dos resultados
     output_dir = Path(
         base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir")
     )
-    
+
     # Nome do arquivo de output
     output_file = output_file or settings.get(
         "module_validator_lpu.output_settings.file_path_output"

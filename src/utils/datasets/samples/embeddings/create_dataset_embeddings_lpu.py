@@ -58,7 +58,7 @@ unit_price_base = {
     "M3": (120, 2200),
     "ML": (10, 250),
     "BR": (20, 600),
-    "KG": (3, 60),   # ✅ novo: aço, armaduras, etc.
+    "KG": (3, 60),  # ✅ novo: aço, armaduras, etc.
 }
 
 
@@ -163,7 +163,13 @@ def gen_eletrica_variants():
         base.append((f"ELETROCALHA PERFURADA {w}", "M"))
     for size in ['4"X2"', '4"X4"', "20X20X10CM", "20X20X12CM"]:
         base.append((f"CAIXA PASSAGEM {size} COM TAMPA PARAFUSADA", "UN"))
-    for p in ["PONTO DE FORCA", "PONTO DE ILUMINACAO", "PONTO PARA CAMERA", "PONTO PARA SENSOR", "PONTO PARA CFTV"]:
+    for p in [
+        "PONTO DE FORCA",
+        "PONTO DE ILUMINACAO",
+        "PONTO PARA CAMERA",
+        "PONTO PARA SENSOR",
+        "PONTO PARA CFTV",
+    ]:
         base.append((p, "PT"))
         base.append((p + " (AREA DA AGENCIA)", "PT"))
     for q in ["LED EMBUTIR", "LED SOBREPOR", "DE EMERGENCIA", "PAINEL 60X60", "LUMINARIA DE SAIDA"]:
@@ -186,7 +192,14 @@ def gen_hidraulica_variants():
     base = []
     for d in ["20MM", "25MM", "32MM", "40MM", "50MM", "75MM", "100MM"]:
         base.append((f"TUBO PVC {d}", "M"))
-    for item in ["BACIA SANITARIA", "LAVATORIO", "CUBA INOX", "TORNEIRA", "MISTURADOR", "VALVULA DE DESCARGA"]:
+    for item in [
+        "BACIA SANITARIA",
+        "LAVATORIO",
+        "CUBA INOX",
+        "TORNEIRA",
+        "MISTURADOR",
+        "VALVULA DE DESCARGA",
+    ]:
         base.append((item, "UN"))
     return base
 
@@ -196,7 +209,12 @@ def gen_esquadrias_vidros_variants():
     for mm in ["8MM", "10MM", "12MM", "15MM"]:
         base.append((f"VIDRO TEMPERADO {mm} INCOLOR", "M2"))
         base.append((f"VIDRO TEMPERADO {mm} COM PERFIL", "M2"))
-    for item in ["PORTA DE MADEIRA", "PORTA DE VIDRO TEMPERADO", "JANELA DE ALUMINIO", "ESQUADRIA DE ALUMINIO"]:
+    for item in [
+        "PORTA DE MADEIRA",
+        "PORTA DE VIDRO TEMPERADO",
+        "JANELA DE ALUMINIO",
+        "ESQUADRIA DE ALUMINIO",
+    ]:
         for q in ["", "COM BATENTE", "COM FERRAGEM", "COM PUXADOR", "SOB MEDIDA"]:
             base.append((join_clean([item, q]), "UN" if "PORTA" in item else "M2"))
     return base
@@ -204,9 +222,21 @@ def gen_esquadrias_vidros_variants():
 
 def gen_metalicos_variants():
     base = []
-    for item in ["CORRIMAO", "GUARDA-CORPO", "GRADIL", "PAINEL METALICO", "ESTRUTURA METALICA AUX."]:
+    for item in [
+        "CORRIMAO",
+        "GUARDA-CORPO",
+        "GRADIL",
+        "PAINEL METALICO",
+        "ESTRUTURA METALICA AUX.",
+    ]:
         for mat in ["ACO", "INOX", "ALUMINIO"]:
-            for q in ["", "PISO DUPLO 1 LADO", "PISO DUPLO 2 LADOS", "CHAPA GALVANIZADA", "REFORCADO"]:
+            for q in [
+                "",
+                "PISO DUPLO 1 LADO",
+                "PISO DUPLO 2 LADOS",
+                "CHAPA GALVANIZADA",
+                "REFORCADO",
+            ]:
                 un = "M" if item in ["CORRIMAO", "GRADIL", "GUARDA-CORPO"] else "M2"
                 base.append((join_clean([item, mat, q]), un))
     return base
@@ -227,8 +257,14 @@ def gen_locacoes_variants():
     """ALUGUEL DE PLATAFORMA / andaimes / equipamentos (VB)."""
     base = []
     eqs = [
-        "PLATAFORMA", "PLATAFORMA ELEVATORIA", "ANDAIME", "BETONEIRA",
-        "COMPACTADOR", "MARTELETE", "GERADOR", "BOMBA D'AGUA"
+        "PLATAFORMA",
+        "PLATAFORMA ELEVATORIA",
+        "ANDAIME",
+        "BETONEIRA",
+        "COMPACTADOR",
+        "MARTELETE",
+        "GERADOR",
+        "BOMBA D'AGUA",
     ]
     for e in eqs:
         for q in ["", "DIARIA", "SEMANAL", "MENSAL", "COM OPERADOR", "SEM OPERADOR"]:
@@ -272,7 +308,12 @@ def gen_barras_perfis_aluminio_variants():
     for p in perfis:
         for m in mats:
             for med in medidas:
-                base.append((join_clean([p, "TE" if p == "BARRA CHATA" else "", m, med, "COM FIXACAO"]), "BR"))
+                base.append(
+                    (
+                        join_clean([p, "TE" if p == "BARRA CHATA" else "", m, med, "COM FIXACAO"]),
+                        "BR",
+                    )
+                )
     # Exemplo idêntico ao seu
     base.append(('BARRA CHATA TE ALUMINIO 7/8"x1/8" COM FIXACAO', "BR"))
     return base
@@ -353,16 +394,28 @@ def build_lpu(n_items=1500, out_path="BASE_LPU_EMBEDDINGS.xlsx"):
 
     # core
     for fn in [
-        gen_vedacao_variants, gen_forro_variants, gen_pintura_variants, gen_demolicao_variants,
-        gen_pisos_variants, gen_eletrica_variants, gen_dados_variants, gen_hidraulica_variants,
-        gen_esquadrias_vidros_variants, gen_metalicos_variants, gen_limpeza_variants
+        gen_vedacao_variants,
+        gen_forro_variants,
+        gen_pintura_variants,
+        gen_demolicao_variants,
+        gen_pisos_variants,
+        gen_eletrica_variants,
+        gen_dados_variants,
+        gen_hidraulica_variants,
+        gen_esquadrias_vidros_variants,
+        gen_metalicos_variants,
+        gen_limpeza_variants,
     ]:
         library.extend(fn())
 
     # ✅ novos blocos "reais"
     for fn in [
-        gen_locacoes_variants, gen_alvenaria_siporex_variants, gen_armacao_ca_variants,
-        gen_barras_perfis_aluminio_variants, gen_pcd_variants, gen_atm_variants
+        gen_locacoes_variants,
+        gen_alvenaria_siporex_variants,
+        gen_armacao_ca_variants,
+        gen_barras_perfis_aluminio_variants,
+        gen_pcd_variants,
+        gen_atm_variants,
     ]:
         library.extend(fn())
 
@@ -386,7 +439,7 @@ def build_lpu(n_items=1500, out_path="BASE_LPU_EMBEDDINGS.xlsx"):
     # injeta exemplos âncora com preços fixos
     anchors = gen_seed_examples()
     anchor_rows = []
-    for (desc, un, preco) in anchors:
+    for desc, un, preco in anchors:
         anchor_rows.append(("ANCHOR", desc.upper(), un.upper(), float(preco)))
 
     # completa até n_items (com sufixos)
@@ -410,7 +463,7 @@ def build_lpu(n_items=1500, out_path="BASE_LPU_EMBEDDINGS.xlsx"):
         i += 1
 
     # adiciona o restante
-    for (desc, un) in expanded:
+    for desc, un in expanded:
         prefix = random.choices(prefixes, weights=[10, 45, 15, 15, 15])[0]
         cod = f"{prefix}-{i:03d}"
         preco = round(price_for_unit(un), 2)
