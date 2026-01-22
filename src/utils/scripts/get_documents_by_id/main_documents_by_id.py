@@ -10,7 +10,7 @@ from modules.get_documents_by_id import orchestra_pick_row_by_date
 
 
 def orchestra_generate_final_dataframe(df):
-    
+
     # Parâmetros hardcoded
     strategy = ["between", "nearest", "last"]
     strict = False
@@ -20,7 +20,7 @@ def orchestra_generate_final_dataframe(df):
     end_col = "DATA_FIM_REAL"
     prefer_col = "DATA_INCLUSAO_DOC"
     between_preference = "last"
-    
+
     # Gera o DataFrame final
     df_result = orchestra_pick_row_by_date(
         df,
@@ -33,9 +33,9 @@ def orchestra_generate_final_dataframe(df):
         prefer_col=prefer_col,
         between_preference=between_preference,
     )
-    
+
     return df_result
-    
+
 
 def main():
     """
@@ -63,6 +63,7 @@ def main():
     final_file = current_dir / "dados_finais.xlsx"
     df_result.to_excel(final_file, index=False)
     print(f"DataFrame final salvo em '{final_file}'.")
+
 
 if __name__ == "__main__":
     main()

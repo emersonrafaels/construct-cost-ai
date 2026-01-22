@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def make_synthetic_upe_dataset(
     n_upe: int = 8,
     rows_per_upe: tuple[int, int] = (2, 6),
@@ -91,5 +92,7 @@ def make_synthetic_upe_dataset(
             doc_id += int(rng.integers(1, 80))
 
     df = pd.DataFrame(rows)
-    df = df.sort_values(["UPE", "DATA_INICIO_REAL", "DATA_INCLUSAO_DOC"], na_position="first").reset_index(drop=True)
+    df = df.sort_values(
+        ["UPE", "DATA_INICIO_REAL", "DATA_INCLUSAO_DOC"], na_position="first"
+    ).reset_index(drop=True)
     return df

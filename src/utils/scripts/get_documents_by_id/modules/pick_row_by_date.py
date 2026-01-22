@@ -8,6 +8,7 @@ sys.path.append(Path(__file__).parents[0])
 
 from modules.datetime_utils import preprocess_datetime_columns
 
+
 def pick_row(
     df: pd.DataFrame,
     strategy: list[str] = ["between_else_nearest"],
@@ -46,14 +47,18 @@ def pick_row(
     # Valida as opções de estratégia
     for strat in strategy:
         if strat not in strategy_options:
-            raise ValueError(f"Estratégia inválida: {strat}. Estratégias permitidas são {strategy_options}.")
+            raise ValueError(
+                f"Estratégia inválida: {strat}. Estratégias permitidas são {strategy_options}."
+            )
 
     print("DataFrame recebido:")
     print(df)
     print("-" * 50)
 
     # Define a lista de estratégias a ser usada
-    strategies_to_use = strategy if strict else strategy + [s for s in strategy_options if s not in strategy]
+    strategies_to_use = (
+        strategy if strict else strategy + [s for s in strategy_options if s not in strategy]
+    )
     print("Estratégias a serem usadas:", strategies_to_use)
     print("-" * 50)
 
@@ -104,8 +109,12 @@ def pick_row(
 
             dist = np.where(
                 inclusion < start,
-                (start - inclusion).dt.days,  # Distância se DATA_INCLUSAO_DOC for antes do intervalo
-                np.where(inclusion > end, (inclusion - end).dt.days, 0),  # Distância se for depois do intervalo
+                (
+                    start - inclusion
+                ).dt.days,  # Distância se DATA_INCLUSAO_DOC for antes do intervalo
+                np.where(
+                    inclusion > end, (inclusion - end).dt.days, 0
+                ),  # Distância se for depois do intervalo
             )
             df["_dist_days"] = dist
 

@@ -58,13 +58,13 @@ def orchestra_pick_row_by_date(
                         end_col=end_col,
                         between_preference=between_preference,
                     )
-                    
+
                     # Adiciona a estratégia usada na linha selecionada
                     selected_row = selected_row.to_dict()
                     selected_row["STRATEGY_USED"] = strat
                     selected_rows.append(selected_row)
                     break
-                
+
                 except ValueError:
                     continue
 

@@ -605,7 +605,7 @@ def merge_data(
     how: str = "inner",
     suffixes: tuple = ("_left", "_right"),
     use_similarity_for_unmatched: bool = False,  # Renomeado para indicar uso em cenários de não correspondência
-    similarity_threshold: float = 90.0
+    similarity_threshold: float = 90.0,
 ) -> pd.DataFrame:
     """
     Realiza um merge genérico entre dois DataFrames, com opção de correspondência baseada em similaridade para linhas não correspondidas.
@@ -645,10 +645,13 @@ def merge_data(
             # Realiza a correspondência baseada em similaridade para as linhas não correspondidas
             for l_col, r_col in zip(left_on, right_on):
                 unmatched_left[f"{l_col}_matched"] = unmatched_left[l_col].apply(
-                    lambda x: process.extractOne(
-                        x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
-                    )[0]
-                    if x is not None else None
+                    lambda x: (
+                        process.extractOne(
+                            x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                        )[0]
+                        if x is not None
+                        else None
+                    )
                 )
 
             # Substitui as colunas para usar os valores correspondidos
@@ -704,6 +707,13 @@ def perform_merge(
         pd.DataFrame: DataFrame resultante do merge.
     """
     try:
+        # Remove a coluna '_merge' se indicator estiver ativado e ela já existir
+        if indicator and "_merge" in df_left.columns:
+            logger.warning(
+                "A coluna '_merge' já existe no DataFrame da esquerda. Ela será removida."
+            )
+            df_left = df_left.drop(columns=["_merge"])
+
         return pd.merge(
             df_left,
             df_right,
@@ -745,7 +755,7 @@ def merge_data_with_columns(
     indicator: bool = False,
     handle_duplicates: bool = False,
     use_similarity_for_unmatched: bool = False,  # Adicionado para habilitar similaridade
-    similarity_threshold: float = 90.0  # Adicionado para definir o limite de similaridade
+    similarity_threshold: float = 90.0,  # Adicionado para definir o limite de similaridade
 ) -> pd.DataFrame:
     """
     Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas, lidar com duplicidades e usar similaridade para linhas não correspondidas.
@@ -771,7 +781,7 @@ def merge_data_with_columns(
     Raises:
         ValueError: Se ocorrer um erro durante a operação de merge.
     """
-    
+
     # Filtra as colunas do DataFrame da esquerda, se especificado
     if selected_left_columns:
         df_left = df_left[left_on + selected_left_columns]
@@ -802,10 +812,13 @@ def merge_data_with_columns(
             # Realiza a correspondência baseada em similaridade para as linhas não correspondidas
             for l_col, r_col in zip(left_on, right_on):
                 unmatched_left[f"{l_col}_matched"] = unmatched_left[l_col].apply(
-                    lambda x: process.extractOne(
-                        x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
-                    )[0]
-                    if x is not None else None
+                    lambda x: (
+                        process.extractOne(
+                            x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                        )[0]
+                        if x is not None
+                        else None
+                    )
                 )
 
             # Substitui as colunas para usar os valores correspondidos
@@ -1007,10 +1020,13 @@ def merge_data_with_similarity(
         for l_col, r_col in zip(left_on, right_on):
             print(f"Calculando similaridade entre '{l_col}' e '{r_col}'...")
             df_left[f"{l_col}_matched"] = df_left[l_col].apply(
-                lambda x: process.extractOne(
-                    x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
-                )[0]
-                if x is not None else None
+                lambda x: (
+                    process.extractOne(
+                        x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                    )[0]
+                    if x is not None
+                    else None
+                )
             )
 
         # Substitui as colunas de merge pelas colunas com os valores correspondentes
@@ -1158,3 +1174,40 @@ def resolve_duplicate_columns(
     # logger.info(f"Colunas depois: {df.columns.tolist()}")
 
     return df
+
+
+def filter_by_merge_column(
+    df: pd.DataFrame, value: Union[str, List[str]] = "both", raise_on_missing: bool = False
+) -> Optional[pd.DataFrame]:
+    """
+    Filtra um DataFrame com base nos valores da coluna '_merge'.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser filtrado.
+        value (Union[str, List[str]]): Valor ou lista de valores a serem buscados na coluna '_merge' (ex.: 'both', ['both', 'left']).
+        raise_on_missing (bool): Se True, lança um erro se a coluna '_merge' não for encontrada. Caso contrário, retorna None.
+
+    Returns:
+        Optional[pd.DataFrame]: DataFrame filtrado contendo apenas as linhas com os valores especificados na coluna '_merge'.
+                                Retorna None se a coluna '_merge' não for encontrada e `raise_on_missing` for False.
+
+    Raises:
+        ValueError: Se a coluna '_merge' não for encontrada e `raise_on_missing` for True.
+    """
+    if "_merge" not in df.columns:
+        message = "A coluna '_merge' não foi encontrada no DataFrame."
+        if raise_on_missing:
+            raise ValueError(message)
+        else:
+            logger.debug(message)
+            return None
+
+    # Garante que `value` seja uma lista
+    if isinstance(value, str):
+        value = [value]
+
+    # Filtra o DataFrame com base nos valores especificados
+    try:
+        return len(df[df["_merge"].isin(value)])
+    except Exception as e:
+        return None
