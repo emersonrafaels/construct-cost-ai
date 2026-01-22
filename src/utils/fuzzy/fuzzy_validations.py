@@ -224,7 +224,7 @@ def fuzzy_match(
         raise ValueError("threshold deve estar entre 0 e 100")
 
     # Se não tem query ou lista, devolve coerente com o modo
-    if not value or not choices:
+    if not value or choices is None or len(choices) == 0:
         return None if top_matches == 1 else []
 
     # -------------------------

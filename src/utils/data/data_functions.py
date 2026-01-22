@@ -65,6 +65,7 @@ import json
 import pandas as pd
 from rapidfuzz import process, fuzz
 from unidecode import unidecode
+from utils.fuzzy.fuzzy_validations import fuzzy_match
 
 # Adiciona o diretório src ao path
 base_dir = Path(__file__).parents[3]
@@ -806,39 +807,55 @@ def merge_data_with_columns(
 
         # Se o uso de similaridade para linhas não correspondidas estiver ativado
         if use_similarity_for_unmatched and how in ["inner", "left"]:
-            # Identifica as linhas não correspondidas no DataFrame da esquerda
-            unmatched_left = df_left[~df_left[left_on[0]].isin(merged_df[left_on[0]])]
-
-            # Realiza a correspondência baseada em similaridade para as linhas não correspondidas
-            for l_col, r_col in zip(left_on, right_on):
-                unmatched_left[f"{l_col}_matched"] = unmatched_left[l_col].apply(
-                    lambda x: (
-                        process.extractOne(
-                            x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
-                        )[0]
-                        if x is not None
-                        else None
-                    )
+            if not indicator:
+                # Realiza o merge inicial usando a função perform_merge
+                merged_df = perform_merge(
+                    df_left=df_left,
+                    df_right=df_right,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how=how,
+                    suffixes=suffixes,
+                    validate=validate,
+                    indicator=True,
+                    handle_duplicates=handle_duplicates,
                 )
 
-            # Substitui as colunas para usar os valores correspondidos
-            similarity_left_on = [f"{col}_matched" for col in left_on]
+            # Identifica as linhas não correspondidas no DataFrame da esquerda
+            unmatched_left = merged_df[merged_df["_merge"] == "left_only"].copy()
+            
+            # Armazenamos os dados que deram match (que a condição anterior não satisfeita)
+            matched = merged_df[merged_df["_merge"] != "left_only"].copy()
 
-            # Realiza o merge das linhas não correspondidas usando a função perform_merge
-            similarity_merged = perform_merge(
+            # Realiza o merge das linhas não correspondidas usando a função merge_data_with_similarity
+            similarity_merged = merge_data_with_similarity(
                 df_left=unmatched_left,
                 df_right=df_right,
-                left_on=similarity_left_on,
+                left_on=left_on,
                 right_on=right_on,
-                how="inner",
+                how=how,
                 suffixes=suffixes,
-                validate=validate,
-                indicator=indicator,
-                handle_duplicates=handle_duplicates,
+                use_similarity=use_similarity_for_unmatched,
+                similarity_threshold=similarity_threshold,
+                update_cols=[],
+                overwrite=False,
+                keep_match_info=False,
+                canonical_cols=df_right.columns,
+                canonical_priority="right",
             )
 
-            # Combina o merge original com o merge baseado em similaridade
-            merged_df = pd.concat([merged_df, similarity_merged], ignore_index=True)
+            # Lista de DataFrames a serem concatenados
+            dataframes = [matched, similarity_merged]
+
+            # Concatena os DataFrames usando a função concat_dataframes
+            try:
+                merged_df = concat_dataframes(dataframes, 
+                                              ignore_index=True, 
+                                              fill_missing=True)
+                print("DataFrames concatenados com sucesso!")
+            except Exception as e:
+                logger.error(f"Erro ao concatenar DataFrames: {e}")
+                raise
 
         return merged_df
 
@@ -989,63 +1006,202 @@ def two_stage_merge(
 def merge_data_with_similarity(
     df_left: pd.DataFrame,
     df_right: pd.DataFrame,
-    left_on: list,
-    right_on: list,
-    how: str = "inner",
-    suffixes: tuple = ("_left", "_right"),
-    similarity_threshold: float = 90.0,  # Similaridade mínima para considerar um match
-    use_similarity: bool = False,  # Ativa ou desativa o merge por similaridade
+    left_on: list[str],
+    right_on: list[str],
+    how: str = "left",
+    suffixes: tuple[str, str] = ("_left", "_right"),
+    use_similarity: bool = False,
+    similarity_threshold: float = 90.0,
+    update_cols: list[str] | None = None,
+    overwrite: bool = True,
+    keep_match_info: bool = False,
+    drop_right_updated_cols: bool = True,
+    canonical_cols: list[str] | None = None,  
+    canonical_priority: str = "right",          
+    drop_canonical_suffix_variants: bool = True,
 ) -> pd.DataFrame:
     """
-    Realiza um merge entre dois DataFrames, com suporte para similaridade entre colunas.
+    Faz merge (com opção de similaridade nas chaves) e atualiza colunas do df_left
+    usando valores do df_right apenas quando houver match.
 
-    Args:
-        df_left (pd.DataFrame): DataFrame da esquerda.
-        df_right (pd.DataFrame): DataFrame da direita.
-        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
-        right_on (list): Colunas do DataFrame da direita para realizar o merge.
-        how (str): Tipo de merge a ser realizado. Default é "inner".
-        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Default é ("_left", "_right").
-        similarity_threshold (float): Similaridade mínima (0-100) para considerar um match. Default é 90.0.
-        use_similarity (bool): Se True, realiza o merge considerando similaridade. Default é False.
-
-    Returns:
-        pd.DataFrame: DataFrame resultante do merge.
-
-    Raises:
-        ValueError: Se o merge falhar ou os parâmetros forem inválidos.
+    NOVO:
+      - canonical_cols: colunas que DEVEM existir no output com o nome original (ex.: ["FORNECEDOR","REGIAO","GRUPO"])
+      - canonical_priority:
+          * "right": canonical = valor do right (quando existe), senão left
+          * "left": canonical = valor do left (já atualizado), senão right
+      - drop_canonical_suffix_variants: remove versões sufixadas dessas colunas após criar canônicas
     """
+
+    left = df_left.copy()
+    right = df_right.copy()
+
+    if len(left_on) != len(right_on):
+        raise ValueError("left_on e right_on precisam ter o mesmo tamanho.")
+
+    if canonical_cols is None:
+        # por padrão, costuma ser o schema do right
+        canonical_cols = right_on[:]  # ex.: ["FORNECEDOR","REGIAO","GRUPO"]
+
+    # =========================
+    # Helpers
+    # =========================
+    def _resolve_lr_cols(merged: pd.DataFrame, base: str) -> tuple[str, str]:
+        l_suf, r_suf = suffixes
+
+        left_candidates = []
+        right_candidates = []
+
+        if l_suf:
+            left_candidates.append(f"{base}{l_suf}")
+        if r_suf:
+            right_candidates.append(f"{base}{r_suf}")
+
+        left_candidates.append(base)
+        right_candidates.append(base)
+
+        left_col = next((c for c in left_candidates if c in merged.columns), None)
+        right_col = next((c for c in right_candidates if c in merged.columns), None)
+
+        if left_col is None:
+            raise KeyError(f"Não achei coluna do LEFT para '{base}'. Candidatas: {left_candidates}")
+        if right_col is None:
+            raise KeyError(f"Não achei coluna do RIGHT para '{base}'. Candidatas: {right_candidates}")
+
+        return left_col, right_col
+
+    # =========================
+    # 1) Preparar chaves (com ou sem similaridade)
+    # =========================
+    left_keys = left_on[:]
+    right_keys = right_on[:]
+    temp_key_cols: list[str] = []
+
     if use_similarity:
-        # Cria colunas temporárias para armazenar os matches por similaridade
         for l_col, r_col in zip(left_on, right_on):
-            print(f"Calculando similaridade entre '{l_col}' e '{r_col}'...")
-            df_left[f"{l_col}_matched"] = df_left[l_col].apply(
-                lambda x: (
-                    process.extractOne(
-                        x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
-                    )[0]
-                    if x is not None
-                    else None
+            unique_left = left[l_col].dropna().unique()
+            unique_right = right[r_col].dropna().unique()
+
+            match_dict = {}
+            for value in unique_left:
+                res = fuzzy_match(
+                    value=value,
+                    choices=unique_right,
+                    top_matches=1,
+                    threshold=similarity_threshold,
+                    normalize=True,
                 )
-            )
+                match_dict[value] = res.choice if res else None
 
-        # Substitui as colunas de merge pelas colunas com os valores correspondentes
-        left_on = [f"{col}_matched" for col in left_on]
+            key_col = f"__key_{r_col}"
+            left[key_col] = left[l_col].map(match_dict)
 
-    # Realiza o merge usando as colunas ajustadas
-    try:
-        merged_df = pd.merge(
-            df_left,
-            df_right,
-            left_on=left_on,
-            right_on=right_on,
-            how=how,
-            suffixes=suffixes,
-        )
-        return merged_df
-    except Exception as e:
-        logger.error(f"Erro durante o merge: {e}")
-        raise ValueError(f"Erro durante o merge: {e}")
+            idx = left_keys.index(l_col)
+            left_keys[idx] = key_col
+            temp_key_cols.append(key_col)
+
+    # =========================
+    # 2) Definir colunas a atualizar
+    # =========================
+    if update_cols is None:
+        update_cols = [c for c in right.columns if c not in right_on]
+
+    update_cols = [c for c in update_cols if c not in right_on]
+
+    # =========================
+    # 3) Merge para trazer colunas do right
+    # =========================
+    right_select = [c for c in (right_on + update_cols) if c in right.columns]
+
+    merged = left.merge(
+        right[right_select],
+        left_on=left_keys,
+        right_on=right_keys,
+        how=how,
+        suffixes=suffixes,
+        indicator=True if keep_match_info else False,
+    )
+
+    if keep_match_info:
+        merged["_matched"] = merged["_merge"].eq("both")
+        # mantém _merge só se você quiser debug
+        # merged = merged.drop(columns=["_merge"])
+
+    # =========================
+    # 4) Atualizar colunas do left com right
+    # =========================
+    for base in update_cols:
+        # se não veio do right, pula
+        if base not in right.columns and f"{base}{suffixes[1]}" not in merged.columns and base not in merged.columns:
+            continue
+
+        lcol, rcol = _resolve_lr_cols(merged, base)
+
+        if lcol == rcol:
+            continue
+
+        if overwrite:
+            merged[lcol] = merged[lcol].where(merged[rcol].isna(), merged[rcol])
+        else:
+            merged[lcol] = merged[lcol].fillna(merged[rcol])
+
+        if drop_right_updated_cols:
+            merged = merged.drop(columns=[rcol], errors="ignore")
+
+    # =========================
+    # 5) Criar colunas canônicas (nomes do df_right)
+    # =========================
+    # Ex.: garantir FORNECEDOR, REGIAO, GRUPO
+    for base in canonical_cols:
+        # tenta achar versões sufixadas que existam
+        lcol = f"{base}{suffixes[0]}" if suffixes[0] else base
+        rcol = f"{base}{suffixes[1]}" if suffixes[1] else base
+
+        # fallback: se não existe com sufixo, tenta base puro
+        if lcol not in merged.columns and base in merged.columns:
+            lcol = base
+        if rcol not in merged.columns and base in merged.columns:
+            rcol = base
+
+        left_exists = lcol in merged.columns
+        right_exists = rcol in merged.columns
+
+        # cria a coluna base, priorizando right ou left
+        if canonical_priority == "right":
+            if right_exists and left_exists:
+                merged[base] = merged[rcol].where(merged[rcol].notna(), merged[lcol])
+            elif right_exists:
+                merged[base] = merged[rcol]
+            elif left_exists:
+                merged[base] = merged[lcol]
+        else:  # "left"
+            if right_exists and left_exists:
+                merged[base] = merged[lcol].where(merged[lcol].notna(), merged[rcol])
+            elif left_exists:
+                merged[base] = merged[lcol]
+            elif right_exists:
+                merged[base] = merged[rcol]
+
+        # remove versões sufixadas das canônicas (se pedido)
+        if drop_canonical_suffix_variants:
+            cols_to_drop = []
+            if f"{base}{suffixes[0]}" in merged.columns and f"{base}{suffixes[0]}" != base:
+                cols_to_drop.append(f"{base}{suffixes[0]}")
+            if f"{base}{suffixes[1]}" in merged.columns and f"{base}{suffixes[1]}" != base:
+                cols_to_drop.append(f"{base}{suffixes[1]}")
+            # também remove "base" duplicada se ela era técnica (não é o caso aqui, mas safe)
+            merged = merged.drop(columns=cols_to_drop, errors="ignore")
+
+    # =========================
+    # 6) Limpar colunas temporárias de chave (similaridade)
+    # =========================
+    if temp_key_cols:
+        merged = merged.drop(columns=temp_key_cols, errors="ignore")
+
+    # se keep_match_info=False, remove _merge se existir
+    if not keep_match_info and "_merge" in merged.columns:
+        merged = merged.drop(columns=["_merge"], errors="ignore")
+
+    return merged
 
 
 def concat_dataframes(

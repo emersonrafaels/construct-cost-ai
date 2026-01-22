@@ -1035,6 +1035,7 @@ def validate_lpu(
             ),
             indicator=True,
             use_similarity_for_unmatched=True,
+            similarity_threshold=70
         )
         if verbose:
             logger.info(f"✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}")
