@@ -620,7 +620,10 @@ def load_agencies(
 
 
 def load_constructors(
-    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
+    file_path: Union[str, Path], 
+    validator_output_data: bool = False, 
+    output_dir_file: str = None,
+    validator_match_fuzzy: bool = False,
 ) -> pd.DataFrame:
     """
     Carrega o arquivo de construtoras.
@@ -629,6 +632,7 @@ def load_constructors(
         file_path: Caminho para o arquivo de construtoras (Excel ou CSV).
         validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
         output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
+        validator_match_fuzzy: Validador se é desejado melhorar o nome das construtoras usando fuzzy matching (Boolean)
 
     Returns:
         DataFrame com a base de construtoras carregada.
@@ -688,6 +692,10 @@ def load_constructors(
     except ValueError as e:
         logger.error(f"Erro ao converter tipos de colunas na base de construtoras: {e}")
         raise
+    
+    # Valida se é desejado melhorar o nome das construtoras usando fuzzy matching
+    if validator_match_fuzzy:
+        pass
 
     # Verificando se é desejado salvar os dados resultantes
     if validator_output_data:

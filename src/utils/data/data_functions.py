@@ -247,24 +247,7 @@ def transform_case(
     """
     Aplica transformações específicas em colunas e células de um DataFrame, como transformar em maiúsculas/minúsculas,
     remover espaços, remover acentos e aplicar strip.
-
-    Args:
-        df (pd.DataFrame): DataFrame a ser transformado.
-        columns_to_upper (Union[List[str], str, bool]): Colunas para transformar os nomes em maiúsculas. Use True para todas.
-        cells_to_upper (Union[List[str], str, bool]): Colunas para transformar os valores das células em maiúsculas. Use True para todas.
-        columns_to_lower (Union[List[str], str, bool]): Colunas para transformar os nomes em minúsculas. Use True para todas.
-        cells_to_lower (Union[List[str], str, bool]): Colunas para transformar os valores das células em minúsculas. Use True para todas.
-        columns_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos nomes. Use True para todas.
-        cells_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos valores das células. Use True para todas.
-        columns_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos nomes. Use True para todas.
-        cells_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos valores das células. Use True para todas.
-        columns_to_strip (Union[List[str], str, bool]): Colunas para aplicar strip nos nomes. Use True para todas.
-        cells_to_strip (Union[List[str], str, bool]): Colunas para aplicar strip nos valores das células. Use True para todas.
-
-    Returns:
-        pd.DataFrame: DataFrame com as transformações aplicadas.
     """
-
     def transform_value(
         value,
         to_upper=False,
@@ -298,37 +281,18 @@ def transform_case(
             return param
         return []
 
-    """
-    
-        Etapa 1 - Transformações nos nomes das colunas
-    
-    """
-
     # Garantir nomes de colunas como string
     df.columns = df.columns.map(str)
     col_names = list(df.columns)
-    col_map = {col: col for col in col_names}
 
     def apply_col_transform(cols, func):
-
-        nonlocal col_names, col_map
+        nonlocal col_names
         updated = []
-
         for col in cols:
             if col in col_names:
-
-                # Aplicando a função de transformação
                 new_col = func(col)
-
-                # Obtendo o idx da coluna original
                 idx = col_names.index(col)
-
-                # Atualizando o nome da coluna no mapeamento
                 col_names[idx] = new_col
-
-                for k, v in col_map.items():
-                    if v == col:
-                        col_map[k] = new_col
                 updated.append(new_col)
         return updated
 
@@ -350,17 +314,13 @@ def transform_case(
 
     # Aplica transformações sequenciais e atualiza listas
     for key, func in col_transforms:
-        cols = resolve_columns(params[key], df.columns)
-        params[key] = apply_col_transform(cols, func)
+        cols = resolve_columns(params[key], col_names)
+        updated_cols = apply_col_transform(cols, func)
+        # Atualiza os parâmetros com os novos nomes das colunas
+        params[key] = updated_cols
 
-    # Atualiza os nomes das colunas no DataFrame, após as transformações
+    # Atualiza os nomes das colunas no DataFrame
     df.columns = col_names
-
-    """
-    
-        Etapa 2 - Transformações nos valores das células
-    
-    """
 
     # Atualiza listas de colunas para células com nomes finais
     cells_params = {
