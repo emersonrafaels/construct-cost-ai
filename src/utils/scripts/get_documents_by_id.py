@@ -105,7 +105,7 @@ def pick_row(
     Raises:
         ValueError: Se nenhuma linha válida for encontrada no modo estrito.
     """
-    print("\n[DEBUG] Iniciando pick_row com as seguintes estratégias:", strategy)
+    print("\nIniciando pick_row com as seguintes estratégias:", strategy)
     print("-" * 50)
 
     # Valida as opções de estratégia
@@ -113,24 +113,24 @@ def pick_row(
         if strat not in strategy_options:
             raise ValueError(f"Estratégia inválida: {strat}. Estratégias permitidas são {strategy_options}.")
 
-    print("[DEBUG] DataFrame recebido:")
+    print("DataFrame recebido:")
     print(df)
     print("-" * 50)
 
     # Define a lista de estratégias a ser usada
     strategies_to_use = strategy if strict else strategy + [s for s in strategy_options if s not in strategy]
-    print("[DEBUG] Estratégias a serem usadas:", strategies_to_use)
+    print("Estratégias a serem usadas:", strategies_to_use)
     print("-" * 50)
 
     # Itera pela lista de estratégias em ordem de prioridade
     for strat in strategies_to_use:
-        print(f"[DEBUG] Avaliando estratégia: {strat}")
+        print(f"Avaliando estratégia: {strat}")
         print("-" * 50)
 
         if strat == "last":
             # Ordena pela coluna preferida e retorna a última linha
             selected_row = df.sort_values(prefer).iloc[-1]
-            print("[DEBUG] Estratégia 'last' selecionou a seguinte linha:")
+            print("Estratégia 'last' selecionou a seguinte linha:")
             print(selected_row)
             print("-" * 50)
             return selected_row
@@ -140,7 +140,7 @@ def pick_row(
             between_mask = (df[start_col] <= df[prefer]) & (df[prefer] <= df[end_col])
             candidates = df[between_mask]
 
-            print("[DEBUG] Linhas candidatas para 'between':")
+            print("Linhas candidatas para 'between':")
             print(candidates)
             print("-" * 50)
 
@@ -151,7 +151,7 @@ def pick_row(
                 else:  # Default to 'last'
                     selected_row = candidates.sort_values(prefer).iloc[-1]
 
-                print(f"[DEBUG] Estratégia 'between' selecionou a seguinte linha ({between_preference}):")
+                print(f"Estratégia 'between' selecionou a seguinte linha ({between_preference}):")
                 print(selected_row)
                 print("-" * 50)
                 return selected_row
@@ -174,14 +174,14 @@ def pick_row(
             )
             df["_dist_days"] = dist
 
-            print("[DEBUG] Distâncias calculadas para 'nearest':")
+            print("Distâncias calculadas para 'nearest':")
             print(df[[prefer, start_col, end_col, "_dist_days"]])
             print("-" * 50)
 
             # Ordena pela distância e pela coluna preferida, então retorna a linha mais próxima
             df = df.sort_values(["_dist_days", prefer], ascending=[True, True])
             best = df.iloc[0]
-            print("[DEBUG] Estratégia 'nearest' selecionou a seguinte linha:")
+            print("Estratégia 'nearest' selecionou a seguinte linha:")
             print(best)
             print("-" * 50)
             return best.drop(labels=["_dist_days"])
@@ -191,7 +191,7 @@ def pick_row(
         raise ValueError("Nenhuma linha válida encontrada para as estratégias fornecidas.")
 
     # Comportamento padrão: retorna uma Series vazia se nenhuma linha for encontrada
-    print("[DEBUG] Nenhuma linha válida encontrada. Retornando Series vazia.")
+    print("Nenhuma linha válida encontrada. Retornando Series vazia.")
     print("-" * 50)
     return pd.Series()
 
@@ -205,6 +205,7 @@ def generate_final_dataframe(
     start_col: str = "DATA_INICIO_REAL",
     end_col: str = "DATA_FIM_REAL",
     prefer_col: str = "DATA_INCLUSAO_DOC",
+    between_preference: str = "last",
 ) -> pd.DataFrame:
     """
     Gera um DataFrame final contendo as linhas selecionadas para cada UPE, usando DATA_INCLUSAO_DOC como target.
@@ -218,6 +219,7 @@ def generate_final_dataframe(
         start_col (str): Nome da coluna que contém as datas de início.
         end_col (str): Nome da coluna que contém as datas de fim.
         prefer_col (str): Nome da coluna preferida para seleção de linhas.
+        between_preference (str): Define se seleciona a primeira ('first') ou última ('last') linha para a estratégia 'between'.
 
     Returns:
         pd.DataFrame: DataFrame final com as colunas selecionadas.
@@ -230,6 +232,8 @@ def generate_final_dataframe(
             # Filtra o DataFrame para o UPE atual
             filtered_df = df[df[upe_col] == upe]
 
+            print(f"UPE atual: {upe}")
+
             # Seleciona a linha para o UPE atual
             selected_row = pick_row(
                 filtered_df,
@@ -238,6 +242,7 @@ def generate_final_dataframe(
                 prefer=prefer_col,
                 start_col=start_col,
                 end_col=end_col,
+                between_preference="last",
             )
             # Adiciona a linha selecionada à lista
             selected_rows.append(selected_row)
@@ -267,6 +272,7 @@ def main():
     start_col = "DATA_INICIO_REAL"
     end_col = "DATA_FIM_REAL"
     prefer_col = "DATA_INCLUSAO_DOC"
+    between_preference = "last"
 
     # Diretório atual
     current_dir = Path(__file__).parents[0]
@@ -289,6 +295,7 @@ def main():
         start_col=start_col,
         end_col=end_col,
         prefer_col=prefer_col,
+        between_preference=between_preference,
     )
 
     # Salva o DataFrame final para análise
