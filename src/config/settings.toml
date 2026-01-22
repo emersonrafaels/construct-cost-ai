@@ -174,11 +174,11 @@ file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
 file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
 
 file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
-file_path_stats_output_pdf = "RELATORIO_VALIDADOR_ESTATISTICAS_LPU.pdf"
+file_path_stats_output_pdf = "02_ESTATISTICAS_VALIDADOR_LPU.pdf"
 
 [default.module_validator_lpu.stats]
 
-# Variável para salvar o relatório em PDF
+# Variável para salvar o relatório de estatísticas em PDF
 validator_output_pdf = true
 
 # Configurações de exportação
