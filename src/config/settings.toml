@@ -56,7 +56,7 @@ required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GR
 # Colunas para normalização de valores
 columns_to_remove_accents = true
 cells_to_remove_spaces = ["GRUPO"]
-cells_to_remove_accents = []
+cells_to_remove_accents = true
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
