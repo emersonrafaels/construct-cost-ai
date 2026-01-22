@@ -68,3 +68,4 @@ dmypy.json
 # Project specific
 .secrets.toml
 settings.local.toml
+data/outputs/*
