@@ -1063,6 +1063,7 @@ def merge_data_with_similarity(
     canonical_cols: list[str] | None = None,  
     canonical_priority: str = "right",          
     drop_canonical_suffix_variants: bool = True,
+    verbose=True,
 ) -> pd.DataFrame:
     """
     Faz merge (com opção de similaridade nas chaves) e atualiza colunas do df_left
@@ -1139,6 +1140,10 @@ def merge_data_with_similarity(
                 
                 # Salvando no dict o resultado obtido
                 match_dict[value] = res.choice if res else None
+                
+                if verbose:
+                    if res:
+                        logger.info(f"Valor: {value} - Match: {res.choice} - Score: {res.score}")
 
             # Salvando no dataframe left usando colunas temporárias
             key_col = f"__key_{r_col}"
