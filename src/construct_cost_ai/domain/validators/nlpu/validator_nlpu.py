@@ -559,10 +559,10 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
 
 def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
     df_right: pd.DataFrame,
-    filter_cols_to_match: dict = None,
-    list_columns_get_df_right: list = None,
     df_left_column: str = None,
     df_choices_column: str = None,
+    filter_cols_to_match: dict = None,
+    list_columns_get_df_right: list = None,
     threshold: int = 80,
     replace_column: bool = False,
     drop_columns_result: bool = False,
@@ -574,10 +574,10 @@ def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
     Args:
         df_left (pd.DataFrame): DataFrame à esquerda (base principal para o match).
         df_right (pd.DataFrame): DataFrame à direita (base de referência para o match).
-        filter_cols_to_match (dict, opcional): Filtros a serem aplicados no DataFrame à esquerda antes do match.
-        list_columns_get_df_right (list, opcional): Colunas do DataFrame à direita a serem incluídas no resultado.
         df_left_column (str, opcional): Nome da coluna no DataFrame à esquerda usada para o match.
         df_choices_column (str, opcional): Nome da coluna no DataFrame à direita usada como referência para o match.
+        filter_cols_to_match (dict, opcional): Filtros a serem aplicados no DataFrame à esquerda antes do match.
+        list_columns_get_df_right (list, opcional): Colunas do DataFrame à direita a serem incluídas no resultado.
         threshold (int, opcional): Pontuação mínima para considerar um match válido. Padrão é 80.
         replace_column (bool, opcional): Substitui a coluna original pelo melhor match, se True. Padrão é False.
         drop_columns_result (bool, opcional): Remove colunas auxiliares do resultado, se True. Padrão é False.
@@ -705,13 +705,19 @@ def validate_nlpu(
                 df_choices_column=settings.get(
                     "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
                 ),
+                filter_cols_to_match=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.filter_cols_to_match"
+                ),
+                list_columns_get_df_right=[],
                 threshold=settings.get(
                     "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
                 ),
-                filter_cols_to_match={"VALIDADOR_LPU": ["ITEM_NAO_LPU"]},
-                list_columns_get_df_right=[],
-                replace_column=False,
-                drop_columns_result=False,
+                replace_column=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.replace_column"
+                ),
+                drop_columns_result=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.drop_columns_result"
+                ),
             )
 
         if verbose:

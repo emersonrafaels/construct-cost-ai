@@ -276,6 +276,15 @@ validator_use_merge_fuzzy_column_left = "NOME"
 # Coluna da LPU para merge fuzzy
 validator_use_merge_fuzzy_column_right = "ITEM"
 
+# Dictionário de colunas para filtro antes do merge fuzzy
+filter_cols_to_match = {"VALIDADOR_LPU" = ["ITEM_NAO_LPU"]}
+
+# Validator para substituir a coluna original pelo melhor match
+replace_column = false
+
+# Validador para remover colunas auxiliares do resultado
+drop_columns_result = false
+
 # Limiar de similaridade para considerar o merge fuzzy
 validator_use_merge_fuzzy_threshold = 80
 
