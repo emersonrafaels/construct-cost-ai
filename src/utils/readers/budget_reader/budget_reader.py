@@ -731,11 +731,13 @@ def append_and_save_results(
     logger.info("Todas as tabelas e metadados foram concatenados com sucesso.")
 
     # Salvando o resultado
-    save_results(output_path=output_path, 
-                 output_file=output_file, 
-                 data_result=data_result, 
-                 metadata_result=metadata_result)
-        
+    save_results(
+        output_path=output_path,
+        output_file=output_file,
+        data_result=data_result,
+        metadata_result=metadata_result,
+    )
+
     return data_result, metadata_result
 
 
@@ -971,7 +973,7 @@ def orchestrate_budget_reader(
         df_all_tables, df_all_metadatas = append_and_save_results(
             all_tables=all_tables,
             all_metadatas=all_metadata,
-            output_path = Path(base_dir, DIR_OUTPUTS),
+            output_path=Path(base_dir, DIR_OUTPUTS),
             output_file=settings.get(
                 "default_budget_reader.result.file_name_output", "budget_reader_output.xlsx"
             ),
