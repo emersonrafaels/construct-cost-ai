@@ -1415,3 +1415,42 @@ def filter_by_merge_column(
         return len(df[df[merge_column].isin(value)])
     except Exception as e:
         return None
+
+
+def filter_dataframe_dict_values(
+    df: pd.DataFrame, filters: Dict[str, Union[str, List[str]]]
+) -> pd.DataFrame:
+    """
+    Filtra um DataFrame com base em um dicionário de colunas e filtros.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser filtrado.
+        filters (Dict[str, Union[str, List[str]]]): Dicionário onde as chaves são os nomes das colunas
+                                                    e os valores são os filtros (string ou lista de valores).
+
+    Returns:
+        pd.DataFrame: DataFrame filtrado.
+    """
+
+    filtered_df = df.copy()
+
+    if isinstance(filters, dict):
+
+        for column, filter_value in filters.items():
+            if column not in filtered_df.columns:
+                raise ValueError(f"A coluna '{column}' não existe no DataFrame.")
+
+            if isinstance(filter_value, str):
+                # Filtra por string
+                filtered_df = filtered_df[filtered_df[column] == filter_value]
+            elif isinstance(filter_value, list):
+                # Filtra por lista de valores
+                filtered_df = filtered_df[filtered_df[column].isin(filter_value)]
+            else:
+                raise ValueError(
+                    f"O filtro para a coluna '{column}' deve ser uma string ou uma lista de valores."
+                )
+
+        return filtered_df
+
+    return df

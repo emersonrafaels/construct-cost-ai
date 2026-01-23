@@ -24,14 +24,24 @@ from pathlib import Path
 base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from construct_cost_ai.domain.validators.lpu.validator_lpu import orchestrate_validate_lpu
+from utils.readers.budget_reader.budget_reader import orchestrate_budget_reader
+from examples.backtest.utils.merge_backtest_saude_esteira import merge_backtest_saude_esteira
 
-def main_orchestrate_validate_lpu():
-    
-    # Executa a validação LPU
-    orchestrate_validate_lpu()
+
+def main_orchestrate_budget_reader():
+
+    # Executando a orquestração do módulo de leitura de orçamentos
+    df_result_tables = orchestrate_budget_reader(
+        Path(Path(__file__).parents[2], "data/inputs/orcamentos"),
+        extensions=[".xlsx", ".xlsm", ".xls"],
+        recursive=True,
+    )
+
+    # Realizando a leitura dos dados de saude da esteira
+    df_result_tables = merge_backtest_saude_esteira(df=df_result_tables)
+
 
 if __name__ == "__main__":
 
-    # Executa a orquestração do módulo de validação LPU
-    main_orchestrate_validate_lpu()
+    # Executando a orquestração do módulo de leitura de orçamentos
+    main_orchestrate_budget_reader()
