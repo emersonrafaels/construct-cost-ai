@@ -34,7 +34,7 @@ from utils.data.data_functions import export_data
 from utils.python_functions import measure_execution_time
 
 
-@measure_execution_time
+@measure_execution_time(condition=True)
 def process_match_value_and_lpu(
     budget_item: str,
     lpu_file: str,
@@ -76,7 +76,7 @@ def process_match_value_and_lpu(
     return matches
 
 
-@measure_execution_time
+@measure_execution_time(condition=True)
 def process_budget_and_lpu(
     budget_file: str,
     lpu_file: str,
@@ -124,7 +124,7 @@ def process_budget_and_lpu(
     budget_df["Percentual Match"] = matches.apply(lambda x: x.score if x else None)
 
     # Salvar o resultado em um arquivo Excel
-    output_file = "data/outputs/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+    output_file = "data/outputs/spec/BASE_SPEC_TESTE_BUDGET_LPU_FUZZY_MATCH.xlsx"
     export_data(data=budget_df, file_path=output_file, index=False)
     print(f"Resultado salvo em: {output_file}")
 

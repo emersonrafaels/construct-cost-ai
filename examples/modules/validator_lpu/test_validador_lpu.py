@@ -102,24 +102,24 @@ def executar_validacao(
 
             logger.info("[1/4] Carregando orçamento...")
             df_orcamento = load_budget(caminho_orcamento)
-            logger.debug(f"      ✅ {len(df_orcamento)} itens carregados")
+            logger.debug(f"   ✅ {len(df_orcamento)} itens carregados")
             logger.debug(f"      📊 Categorias: {df_orcamento['categoria'].nunique()}")
             logger.debug(f"      📋 UPEs: {df_orcamento['cod_upe'].nunique()}")
             logger.debug(f"      💰 Valor total: R$ {df_orcamento['total_orcado'].sum():,.2f}")
 
             logger.info("[2/4] Carregando base LPU...")
             df_lpu = carregar_lpu(caminho_lpu)
-            logger.debug(f"      ✅ {len(df_lpu)} itens carregados")
+            logger.debug(f"   ✅ {len(df_lpu)} itens carregados")
             logger.debug(f"      📚 Fontes: {df_lpu['fonte'].nunique()}")
             logger.debug(f"      🏷️  Fontes disponíveis: {', '.join(df_lpu['fonte'].unique())}")
 
             logger.info("[3/4] Cruzando dados...")
             df_cruzado = cruzar_orcamento_lpu(df_orcamento, df_lpu)
-            logger.debug(f"      ✅ {len(df_cruzado)} itens correspondidos")
+            logger.debug(f"   ✅ {len(df_cruzado)} itens correspondidos")
 
             logger.info("[4/4] Calculando divergências...")
             df_resultado = calcular_divergencias(df_cruzado)
-            logger.debug("      ✅ Cálculos concluídos")
+            logger.debug("   ✅ Cálculos concluídos")
 
             # Salvar resultados
             from construct_cost_ai.domain.validators.lpu.validator_lpu import salvar_resultado
@@ -313,11 +313,11 @@ def executar_validacao(
 
         logger.info("📁 ARQUIVOS GERADOS:")
         logger.debug("-" * 80)
-        logger.debug("   ✅ validacao_lpu.xlsx           - Exportação básica (4 abas)")
-        logger.debug("   ✅ validacao_lpu.csv            - Exportação CSV")
-        logger.debug("   ✅ relatorio_completo_validacao_lpu.xlsx - Relatório completo (11+ abas)")
+        logger.debug("✅ validacao_lpu.xlsx           - Exportação básica (4 abas)")
+        logger.debug("✅ validacao_lpu.csv            - Exportação CSV")
+        logger.debug("✅ relatorio_completo_validacao_lpu.xlsx - Relatório completo (11+ abas)")
         logger.debug("      └─ Estatísticas gerais, Top divergências, Análises por categoria/UPE")
-        logger.debug("   ✅ relatorio_validacao_lpu.html - Relatório HTML interativo")
+        logger.debug("✅ relatorio_validacao_lpu.html - Relatório HTML interativo")
         logger.debug("      └─ Dashboard visual com gráficos e tabelas formatadas")
         logger.debug("-" * 80)
         logger.debug(f"   📂 Localização: {Path(output_dir).resolve()}")

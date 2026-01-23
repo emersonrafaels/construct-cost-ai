@@ -166,7 +166,21 @@ def merge_budget_lpu(
     how: str = "inner",
     validate: str = "many_to_many",
     use_two_stage_merge: bool = False,
+    validator_output_data: bool = False,
+    output_dir_file: str = None,
 ) -> dict:
+    """
+
+    Realiza o cruzamento entre os dados e a base de LPU
+
+    # Args
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
+
+
+    # Returns
+
+    """
 
     # Evita efeito colateral
     budget = df_budget.copy()

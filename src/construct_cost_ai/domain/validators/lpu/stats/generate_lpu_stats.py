@@ -87,9 +87,9 @@ def calculate_validation_stats_and_generate_report(
     if verbose:
         logger.info("")
         logger.info("📊 ESTATÍSTICAS DE VALIDAÇÃO")
-        logger.info("-" * 80)
+        logger.info("-" * 50)
         logger.info(f"   Total de itens validados: {total_items}")
-        logger.info(f"   ✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
+        logger.info(f"✅ OK: {items_ok} ({items_ok/total_items*100:.1f}%)")
         logger.info(
             f"   ⚠️  Para ressarcimento: {items_refund} ({items_refund/total_items*100:.1f}%)"
         )

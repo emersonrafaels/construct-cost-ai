@@ -35,6 +35,7 @@ from utils.data.data_functions import (
     merge_data_with_columns,
     select_columns,
     rename_columns,
+    filter_by_merge_column,
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
@@ -48,6 +49,7 @@ from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
 from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
     calculate_validation_stats_and_generate_report,
 )
+from utils.python_functions import get_item_safe
 
 settings = get_settings()
 
@@ -70,12 +72,16 @@ class MissingColumnsError(ValidatorLPUError):
     pass
 
 
-def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
+def load_budget(
+    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
+) -> pd.DataFrame:
     """
     Carrega o arquivo de orçamento.
 
     Args:
         path: Caminho para o arquivo de orçamento (Excel ou CSV)
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
 
     Returns:
         DataFrame com o orçamento carregado
@@ -112,6 +118,7 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             cells_to_remove_accents=settings.get(
                 "module_validator_lpu.budget_data.cells_to_remove_accents", []
             ),
+            cells_to_strip=True,
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
@@ -145,15 +152,25 @@ def load_budget(file_path: Union[str, Path]) -> pd.DataFrame:
             df, rename_dict=settings.get("module_validator_lpu.budget_data.columns_to_rename")
         )
 
+    # Verificando se é desejado salvar os dados resultantes
+    if validator_output_data:
+        export_data(data=df, file_path=output_dir_file)
+
     return df
 
 
-def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
+def load_metadata(
+    file_path: Union[str, Path] = None,
+    validator_output_data: bool = False,
+    output_dir_file: str = None,
+) -> pd.DataFrame:
     """
     Carrega o arquivo de metadados.
 
     Args:
         file_path: Caminho para o arquivo de metadados (Excel ou CSV). Se não for fornecido, usa o caminho padrão.
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
 
     Returns:
         DataFrame com a base de metadados carregada.
@@ -201,6 +218,10 @@ def load_metadata(file_path: Union[str, Path] = None) -> pd.DataFrame:
         logger.error(f"Erro ao converter tipos de colunas na base de metadados: {e}")
         raise
 
+    # Verificando se é desejado salvar os dados resultantes
+    if validator_output_data:
+        export_data(data=df, file_path=output_dir_file)
+
     return df
 
 
@@ -224,6 +245,7 @@ def identify_lpu_format(
     *,
     expected_core_cols: Tuple[str, str, str] = ("CÓD ITEM", "ITEM", "UN"),
     long_required_cols: Tuple[str, str, str] = ("REGIAO", "GRUPO", "PRECO"),
+    filter_columns_not_matching: bool = True,
 ) -> "LPUFormatReport":
     """
     Identifica se a base está no formato:
@@ -235,6 +257,7 @@ def identify_lpu_format(
         df (pd.DataFrame): DataFrame a ser analisado.
         expected_core_cols (Tuple[str, str, str]): Colunas principais esperadas no DataFrame.
         long_required_cols (Tuple[str, str, str]): Colunas esperadas no formato long.
+        filter_columns_not_matching (bool): Se True, filtra colunas que não correspondem ao padrão esperado.
 
     Returns:
         LPUFormatReport: Relatório contendo o formato identificado e as colunas encontradas.
@@ -253,10 +276,16 @@ def identify_lpu_format(
     found_wide_cols = [col for col in df.columns if col in expected_wide_cols]
 
     # Verifica se todas as colunas principais estão presentes
-    if all(col in df.columns for col in expected_core_cols):
+    if any(col in df.columns for col in expected_core_cols):
+
+        if filter_columns_not_matching:
+            # Filtra colunas que não correspondem ao padrão esperado
+            df = select_columns(df, target_columns=found_wide_cols)
+
         # Se as colunas de preço seguem o padrão esperado, é wide
         if found_wide_cols:
             return LPUFormatReport(format="wide", columns=found_wide_cols)
+
         # Se as colunas 'regiao', 'grupo' e 'preco' estão presentes, é long
         elif all(col in df.columns for col in long_required_cols):
             return LPUFormatReport(
@@ -414,12 +443,16 @@ def convert_lpu(
     return df
 
 
-def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
+def load_lpu(
+    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
+) -> pd.DataFrame:
     """
     Carrega o arquivo base da LPU.
 
     Args:
         file_path: Caminho para o arquivo da LPU
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
 
     Returns:
         DataFrame com a base da LPU carregada
@@ -439,11 +472,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
     # Colunas obrigatórias
     required_columns = settings.get(
         "module_validator_lpu.lpu_data.required_columns_with_types",
-        [
-            "CÓD ITEM",
-            "ITEM",
-            "UN",
-        ],
+        {"CÓD ITEM": "object", "ITEM": "object", "UNID.": "object"},
     )
 
     try:
@@ -461,6 +490,7 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             cells_to_remove_accents=settings.get(
                 "module_validator_lpu.lpu_data.cells_to_remove_accents", []
             ),
+            cells_to_strip=True,
         )
     except Exception as e:
         raise ValidatorLPUError(f"Erro ao carregar base LPU: {e}")
@@ -474,8 +504,15 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
 
     # Detecta formato e converte se necessário
     report = identify_lpu_format(df)
+
     if report.format == "wide":
-        df_wide, df_long = wide_to_long(df, col_to_regiao_grupo=report.columns)
+        df_wide, df_long = wide_to_long(
+            df,
+            id_col=get_item_safe(required_columns, 0, return_key=True),
+            item_col=get_item_safe(required_columns, 1, return_key=True),
+            unit_col=get_item_safe(required_columns, 2, return_key=True),
+            col_to_regiao_grupo=report.columns,
+        )
         logger.info("Convertido LPU de WIDE para LONG.")
     elif report.format == "long":
         # df = long_to_wide(df)
@@ -502,15 +539,23 @@ def load_lpu(file_path: Union[str, Path]) -> pd.DataFrame:
             df_long, rename_dict=settings.get("module_validator_lpu.lpu_data.columns_to_rename")
         )
 
+    # Verificando se é desejado salvar os dados resultantes
+    if validator_output_data:
+        export_data(data=df, file_path=output_dir_file)
+
     return df_wide, df_long
 
 
-def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
+def load_agencies(
+    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
+) -> pd.DataFrame:
     """
     Carrega o arquivo de agências.
 
     Args:
         file_path: Caminho para o arquivo de agências (Excel ou CSV).
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
 
     Returns:
         DataFrame com a base de agências carregada.
@@ -538,6 +583,7 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
             read_data(
                 file_path=file_path,
                 sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
+                header=settings.get("module_validator_lpu.agencies_data.header", 1),
             ),
             columns_to_upper=True,
             cells_to_upper=True,
@@ -566,15 +612,27 @@ def load_agencies(file_path: Union[str, Path]) -> pd.DataFrame:
         logger.error(f"Erro ao converter tipos de colunas na base de agências: {e}")
         raise
 
+    # Verificando se é desejado salvar os dados resultantes
+    if validator_output_data:
+        export_data(data=df, file_path=output_dir_file)
+
     return df
 
 
-def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
+def load_constructors(
+    file_path: Union[str, Path],
+    validator_output_data: bool = False,
+    output_dir_file: str = None,
+    validator_match_fuzzy: bool = False,
+) -> pd.DataFrame:
     """
     Carrega o arquivo de construtoras.
 
     Args:
         file_path: Caminho para o arquivo de construtoras (Excel ou CSV).
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
+        validator_match_fuzzy: Validador se é desejado melhorar o nome das construtoras usando fuzzy matching (Boolean)
 
     Returns:
         DataFrame com a base de construtoras carregada.
@@ -607,6 +665,9 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
             ),
             columns_to_upper=True,
             cells_to_upper=True,
+            columns_to_remove_accents=settings.get(
+                "module_validator_lpu.constructors_data.columns_to_remove_accents", []
+            ),
             cells_to_remove_spaces=settings.get(
                 "module_validator_lpu.constructors_data.cells_to_remove_spaces", []
             ),
@@ -632,6 +693,14 @@ def load_constructors(file_path: Union[str, Path]) -> pd.DataFrame:
         logger.error(f"Erro ao converter tipos de colunas na base de construtoras: {e}")
         raise
 
+    # Valida se é desejado melhorar o nome das construtoras usando fuzzy matching
+    if validator_match_fuzzy:
+        pass
+
+    # Verificando se é desejado salvar os dados resultantes
+    if validator_output_data:
+        export_data(data=df, file_path=output_dir_file)
+
     return df
 
 
@@ -650,10 +719,24 @@ def calculate_total_item(
     Returns:
         pd.DataFrame: DataFrame atualizado com a coluna de valor total orçado calculada ou convertida.
     """
+
+    # Verifica se a coluna de valor total orçado existe
     if column_total_value not in df.columns:
+
+        # Se não existe, ele calcula usando quantidade * preço unitário
         df[column_total_value] = df[column_quantity] * df[column_unit_price]
     else:
+        # Nesse caso a coluna existe, então:
+        # 1 - Garante que está no formato numérico
         df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
+
+        # Filtra linhas onde o valor total é nulo ou menor/igual a zero
+        mask = df[column_total_value].isna() | (df[column_total_value] <= 0)
+
+        # 2 - Recalcula o valor total apenas para essas linhas
+        df.loc[mask, column_total_value] = (
+            df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
+        )
 
     return df
 
@@ -762,6 +845,7 @@ def validate_lpu(
     file_path_lpu: Union[str, Path] = None,
     file_path_agencies: Union[str, Path] = None,
     file_path_constructors: Union[str, Path] = None,
+    base_dir: Union[str, Path] = None,
     output_dir: Union[str, Path] = None,
     output_file: str = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx",
     verbose: bool = True,
@@ -782,6 +866,7 @@ def validate_lpu(
         file_path_lpu: Caminho para o arquivo da LPU (padrão nas configurações).
         file_path_agencies: Caminho para o arquivo de agências (padrão nas configurações).
         file_path_constructors: Caminho para o arquivo de construtoras (padrão nas configurações).
+        base_dir: Diretório raiz do projeto (padrão nas configurações).
         output_dir: Diretório para salvar resultados (padrão nas configurações).
         output_file_name: Nome base para os arquivos de saída (sem extensão).
         verbose: Se True, exibe estatísticas no console.
@@ -807,47 +892,105 @@ def validate_lpu(
 
     try:
         logger.info(f"Carregando orçamento de: {file_path_budget}")
-        df_budget = load_budget(file_path_budget)
+        df_budget = load_budget(
+            file_path_budget,
+            validator_output_data=settings.get(
+                "module_validator_lpu.budget_data.validator_save_sot", True
+            ),
+            output_dir_file=Path(
+                base_dir, settings.get("module_validator_lpu.budget_data.dir_path_file_sot")
+            ),
+        )
         if verbose:
-            logger.info(f"   ✅ Orçamento carregado: {len(df_budget)} itens")
+            logger.info(f"✅ Orçamento carregado: {len(df_budget)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar orçamento: {e}")
         raise ValidatorLPUError(f"Erro ao carregar orçamento: {e}")
 
     try:
         logger.info(f"Carregando metadados de orçamentos de: {file_path_metadata}")
-        df_budget_metadata = load_metadata(file_path_metadata)
+        df_budget_metadata = select_columns(
+            load_metadata(
+                file_path_metadata,
+                validator_output_data=settings.get(
+                    "module_validator_lpu.budget_metadados.validator_save_sot", True
+                ),
+                output_dir_file=Path(
+                    base_dir,
+                    settings.get("module_validator_lpu.budget_metadados.dir_path_file_sot"),
+                ),
+            ),
+            target_columns=settings.get(
+                "module_validator_lpu.budget_metadados.list_columns_select", []
+            ),
+            keep_dataframe_original_target_columns_empty=True,
+        )
         if verbose:
-            logger.info(
-                f"   ✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens"
-            )
+            logger.info(f"✅ Metadados dos orçamentos carregado: {len(df_budget_metadata)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar metadados dos orçamentos: {e}")
         raise ValidatorLPUError(f"Erro ao carregar metadados dos orçamentos: {e}")
 
     try:
         logger.info(f"Carregando LPU de: {file_path_lpu}")
-        df_lpu_wide, df_lpu_long = load_lpu(file_path_lpu)
+        df_lpu_wide, df_lpu_long = load_lpu(
+            file_path_lpu,
+            validator_output_data=settings.get(
+                "module_validator_lpu.lpu_data.validator_save_sot", True
+            ),
+            output_dir_file=Path(
+                base_dir, settings.get("module_validator_lpu.lpu_data.dir_path_file_sot")
+            ),
+        )
         if verbose:
-            logger.info(f"   ✅ LPU carregada: {len(df_lpu_long)} itens")
+            logger.info(f"✅ LPU carregada: {len(df_lpu_long)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar LPU: {e}")
         raise ValidatorLPUError(f"Erro ao carregar LPU: {e}")
 
     try:
         logger.info(f"Carregando agências de: {file_path_agencies}")
-        df_agencies = load_agencies(file_path_agencies)
+        df_agencies = select_columns(
+            load_agencies(
+                file_path_agencies,
+                validator_output_data=settings.get(
+                    "module_validator_lpu.agencies_data.validator_save_sot", True
+                ),
+                output_dir_file=Path(
+                    base_dir, settings.get("module_validator_lpu.agencies_data.dir_path_file_sot")
+                ),
+            ),
+            target_columns=settings.get(
+                "module_validator_lpu.agencies_data.list_columns_select", []
+            ),
+            keep_dataframe_original_target_columns_empty=True,
+        )
         if verbose:
-            logger.info(f"   ✅ Agências carregadas: {len(df_agencies)} itens")
+            logger.info(f"✅ Agências carregadas: {len(df_agencies)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar agências: {e}")
         raise ValidatorLPUError(f"Erro ao carregar agências: {e}")
 
     try:
         logger.info(f"Carregando construtoras de: {file_path_constructors}")
-        df_constructors = load_constructors(file_path_constructors)
+        df_constructors = select_columns(
+            load_constructors(
+                file_path_constructors,
+                validator_output_data=settings.get(
+                    "module_validator_lpu.constructors_data.validator_save_sot", True
+                ),
+                output_dir_file=Path(
+                    base_dir,
+                    settings.get("module_validator_lpu.constructors_data.dir_path_file_sot"),
+                ),
+            ),
+            target_columns=settings.get(
+                "module_validator_lpu.constructors_data.list_columns_select", []
+            ),
+            keep_dataframe_original_target_columns_empty=True,
+        )
         if verbose:
-            logger.info(f"   ✅ Construtoras carregadas: {len(df_constructors)} itens")
+            logger.info(f"✅ Construtoras carregadas: {len(df_constructors)} itens")
     except Exception as e:
         logger.error(f"Erro ao carregar construtoras: {e}")
         raise ValidatorLPUError(f"Erro ao carregar construtoras: {e}")
@@ -855,6 +998,11 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget e metadados
         logger.info(f"🔗 Cruzando orçamento com Metadados")
+
+        indicator = settings.get(
+            "module_validator_lpu.merge_budget_metadata.indicator", "_merge_bud_met"
+        )
+
         df_merge_budget_metadata = merge_data_with_columns(
             df_left=df_budget,
             df_right=df_budget_metadata,
@@ -865,10 +1013,23 @@ def validate_lpu(
             validate=settings.get(
                 "module_validator_lpu.merge_budget_metadata.validate", "many_to_one"
             ),
+            indicator=indicator,
+            validator_output_data=settings.get(
+                "module_validator_lpu.merge_budget_metadata.validator_save_sot", True
+            ),
+            output_dir_file=Path(
+                base_dir,
+                settings.get("module_validator_lpu.merge_budget_metadata.dir_path_file_sot"),
+            ),
         )
+
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata.shape}")
+
+            logger.info(
+                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata, merge_column=indicator)}"
+            )
+            logger.info(f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata.shape}")
+
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -876,6 +1037,12 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget/metadados e agencias
         logger.info(f"🔗 Cruzando orçamento com Agências")
+
+        indicator = settings.get(
+            "module_validator_lpu.merge_budget_metadata_agencies.indicator",
+            "_merge_bud_met_age",
+        )
+
         df_merge_budget_metadata_agencias = merge_data_with_columns(
             df_left=df_merge_budget_metadata,
             df_right=df_agencies,
@@ -886,10 +1053,26 @@ def validate_lpu(
             validate=settings.get(
                 "module_validator_lpu.merge_budget_metadata_agencies.validate", "many_to_one"
             ),
+            indicator=indicator,
+            validator_output_data=settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies.validator_save_sot", True
+            ),
+            output_dir_file=Path(
+                base_dir,
+                settings.get(
+                    "module_validator_lpu.merge_budget_metadata_agencies.dir_path_file_sot"
+                ),
+            ),
         )
+
         if verbose:
-            logger.info(f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias)}")
-            logger.info(f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias.shape}")
+
+            logger.info(
+                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata_agencias, merge_column=indicator)}"
+            )
+
+            logger.info(f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias.shape}")
+
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -897,6 +1080,12 @@ def validate_lpu(
     try:
         # Realiza o merge entre budget/metadados/construtoras e agencias
         logger.info(f"🔗 Cruzando orçamento com Construtoras")
+
+        indicator = settings.get(
+            "module_validator_lpu.merge_budget_metadata_agencies_constructors.indicator",
+            "_merge_bud_met_age_constr",
+        )
+
         df_merge_budget_metadata_agencias_constructors = merge_data_with_columns(
             df_left=df_merge_budget_metadata_agencias,
             df_right=df_constructors,
@@ -914,14 +1103,31 @@ def validate_lpu(
                 "module_validator_lpu.merge_budget_metadata_agencies_constructors.validate",
                 "many_to_one",
             ),
+            indicator=indicator,
+            use_similarity_for_unmatched=True,
+            similarity_threshold=70,
+            validator_output_data=settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_save_sot",
+                True,
+            ),
+            output_dir_file=Path(
+                base_dir,
+                settings.get(
+                    "module_validator_lpu.merge_budget_metadata_agencies_constructors.dir_path_file_sot"
+                ),
+            ),
         )
+
         if verbose:
+
             logger.info(
-                f"   ✅ Itens cruzados: {len(df_merge_budget_metadata_agencias_constructors)}"
+                f"✅ Itens cruzados: {filter_by_merge_column(df=df_merge_budget_metadata_agencias_constructors, merge_column=indicator)}"
             )
+
             logger.info(
-                f"   ✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias_constructors.shape}"
+                f"✅ Qtd de linhas e colunas: {df_merge_budget_metadata_agencias_constructors.shape}"
             )
+
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
@@ -943,12 +1149,31 @@ def validate_lpu(
             how=settings.get("module_validator_lpu.merge_budget_lpu.how", "left"),
             validate=settings.get("module_validator_lpu.merge_budget_lpu.validate", "many_to_one"),
             use_two_stage_merge=True,
+            validator_output_data=settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_save_sot",
+                True,
+            ),
+            output_dir_file=Path(
+                base_dir,
+                settings.get(
+                    "module_validator_lpu.merge_budget_metadata_agencies_constructors.dir_path_file_sot"
+                ),
+            ),
         )
+
         if verbose:
-            logger.info(f"   ✅ Itens cruzados com a LPU: {len_merged}")
+            logger.info(f"✅ Itens cruzados com a LPU: {len_merged}")
+
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
+
+    # Salvar o resultado em um arquivo Excel
+    export_data(
+        data=df_merge_budget_metadata_agencias_constructors_lpu,
+        file_path=Path(output_dir, "PRE_CALCULATE_LPU_DISCREPANCIES.xlsx"),
+        index=False,
+    )
 
     # 3. Calcula discrepâncias
     try:
@@ -976,13 +1201,6 @@ def validate_lpu(
     export_data(
         data=df_result,
         file_path=Path(output_dir, output_file),
-        index=False,
-    )
-
-    # Salvar o resultado em um arquivo Excel
-    export_data(
-        data=df_result,
-        file_path=Path(output_dir, output_file.replace(".xlsx", ".csv")),
         index=False,
     )
 
@@ -1034,27 +1252,42 @@ def orchestrate_validate_lpu(
     """
     # Configura caminhos padrão se não fornecidos
     base_dir = Path(__file__).parents[5]
+
+    # Define os caminhos dos arquivos com base nas configurações ou argumentos fornecidos
+    # Arquivo de orçamento
     path_file_budget = Path(
         base_dir,
         file_path_budget or settings.get("module_validator_lpu.budget_data.file_path"),
     )
+
+    # Arquivo de metadados
     path_file_metadata = Path(
         base_dir,
         file_path_metadata or settings.get("module_validator_lpu.budget_metadados.file_path"),
     )
+
+    # Arquivo da LPU
     path_file_lpu = Path(
         base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path")
     )
+
+    # Arquivo de com as informações das agências
     path_file_agencies = Path(
         base_dir, file_path_agencies or settings.get("module_validator_lpu.agencies_data.file_path")
     )
+
+    # Arquivo com as informações das construtoras
     path_file_constructors = Path(
         base_dir,
         file_path_constructors or settings.get("module_validator_lpu.constructors_data.file_path"),
     )
+
+    # Diretório de outputs dos resultados
     output_dir = Path(
         base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir")
     )
+
+    # Nome do arquivo de output
     output_file = output_file or settings.get(
         "module_validator_lpu.output_settings.file_path_output"
     )
@@ -1072,6 +1305,7 @@ def orchestrate_validate_lpu(
             file_path_lpu=path_file_lpu,
             file_path_agencies=path_file_agencies,
             file_path_constructors=path_file_constructors,
+            base_dir=base_dir,
             output_dir=output_dir,
             output_file=output_file,
             verbose=verbose,

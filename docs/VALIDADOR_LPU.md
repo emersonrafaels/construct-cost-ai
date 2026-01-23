@@ -265,18 +265,18 @@ VALIDADOR LPU - Conciliação de Orçamento vs Base de Preços
 ================================================================================
 
 📂 Carregando arquivos...
-   ✅ Orçamento carregado: 77 itens
-   ✅ LPU carregado: 100 itens
+✅ Orçamento carregado: 77 itens
+✅ LPU carregado: 100 itens
 
 🔗 Cruzando orçamento com LPU...
-   ✅ Itens cruzados: 75
+✅ Itens cruzados: 75
 
 🧮 Calculando divergências (tolerância ZERO)...
 
 📊 ESTATÍSTICAS DA VALIDAÇÃO
 --------------------------------------------------------------------------------
    Total de itens validados: 75
-   ✅ OK: 45 (60.0%)
+✅ OK: 45 (60.0%)
    ⚠️  Para ressarcimento: 18 (24.0%)
    📉 Abaixo LPU: 12 (16.0%)
 

@@ -106,24 +106,24 @@ def executar_validacao(
 
             print("\n[1/4] Carregando orçamento...")
             df_orcamento = load_budget(caminho_orcamento)
-            print(f"      ✅ {len(df_orcamento)} itens carregados")
+            print(f"   ✅ {len(df_orcamento)} itens carregados")
             print(f"      📊 Categorias: {df_orcamento['categoria'].nunique()}")
             print(f"      📋 UPEs: {df_orcamento['cod_upe'].nunique()}")
             print(f"      💰 Valor total: R$ {df_orcamento['total_orcado'].sum():,.2f}")
 
             print("\n[2/4] Carregando base LPU...")
             df_lpu = carregar_lpu(caminho_lpu)
-            print(f"      ✅ {len(df_lpu)} itens carregados")
+            print(f"   ✅ {len(df_lpu)} itens carregados")
             print(f"      📚 Fontes: {df_lpu['fonte'].nunique()}")
             print(f"      🏷️  Fontes disponíveis: {', '.join(df_lpu['fonte'].unique())}")
 
             print("\n[3/4] Cruzando dados...")
             df_cruzado = cruzar_orcamento_lpu(df_orcamento, df_lpu)
-            print(f"      ✅ {len(df_cruzado)} itens correspondidos")
+            print(f"   ✅ {len(df_cruzado)} itens correspondidos")
 
             print("\n[4/4] Calculando divergências...")
             df_resultado = calcular_divergencias(df_cruzado)
-            print("      ✅ Cálculos concluídos\n")
+            print("   ✅ Cálculos concluídos\n")
 
             # Salvar resultados
             from construct_cost_ai.domain.validators.lpu.validator_lpu import salvar_resultado
@@ -537,7 +537,7 @@ def exemplo_4_uso_modular():
             output_dir=base_dir / "outputs",
             verbose=False,
         )
-        print(f"   ✅ Validação concluída: {len(df_resultado)} itens processados")
+        print(f"✅ Validação concluída: {len(df_resultado)} itens processados")
 
         return df_resultado
 

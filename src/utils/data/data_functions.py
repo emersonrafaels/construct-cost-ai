@@ -63,13 +63,16 @@ from typing import Dict, List, Optional, Tuple, Union
 import json
 
 import pandas as pd
+from rapidfuzz import process, fuzz
 from unidecode import unidecode
+from utils.fuzzy.fuzzy_validations import fuzzy_match
 
 # Adiciona o diretório src ao path
 base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
+from utils.python_functions import to_float_resilient
 
 
 def read_data(
@@ -77,6 +80,7 @@ def read_data(
     sheet_name: Optional[Union[str, int]] = None,
     header: Optional[Union[int, List[int]]] = 0,
     default_sheet: Optional[Union[str, List[str]]] = ["Sheet1", "Planilha1", "Plan1"],
+    engine: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Lê dados de vários formatos de arquivo usando a extensão do arquivo para determinar o método apropriado.
@@ -87,6 +91,7 @@ def read_data(
         sheet_name (Optional[Union[str, int]]): Nome ou índice da aba a ser lida (para arquivos Excel). Padrão é None.
         header (Optional[Union[int, List[int]]]): Número(s) da(s) linha(s) a ser(em) usada(s) como nomes das colunas. Padrão é 0.
         default_sheet (Optional[Union[str, List[str]]]): Nome ou lista de nomes das abas padrão a serem lidas se a aba especificada não for encontrada.
+        engine (Optional[str]): Motor a ser usado para leitura de arquivos Excel. Padrão é None.
 
     Returns:
         pd.DataFrame: DataFrame contendo os dados lidos.
@@ -106,7 +111,9 @@ def read_data(
     # Definindo os leitores disponíveis no data functions
     readers = {
         ".csv": lambda path: pd.read_csv(path, header=header),
-        ".xlsx": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
+        ".xlsx": lambda path: pd.read_excel(
+            path, sheet_name=sheet_name, header=header, engine=engine
+        ),
         ".xls": lambda path: pd.read_excel(path, sheet_name=sheet_name, header=header),
         ".xlsm": lambda path: pd.read_excel(
             path, sheet_name=sheet_name, header=header
@@ -234,116 +241,113 @@ def transform_case(
     cells_to_remove_spaces: Union[List[str], str, bool] = None,
     columns_to_remove_accents: Union[List[str], str, bool] = None,
     cells_to_remove_accents: Union[List[str], str, bool] = None,
+    columns_to_strip: Union[List[str], str, bool] = None,
+    cells_to_strip: Union[List[str], str, bool] = None,
 ) -> pd.DataFrame:
     """
     Aplica transformações específicas em colunas e células de um DataFrame, como transformar em maiúsculas/minúsculas,
-    remover espaços e remover acentos.
-
-    Args:
-        df (pd.DataFrame): DataFrame a ser transformado.
-        columns_to_upper (Union[List[str], str, bool]): Colunas para transformar os nomes em maiúsculas. Use True para todas.
-        cells_to_upper (Union[List[str], str, bool]): Colunas para transformar os valores das células em maiúsculas. Use True para todas.
-        columns_to_lower (Union[List[str], str, bool]): Colunas para transformar os nomes em minúsculas. Use True para todas.
-        cells_to_lower (Union[List[str], str, bool]): Colunas para transformar os valores das células em minúsculas. Use True para todas.
-        columns_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos nomes. Use True para todas.
-        cells_to_remove_spaces (Union[List[str], str, bool]): Colunas para remover espaços dos valores das células. Use True para todas.
-        columns_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos nomes. Use True para todas.
-        cells_to_remove_accents (Union[List[str], str, bool]): Colunas para remover acentos dos valores das células. Use True para todas.
-
-    Returns:
-        pd.DataFrame: DataFrame com as transformações aplicadas.
+    remover espaços, remover acentos e aplicar strip.
     """
 
     def transform_value(
-        value, to_upper=False, to_lower=False, remove_spaces=False, remove_accents=False
+        value,
+        to_upper=False,
+        to_lower=False,
+        remove_spaces=False,
+        remove_accents=False,
+        strip=False,
     ):
         """Aplica transformações a um único valor."""
-        if isinstance(value, str):
-            if remove_accents:
-                value = unidecode(value)
-            if remove_spaces:
-                value = value.replace(" ", "")
-            if to_upper:
-                value = value.upper()
-            if to_lower:
-                value = value.lower()
+        if not isinstance(value, str):
+            return value
+        if remove_accents:
+            value = unidecode(value)
+        if remove_spaces:
+            value = value.replace(" ", "")
+        if to_upper:
+            value = value.upper()
+        if to_lower:
+            value = value.lower()
+        if strip:
+            value = value.strip()
         return value
 
-    def resolve_columns(param):
+    def resolve_columns(param, current_columns):
         """Resolve o parâmetro para retornar uma lista de colunas."""
         if param in [True, "true", "True"]:
-            return df.columns.tolist()
+            return list(current_columns)
         elif isinstance(param, str):
             return [param]
         elif isinstance(param, list):
             return param
         return []
 
-    # Garantir que os nomes das colunas sejam strings
+    # Garantir nomes de colunas como string
     df.columns = df.columns.map(str)
+    col_names = list(df.columns)
 
-    # Resolver colunas para cada transformação
-    columns_to_upper = resolve_columns(columns_to_upper)
-    cells_to_upper = resolve_columns(cells_to_upper)
-    columns_to_lower = resolve_columns(columns_to_lower)
-    cells_to_lower = resolve_columns(cells_to_lower)
-    columns_to_remove_spaces = resolve_columns(columns_to_remove_spaces)
-    cells_to_remove_spaces = resolve_columns(cells_to_remove_spaces)
-    columns_to_remove_accents = resolve_columns(columns_to_remove_accents)
-    cells_to_remove_accents = resolve_columns(cells_to_remove_accents)
+    def apply_col_transform(cols, func):
+        nonlocal col_names
+        updated = []
+        for col in cols:
+            if col in col_names:
+                new_col = func(col)
+                idx = col_names.index(col)
+                col_names[idx] = new_col
+                updated.append(new_col)
+        return updated
 
-    # Mapeamento para rastrear mudanças nos nomes das colunas
-    column_mapping = {col: col for col in df.columns}
+    # Resolve listas de colunas para cada transformação
+    col_transforms = [
+        ("columns_to_upper", lambda c: c.upper()),
+        ("columns_to_lower", lambda c: c.lower()),
+        ("columns_to_remove_spaces", lambda c: c.replace(" ", "")),
+        ("columns_to_remove_accents", unidecode),
+        ("columns_to_strip", lambda c: c.strip()),
+    ]
+    params = {
+        "columns_to_upper": columns_to_upper,
+        "columns_to_lower": columns_to_lower,
+        "columns_to_remove_spaces": columns_to_remove_spaces,
+        "columns_to_remove_accents": columns_to_remove_accents,
+        "columns_to_strip": columns_to_strip,
+    }
 
-    # Transformar nomes de colunas
-    if columns_to_upper:
-        column_mapping.update(
-            {col: col.upper() for col in columns_to_upper if col in column_mapping}
-        )
-    if columns_to_lower:
-        column_mapping.update(
-            {col: col.lower() for col in columns_to_lower if col in column_mapping}
-        )
-    if columns_to_remove_spaces:
-        column_mapping.update(
-            {col: col.replace(" ", "") for col in columns_to_remove_spaces if col in column_mapping}
-        )
-    if columns_to_remove_accents:
-        column_mapping.update(
-            {col: unidecode(col) for col in columns_to_remove_accents if col in column_mapping}
-        )
+    # Aplica transformações sequenciais e atualiza listas
+    for key, func in col_transforms:
+        cols = resolve_columns(params[key], col_names)
+        updated_cols = apply_col_transform(cols, func)
+        # Atualiza os parâmetros com os novos nomes das colunas
+        params[key] = updated_cols
 
-    # Atualizar os nomes das colunas no DataFrame
-    df.rename(columns=column_mapping, inplace=True)
+    # Atualiza os nomes das colunas no DataFrame
+    df.columns = col_names
 
-    # Atualizar os parâmetros de células com os novos nomes das colunas
-    def update_column_list(columns):
-        if columns:
-            return [column_mapping.get(col, col) for col in columns]
-        return []
+    # Atualiza listas de colunas para células com nomes finais
+    cells_params = {
+        "cells_to_upper": cells_to_upper,
+        "cells_to_lower": cells_to_lower,
+        "cells_to_remove_spaces": cells_to_remove_spaces,
+        "cells_to_remove_accents": cells_to_remove_accents,
+        "cells_to_strip": cells_to_strip,
+    }
 
-    cells_to_upper = update_column_list(cells_to_upper)
-    cells_to_lower = update_column_list(cells_to_lower)
-    cells_to_remove_spaces = update_column_list(cells_to_remove_spaces)
-    cells_to_remove_accents = update_column_list(cells_to_remove_accents)
+    for key in cells_params:
+        cells_params[key] = resolve_columns(cells_params[key], df.columns)
 
-    # Transformar valores das células
-    if cells_to_upper:
-        for col in cells_to_upper:
+    # Aplica transformações nas células
+    cells_ops = [
+        ("cells_to_upper", dict(to_upper=True)),
+        ("cells_to_lower", dict(to_lower=True)),
+        ("cells_to_remove_spaces", dict(remove_spaces=True)),
+        ("cells_to_remove_accents", dict(remove_accents=True)),
+        ("cells_to_strip", dict(strip=True)),
+    ]
+
+    for key, kwargs in cells_ops:
+        for col in cells_params[key]:
             if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, to_upper=True))
-    if cells_to_lower:
-        for col in cells_to_lower:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, to_lower=True))
-    if cells_to_remove_spaces:
-        for col in cells_to_remove_spaces:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, remove_spaces=True))
-    if cells_to_remove_accents:
-        for col in cells_to_remove_accents:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: transform_value(x, remove_accents=True))
+                df[col] = df[col].apply(lambda x: transform_value(x, **kwargs))
 
     return df
 
@@ -403,6 +407,38 @@ def rename_columns(df: pd.DataFrame, rename_dict: Union[dict, "Box"]) -> pd.Data
     return df
 
 
+def drop_columns(
+    df: pd.DataFrame, drop_column_list: Union[str, List[str]], inplace: bool = False
+) -> pd.DataFrame:
+    """
+    Remove colunas de um DataFrame de forma resiliente, ignorando colunas que não existem.
+
+    Args:
+        df (pd.DataFrame): DataFrame original.
+        columns (Union[str, List[str]]): Nome ou lista de nomes das colunas a serem removidas.
+        inplace (bool): Se True, modifica o DataFrame original. Caso contrário, retorna uma cópia. Default é False.
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas removidas (se inplace=False).
+
+    Raises:
+        ValueError: Se `columns` não for uma string ou uma lista de strings.
+    """
+    if isinstance(drop_column_list, str):
+        drop_column_list = [drop_column_list]
+    elif not isinstance(drop_column_list, list):
+        raise ValueError("O parâmetro 'columns' deve ser uma string ou uma lista de strings.")
+
+    # Filtra apenas as colunas que existem no DataFrame
+    existing_columns = [col for col in drop_column_list if col in df.columns]
+
+    if inplace:
+        df.drop(columns=existing_columns, inplace=True)
+        return df
+    else:
+        return df.drop(columns=existing_columns, inplace=False)
+
+
 def ensure_columns_exist(df: pd.DataFrame, columns: list, default_value=None) -> pd.DataFrame:
     """
     Garante que todas as colunas especificadas existam no DataFrame, criando-as com um valor padrão se necessário.
@@ -421,13 +457,18 @@ def ensure_columns_exist(df: pd.DataFrame, columns: list, default_value=None) ->
     return df
 
 
-def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
+def select_columns(
+    df: pd.DataFrame,
+    target_columns: list,
+    keep_dataframe_original_target_columns_empty: bool = True,
+) -> pd.DataFrame:
     """
     Seleciona colunas de um DataFrame com base em uma lista de colunas alvo, mantendo a ordem fornecida.
 
     Args:
         df (pd.DataFrame): DataFrame original.
         target_columns (list): Lista de nomes de colunas desejadas.
+        keep_dataframe_original_target_columns_empty
 
     Returns:
         pd.DataFrame: DataFrame com as colunas correspondentes selecionadas.
@@ -435,8 +476,16 @@ def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
     # Verifica quais colunas da lista alvo existem no DataFrame
     existing_columns = [col for col in target_columns if col in df.columns]
 
-    # Retorna o DataFrame com as colunas existentes na ordem fornecida
-    return df[existing_columns]
+    # Se não há coluna para filtrar e está com opção de manter dataframe original caso essa condição aconteça
+    if not existing_columns and keep_dataframe_original_target_columns_empty:
+
+        # Retorna o DataFrame original
+        return df
+
+    else:
+
+        # Retorna o DataFrame com as colunas existentes na ordem fornecida
+        return df[existing_columns]
 
 
 def export_to_json(
@@ -492,42 +541,6 @@ def export_to_json(
         raise RuntimeError(f"Erro ao exportar para JSON em {file_path}: {str(e)}")
 
 
-# Example usage:
-if __name__ == "__main__":
-    # Reading example
-    try:
-        df = read_data("sample.csv")
-        print("Data read successfully")
-    except Exception as e:
-        print(f"Error reading data: {e}")
-
-    # Single DataFrame export example
-    try:
-        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
-        export_data(df, "output/single_sheet.xlsx", create_dirs=True)
-        print("Single sheet exported successfully")
-    except Exception as e:
-        print(f"Error exporting single sheet: {e}")
-
-    # Multi-sheet Excel export example
-    try:
-        sheets = {
-            "Sheet1": pd.DataFrame({"A": [1, 2], "B": [3, 4]}),
-            "Sheet2": pd.DataFrame({"C": [5, 6], "D": [7, 8]}),
-        }
-        export_data(sheets, "output/multi_sheet.xlsx", create_dirs=True)
-        print("Multiple sheets exported successfully")
-    except Exception as e:
-        print(f"Error exporting multiple sheets: {e}")
-
-    # JSON export example
-    try:
-        export_to_json(df, "output/data.json", create_dirs=True)
-        print("Data exported to JSON successfully")
-    except Exception as e:
-        print(f"Error exporting to JSON: {e}")
-
-
 def cast_columns(df: pd.DataFrame, column_types: Dict[str, Union[str, type]]) -> pd.DataFrame:
     """
     Tenta converter as colunas de um DataFrame para os tipos especificados.
@@ -577,7 +590,11 @@ def cast_columns(df: pd.DataFrame, column_types: Dict[str, Union[str, type]]) ->
                             {0: ""} if col_type == "int" else {pd.NA: "", None: ""}
                         )
                     else:
-                        df[column] = df[column].astype(col_type)
+                        if col_type in ["float64", "float32", "float"]:
+                            # Aplica a conversão para float
+                            df[column] = df[column].apply(to_float_resilient)
+                        else:
+                            df[column] = df[column].astype(col_type)
             except Exception as e:
                 raise ValueError(
                     f"Erro ao converter a coluna '{column}' para o tipo '{col_type}': {e}"
@@ -594,25 +611,30 @@ def merge_data(
     right_on: list,
     how: str = "inner",
     suffixes: tuple = ("_left", "_right"),
+    use_similarity_for_unmatched: bool = False,  # Renomeado para indicar uso em cenários de não correspondência
+    similarity_threshold: float = 90.0,
 ) -> pd.DataFrame:
     """
-    Perform a generic merge between two DataFrames.
+    Realiza um merge genérico entre dois DataFrames, com opção de correspondência baseada em similaridade para linhas não correspondidas.
 
     Args:
-        df_left (pd.DataFrame): The left DataFrame.
-        df_right (pd.DataFrame): The right DataFrame.
-        left_on (list): Columns to merge on from the left DataFrame.
-        right_on (list): Columns to merge on from the right DataFrame.
-        how (str): Type of merge to perform. Defaults to "inner".
-        suffixes (tuple): Suffixes to apply to overlapping column names. Defaults to ("_left", "_right").
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        how (str): Tipo de merge a ser realizado. Padrão é "inner".
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
+        use_similarity_for_unmatched (bool): Se True, realiza um merge secundário usando similaridade para linhas não correspondidas. Padrão é False.
+        similarity_threshold (float): Pontuação mínima de similaridade (0-100) para considerar uma correspondência. Padrão é 90.0.
 
     Returns:
-        pd.DataFrame: The merged DataFrame.
+        pd.DataFrame: O DataFrame resultante do merge.
 
     Raises:
-        ValueError: If the merge operation fails.
+        ValueError: Se ocorrer um erro durante a operação de merge.
     """
     try:
+        # Realiza o merge inicial
         merged_df = pd.merge(
             df_left,
             df_right,
@@ -621,10 +643,46 @@ def merge_data(
             how=how,
             suffixes=suffixes,
         )
+
+        # Se o uso de similaridade para linhas não correspondidas estiver ativado
+        if use_similarity_for_unmatched and how in ["inner", "left"]:
+            # Identifica as linhas não correspondidas no DataFrame da esquerda
+            unmatched_left = df_left[~df_left[left_on[0]].isin(merged_df[left_on[0]])]
+
+            # Realiza a correspondência baseada em similaridade para as linhas não correspondidas
+            for l_col, r_col in zip(left_on, right_on):
+                unmatched_left[f"{l_col}_matched"] = unmatched_left[l_col].apply(
+                    lambda x: (
+                        process.extractOne(
+                            x, df_right[r_col], scorer=fuzz.ratio, score_cutoff=similarity_threshold
+                        )[0]
+                        if x is not None
+                        else None
+                    )
+                )
+
+            # Substitui as colunas para usar os valores correspondidos
+            similarity_left_on = [f"{col}_matched" for col in left_on]
+
+            # Realiza o merge das linhas não correspondidas usando similaridade
+            similarity_merged = pd.merge(
+                unmatched_left,
+                df_right,
+                left_on=similarity_left_on,
+                right_on=right_on,
+                how="inner",
+                suffixes=suffixes,
+            )
+
+            # Combina o merge original com o merge baseado em similaridade
+            merged_df = pd.concat([merged_df, similarity_merged], ignore_index=True)
+
         return merged_df
+
     except Exception as e:
-        logger.error(f"Error during merge: {e}")
-        raise ValueError(f"Error during merge: {e}")
+        # Loga o erro e levanta uma exceção com a mensagem
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
 
 
 def perform_merge(
@@ -637,7 +695,7 @@ def perform_merge(
     validate: Optional[str],
     indicator: bool,
     handle_duplicates: bool,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, List[str]]:
     """
     Função auxiliar para realizar o merge entre dois DataFrames, com tratamento de duplicidades.
 
@@ -653,10 +711,22 @@ def perform_merge(
         handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
 
     Returns:
-        pd.DataFrame: DataFrame resultante do merge.
+        Tuple[pd.DataFrame, List[str]]: DataFrame resultante do merge e lista de colunas criadas no processo.
     """
     try:
-        return pd.merge(
+        # Remove a coluna '_merge' se indicator estiver ativado e ela já existir
+        if indicator:
+            if (indicator in df_left.columns) or ("_merge" in df_left.columns):
+                logger.warning(
+                    "A coluna '_merge' já existe no DataFrame da esquerda. Ela será removida."
+                )
+                df_left = drop_columns(df=df_left, drop_column_list=[indicator, "_merge"])
+
+        # Lista de colunas antes do merge
+        original_columns = list(df_left.columns)
+
+        # Realiza o merge
+        df_merged = pd.merge(
             df_left,
             df_right,
             left_on=left_on,
@@ -666,11 +736,16 @@ def perform_merge(
             validate=validate,
             indicator=indicator,
         )
+
+        # Identifica as colunas criadas após o merge, preservando a ordem
+        new_columns = [col for col in df_merged.columns if col not in original_columns]
+
+        return df_merged, new_columns
     except pd.errors.MergeError as e:
         if handle_duplicates and "not a many-to-one merge" in str(e):
             logger.warning("Removendo duplicidades para tentar novamente o merge.")
             df_right = df_right.drop_duplicates(subset=right_on)
-            return pd.merge(
+            df_merged = pd.merge(
                 df_left,
                 df_right,
                 left_on=left_on,
@@ -680,6 +755,9 @@ def perform_merge(
                 validate=validate,
                 indicator=indicator,
             )
+            # Identifica as colunas criadas após o merge, preservando a ordem
+            new_columns = [col for col in df_merged.columns if col not in original_columns]
+            return df_merged, new_columns
         logger.error(f"Erro durante o merge: {e}")
         raise ValueError(f"Erro durante o merge: {e}")
 
@@ -696,13 +774,38 @@ def merge_data_with_columns(
     validate: str = None,
     indicator: bool = False,
     handle_duplicates: bool = False,
+    use_similarity_for_unmatched: bool = False,  # Adicionado para habilitar similaridade
+    similarity_threshold: float = 90.0,  # Adicionado para definir o limite de similaridade
+    validator_output_data: bool = False,
+    output_dir_file: str = None,
 ) -> pd.DataFrame:
     """
-    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas e lidar com duplicidades.
+    Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas, lidar com duplicidades e usar similaridade para linhas não correspondidas.
 
-    Parâmetros:
-        (mesmos parâmetros da função original)
+    Args:
+        df_left (pd.DataFrame): DataFrame da esquerda.
+        df_right (pd.DataFrame): DataFrame da direita.
+        left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
+        right_on (list): Colunas do DataFrame da direita para realizar o merge.
+        selected_left_columns (list, opcional): Colunas adicionais do DataFrame da esquerda a serem incluídas no merge.
+        selected_right_columns (list, opcional): Colunas adicionais do DataFrame da direita a serem incluídas no merge.
+        how (str): Tipo de merge a ser realizado. Padrão é "inner".
+        suffixes (tuple): Sufixos aplicados a colunas sobrepostas. Padrão é ("_left", "_right").
+        validate (str, opcional): Valida o tipo de relacionamento entre os DataFrames.
+        indicator (bool): Se True, adiciona uma coluna indicando a origem de cada linha no merge.
+        handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
+        use_similarity_for_unmatched (bool): Se True, realiza um merge secundário usando similaridade para linhas não correspondidas. Padrão é False.
+        similarity_threshold (float): Pontuação mínima de similaridade (0-100) para considerar uma correspondência. Padrão é 90.0.
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
+
+    Returns:
+        pd.DataFrame: O DataFrame resultante do merge.
+
+    Raises:
+        ValueError: Se ocorrer um erro durante a operação de merge.
     """
+
     # Filtra as colunas do DataFrame da esquerda, se especificado
     if selected_left_columns:
         df_left = df_left[left_on + selected_left_columns]
@@ -711,18 +814,83 @@ def merge_data_with_columns(
     if selected_right_columns:
         df_right = df_right[right_on + selected_right_columns]
 
-    # Realiza o merge usando a função auxiliar
-    return perform_merge(
-        df_left=df_left,
-        df_right=df_right,
-        left_on=left_on,
-        right_on=right_on,
-        how=how,
-        suffixes=suffixes,
-        validate=validate,
-        indicator=indicator,
-        handle_duplicates=handle_duplicates,
-    )
+    try:
+        # Realiza o merge inicial usando a função perform_merge
+        merged_df, new_cols = perform_merge(
+            df_left=df_left,
+            df_right=df_right,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=suffixes,
+            validate=validate,
+            indicator=indicator,
+            handle_duplicates=handle_duplicates,
+        )
+
+        # Se o uso de similaridade para linhas não correspondidas estiver ativado
+        if use_similarity_for_unmatched and how in ["inner", "left"]:
+            if not indicator:
+                # Realiza o merge inicial usando a função perform_merge
+                merged_df, new_cols = perform_merge(
+                    df_left=df_left,
+                    df_right=df_right,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how=how,
+                    suffixes=suffixes,
+                    validate=validate,
+                    indicator=True,
+                    handle_duplicates=handle_duplicates,
+                )
+
+            # Identifica as linhas não correspondidas no DataFrame da esquerda
+            unmatched_left = merged_df[merged_df[indicator] == "left_only"].copy()
+
+            # Dos dados unmatched, dropa as colunas antes de testar similaridade
+            unmatched_left = drop_columns(df=unmatched_left, drop_column_list=new_cols)
+
+            # Armazenamos os dados que deram match (que a condição anterior não satisfeita)
+            matched = merged_df[merged_df[indicator] != "left_only"].copy()
+
+            # Realiza o merge das linhas não correspondidas usando a função merge_data_with_similarity
+            similarity_merged = merge_data_with_similarity(
+                df_left=unmatched_left,
+                df_right=df_right,
+                left_on=left_on,
+                right_on=right_on,
+                how=how,
+                suffixes=suffixes,
+                use_similarity=use_similarity_for_unmatched,
+                similarity_threshold=similarity_threshold,
+                update_cols=[],
+                overwrite=False,
+                keep_match_info=False,
+                canonical_cols=df_right.columns,
+                canonical_priority="right",
+            )
+
+            # Lista de DataFrames a serem concatenados
+            dataframes = [matched, similarity_merged]
+
+            # Concatena os DataFrames usando a função concat_dataframes
+            try:
+                merged_df = concat_dataframes(dataframes, ignore_index=True, fill_missing=True)
+                print("DataFrames concatenados com sucesso!")
+            except Exception as e:
+                logger.error(f"Erro ao concatenar DataFrames: {e}")
+                raise
+
+        # Verificando se é desejado salvar os dados resultantes
+        if validator_output_data:
+            export_data(data=merged_df, file_path=output_dir_file)
+
+        return merged_df
+
+    except Exception as e:
+        # Loga o erro e levanta uma exceção com a mensagem
+        logger.error(f"Erro durante o merge: {e}")
+        raise ValueError(f"Erro durante o merge: {e}")
 
 
 def two_stage_merge(
@@ -813,7 +981,7 @@ def two_stage_merge(
         logger.info(f"[two_stage_merge] Tentativa {i} | LEFT={lkeys} <-> RIGHT={rkeys}")
 
         # Executando o merge
-        merged = perform_merge(
+        merged, new_cols = perform_merge(
             df_left=remaining,
             df_right=right,
             left_on=lkeys,
@@ -861,3 +1029,428 @@ def two_stage_merge(
 
     # Retorna o DataFrame final consolidado
     return out
+
+
+def merge_data_with_similarity(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    left_on: list[str],
+    right_on: list[str],
+    how: str = "left",
+    suffixes: tuple[str, str] = ("_left", "_right"),
+    use_similarity: bool = False,
+    similarity_threshold: float = 90.0,
+    update_cols: list[str] | None = None,
+    overwrite: bool = True,
+    keep_match_info: bool = False,
+    drop_right_updated_cols: bool = True,
+    canonical_cols: list[str] | None = None,
+    canonical_priority: str = "right",
+    drop_canonical_suffix_variants: bool = True,
+    verbose=True,
+) -> pd.DataFrame:
+    """
+    Faz merge (com opção de similaridade nas chaves) e atualiza colunas do df_left
+    usando valores do df_right apenas quando houver match.
+
+    NOVO:
+      - canonical_cols: colunas que DEVEM existir no output com o nome original)
+      - canonical_priority:
+          * "right": canonical = valor do right (quando existe), senão left
+          * "left": canonical = valor do left (já atualizado), senão right
+      - drop_canonical_suffix_variants: remove versões sufixadas dessas colunas após criar canônicas
+    """
+
+    left = df_left.copy()
+    right = df_right.copy()
+
+    if len(left_on) != len(right_on):
+        raise ValueError("left_on e right_on precisam ter o mesmo tamanho.")
+
+    if canonical_cols is None:
+        # por padrão, costuma ser o schema do right
+        canonical_cols = right_on[:]  # ex.: ["FORNECEDOR","REGIAO","GRUPO"]
+
+    # =========================
+    # Helpers
+    # =========================
+    def _resolve_lr_cols(merged: pd.DataFrame, base: str) -> tuple[str, str]:
+        l_suf, r_suf = suffixes
+
+        left_candidates = []
+        right_candidates = []
+
+        if l_suf:
+            left_candidates.append(f"{base}{l_suf}")
+        if r_suf:
+            right_candidates.append(f"{base}{r_suf}")
+
+        left_candidates.append(base)
+        right_candidates.append(base)
+
+        left_col = next((c for c in left_candidates if c in merged.columns), None)
+        right_col = next((c for c in right_candidates if c in merged.columns), None)
+
+        if left_col is None:
+            raise KeyError(f"Não achei coluna do LEFT para '{base}'. Candidatas: {left_candidates}")
+        if right_col is None:
+            raise KeyError(
+                f"Não achei coluna do RIGHT para '{base}'. Candidatas: {right_candidates}"
+            )
+
+        return left_col, right_col
+
+    # =========================
+    # 1) Preparar chaves (com ou sem similaridade)
+    # =========================
+    left_keys = left_on[:]
+    right_keys = right_on[:]
+    temp_key_cols: list[str] = []
+
+    if use_similarity:
+        # Percorrendo as colunas para testar match,
+        for l_col, r_col in zip(left_on, right_on):
+            unique_left = left[l_col].dropna().unique()
+            unique_right = right[r_col].dropna().unique()
+
+            match_dict = {}
+            for value in unique_left:
+                # Percorrendo os dados do dataframe left, que precisam de match
+                res = fuzzy_match(
+                    value=value,
+                    choices=unique_right,
+                    top_matches=1,
+                    threshold=similarity_threshold,
+                    normalize=True,
+                )
+
+                # Salvando no dict o resultado obtido
+                match_dict[value] = res.choice if res else None
+
+                if verbose:
+                    if res:
+                        logger.info(f"Valor: {value} - Match: {res} - Score: {res.score}")
+
+            # Salvando no dataframe left usando colunas temporárias
+            key_col = f"__key_{r_col}"
+            left[key_col] = left[l_col].map(match_dict)
+
+            idx = left_keys.index(l_col)
+            left_keys[idx] = key_col
+            temp_key_cols.append(key_col)
+
+    # =========================
+    # 2) Definir colunas a atualizar
+    # =========================
+    if update_cols is None:
+        update_cols = [c for c in right.columns if c not in right_on]
+
+    update_cols = [c for c in update_cols if c not in right_on]
+
+    # =========================
+    # 3) Merge para trazer colunas do right
+    # =========================
+    right_select = [c for c in (right_on + update_cols) if c in right.columns]
+
+    merged = left.merge(
+        right[right_select],
+        left_on=left_keys,
+        right_on=right_keys,
+        how=how,
+        suffixes=suffixes,
+        indicator=True if keep_match_info else False,
+    )
+
+    if keep_match_info:
+        merged["_matched"] = merged["_merge"].eq("both")
+        # mantém _merge só se você quiser debug
+        # merged = merged.drop(columns=["_merge"])
+
+    # =========================
+    # 4) Atualizar colunas do left com right
+    # =========================
+    for base in update_cols:
+        # se não veio do right, pula
+        if (
+            base not in right.columns
+            and f"{base}{suffixes[1]}" not in merged.columns
+            and base not in merged.columns
+        ):
+            continue
+
+        lcol, rcol = _resolve_lr_cols(merged, base)
+
+        if lcol == rcol:
+            continue
+
+        if overwrite:
+            merged[lcol] = merged[lcol].where(merged[rcol].isna(), merged[rcol])
+        else:
+            merged[lcol] = merged[lcol].fillna(merged[rcol])
+
+        if drop_right_updated_cols:
+            merged = merged.drop(columns=[rcol], errors="ignore")
+
+    # =========================
+    # 5) Criar colunas canônicas (nomes do df_right)
+    # =========================
+    # Ex.: garantir FORNECEDOR, REGIAO, GRUPO
+    for base in canonical_cols:
+        # tenta achar versões sufixadas que existam
+        lcol = f"{base}{suffixes[0]}" if suffixes[0] else base
+        rcol = f"{base}{suffixes[1]}" if suffixes[1] else base
+
+        # fallback: se não existe com sufixo, tenta base puro
+        if lcol not in merged.columns and base in merged.columns:
+            lcol = base
+        if rcol not in merged.columns and base in merged.columns:
+            rcol = base
+
+        left_exists = lcol in merged.columns
+        right_exists = rcol in merged.columns
+
+        # cria a coluna base, priorizando right ou left
+        if canonical_priority == "right":
+            if right_exists and left_exists:
+                merged[base] = merged[rcol].where(merged[rcol].notna(), merged[lcol])
+            elif right_exists:
+                merged[base] = merged[rcol]
+            elif left_exists:
+                merged[base] = merged[lcol]
+        else:  # "left"
+            if right_exists and left_exists:
+                merged[base] = merged[lcol].where(merged[lcol].notna(), merged[rcol])
+            elif left_exists:
+                merged[base] = merged[lcol]
+            elif right_exists:
+                merged[base] = merged[rcol]
+
+        # remove versões sufixadas das canônicas (se pedido)
+        if drop_canonical_suffix_variants:
+            cols_to_drop = []
+            if f"{base}{suffixes[0]}" in merged.columns and f"{base}{suffixes[0]}" != base:
+                cols_to_drop.append(f"{base}{suffixes[0]}")
+            if f"{base}{suffixes[1]}" in merged.columns and f"{base}{suffixes[1]}" != base:
+                cols_to_drop.append(f"{base}{suffixes[1]}")
+            # também remove "base" duplicada se ela era técnica (não é o caso aqui, mas safe)
+            merged = merged.drop(columns=cols_to_drop, errors="ignore")
+
+    # =========================
+    # 6) Limpar colunas temporárias de chave (similaridade)
+    # =========================
+    if temp_key_cols:
+        merged = merged.drop(columns=temp_key_cols, errors="ignore")
+
+    # se keep_match_info=False, remove _merge se existir
+    if not keep_match_info and "_merge" in merged.columns:
+        merged = merged.drop(columns=["_merge"], errors="ignore")
+
+    return merged
+
+
+def concat_dataframes(
+    dataframes: list, ignore_index: bool = True, fill_missing: bool = True
+) -> pd.DataFrame:
+    """
+    Concatena uma lista de DataFrames, lidando com índices duplicados e colunas inconsistentes.
+
+    Args:
+        dataframes (list): Lista de DataFrames a serem concatenados.
+        ignore_index (bool): Se deve ignorar os índices originais e criar um novo índice.
+        fill_missing (bool): Se deve preencher valores ausentes com NaN para colunas inconsistentes.
+
+    Returns:
+        pd.DataFrame: DataFrame concatenado.
+    """
+    if not dataframes:
+        raise ValueError("A lista de DataFrames está vazia.")
+
+    # Verifica se todos os elementos da lista são DataFrames
+    if not all(isinstance(df, pd.DataFrame) for df in dataframes):
+        raise TypeError("Todos os elementos da lista devem ser DataFrames.")
+
+    # Preenche valores ausentes para colunas inconsistentes, se necessário
+    if fill_missing:
+        all_columns = set(col for df in dataframes for col in df.columns)
+        dataframes = [df.reindex(columns=all_columns) for df in dataframes]
+
+    # Concatena os DataFrames
+    concatenated_df = pd.concat(dataframes, ignore_index=ignore_index)
+
+    return concatenated_df
+
+
+def resolve_duplicate_columns(
+    df: pd.DataFrame,
+    column_name: Optional[str] = None,  # Nome da coluna ou None para todas as colunas
+    strategy: str = "rename",  # Opções: "rename", "keep_first", "keep_last", "drop"
+    suffix: str = "_dup",
+) -> pd.DataFrame:
+    """
+    Resolve colunas duplicadas em um DataFrame com base na estratégia escolhida.
+
+    Args:
+        df (pd.DataFrame): DataFrame com possíveis colunas duplicadas.
+        column_name (Optional[str]): Nome da coluna a ser verificada para duplicatas.
+                                      Use None para aplicar a estratégia a todas as colunas.
+        strategy (str): Estratégia para lidar com duplicatas:
+            - "rename": Renomeia colunas duplicadas adicionando um sufixo.
+            - "keep_first": Mantém apenas a primeira ocorrência da coluna.
+            - "keep_last": Mantém apenas a última ocorrência da coluna.
+            - "drop": Remove todas as colunas duplicadas.
+        suffix (str): Sufixo a ser adicionado ao renomear colunas duplicadas (apenas para "rename").
+
+    Returns:
+        pd.DataFrame: DataFrame com as colunas duplicadas resolvidas.
+
+    Raises:
+        ValueError: Se a estratégia fornecida não for válida.
+    """
+
+    # Função auxiliar para renomear colunas duplicadas
+    def rename_duplicates(columns):
+        seen = {}
+        new_columns = []
+        for col in columns:
+            if col in seen:
+                seen[col] += 1
+                new_columns.append(f"{col}{suffix}{seen[col]}")
+            else:
+                seen[col] = 0
+                new_columns.append(col)
+        return new_columns
+
+    # logger.info(f"Colunas antes: {df.columns.tolist()}")
+
+    # Se column_name for None, aplica a estratégia a todas as colunas
+    if column_name is None:
+        if strategy == "rename":
+            # Renomeia todas as colunas duplicadas no DataFrame
+            df.columns = rename_duplicates(df.columns)
+        elif strategy in ["keep_first", "keep_last", "drop"]:
+            # Identifica colunas duplicadas
+            duplicated_mask = df.columns.duplicated(keep=strategy.split("_")[1])
+            if strategy == "drop":
+                # Remove todas as duplicatas
+                df = df.loc[:, ~df.columns.duplicated(keep=False)]
+            else:
+                # Mantém apenas a primeira ou última ocorrência
+                df = df.loc[:, ~duplicated_mask]
+        else:
+            raise ValueError(
+                f"Estratégia inválida: '{strategy}'. Use 'rename', 'keep_first', 'keep_last' ou 'drop'."
+            )
+    else:
+        # Aplica a estratégia apenas à coluna especificada
+        if column_name not in df.columns:
+            raise ValueError(f"A coluna '{column_name}' não existe no DataFrame.")
+
+        # Identifica colunas duplicadas com o mesmo nome
+        duplicate_columns = [col for col in df.columns if col == column_name]
+
+        # Se não houver duplicatas, retorna o DataFrame original
+        if len(duplicate_columns) <= 1:
+            return df
+
+        if strategy == "rename":
+            # Renomeia colunas duplicadas adicionando um sufixo
+            for i, col in enumerate(duplicate_columns[1:], start=1):
+                new_name = f"{col}{suffix}{i}"
+                df.rename(columns={col: new_name}, inplace=True)
+        elif strategy == "keep_first":
+            # Mantém apenas a primeira ocorrência da coluna
+            df = df.loc[:, ~df.columns.duplicated(keep="first")]
+        elif strategy == "keep_last":
+            # Mantém apenas a última ocorrência da coluna
+            df = df.loc[:, ~df.columns.duplicated(keep="last")]
+        elif strategy == "drop":
+            # Remove todas as colunas duplicadas
+            df = df.loc[:, ~df.columns.duplicated(keep=False)]
+        else:
+            raise ValueError(
+                f"Estratégia inválida: '{strategy}'. Use 'rename', 'keep_first', 'keep_last' ou 'drop'."
+            )
+
+    # logger.info(f"Colunas depois: {df.columns.tolist()}")
+
+    return df
+
+
+def filter_by_merge_column(
+    df: pd.DataFrame,
+    merge_column: str = "_merge",
+    value: Union[str, List[str]] = "both",
+    raise_on_missing: bool = False,
+) -> Optional[pd.DataFrame]:
+    """
+    Filtra um DataFrame com base nos valores da coluna '_merge'.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser filtrado.
+        merge_column (str): Nome da coluna de merge a ser utilizada. Padrão é '_merge'.
+        value (Union[str, List[str]]): Valor ou lista de valores a serem buscados na coluna '_merge' (ex.: 'both', ['both', 'left']).
+        raise_on_missing (bool): Se True, lança um erro se a coluna '_merge' não for encontrada. Caso contrário, retorna None.
+
+    Returns:
+        Optional[pd.DataFrame]: DataFrame filtrado contendo apenas as linhas com os valores especificados na coluna '_merge'.
+                                Retorna None se a coluna '_merge' não for encontrada e `raise_on_missing` for False.
+
+    Raises:
+        ValueError: Se a coluna '_merge' não for encontrada e `raise_on_missing` for True.
+    """
+    if merge_column not in df.columns:
+        message = f"A coluna '{merge_column}' não foi encontrada no DataFrame."
+        if raise_on_missing:
+            raise ValueError(message)
+        else:
+            logger.debug(message)
+            return None
+
+    # Garante que `value` seja uma lista
+    if isinstance(value, str):
+        value = [value]
+
+    # Filtra o DataFrame com base nos valores especificados
+    try:
+        return len(df[df[merge_column].isin(value)])
+    except Exception as e:
+        return None
+
+
+def filter_dataframe_dict_values(
+    df: pd.DataFrame, filters: Dict[str, Union[str, List[str]]]
+) -> pd.DataFrame:
+    """
+    Filtra um DataFrame com base em um dicionário de colunas e filtros.
+
+    Args:
+        df (pd.DataFrame): DataFrame a ser filtrado.
+        filters (Dict[str, Union[str, List[str]]]): Dicionário onde as chaves são os nomes das colunas
+                                                    e os valores são os filtros (string ou lista de valores).
+
+    Returns:
+        pd.DataFrame: DataFrame filtrado.
+    """
+
+    filtered_df = df.copy()
+
+    if isinstance(filters, dict):
+
+        for column, filter_value in filters.items():
+            if column not in filtered_df.columns:
+                raise ValueError(f"A coluna '{column}' não existe no DataFrame.")
+
+            if isinstance(filter_value, str):
+                # Filtra por string
+                filtered_df = filtered_df[filtered_df[column] == filter_value]
+            elif isinstance(filter_value, list):
+                # Filtra por lista de valores
+                filtered_df = filtered_df[filtered_df[column].isin(filter_value)]
+            else:
+                raise ValueError(
+                    f"O filtro para a coluna '{column}' deve ser uma string ou uma lista de valores."
+                )
+
+        return filtered_df
+
+    return df

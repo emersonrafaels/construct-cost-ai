@@ -2,28 +2,98 @@ import time
 from functools import wraps
 from typing import Any
 
+import numpy as np
 
-def measure_execution_time(func):
+def measure_execution_time(condition=True):
     """
-    Decorator to measure the execution time of a function.
+    Decorator para medir o tempo de execução de uma função, com comportamento condicional.
 
     Args:
-        func (callable): The function to be decorated.
+        condition (bool): Define se o decorator será aplicado ou não. Padrão é True.
 
     Returns:
-        callable: The wrapped function with execution time measurement.
+        callable: A função decorada com medição de tempo, ou a função original se a condição for False.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if condition:
+                start_time = time.time()
+                result = func(*args, **kwargs)
+                end_time = time.time()
+                execution_time = end_time - start_time
+                print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds.")
+                return result
+            else:
+                # Se a condição for False, executa a função diretamente sem medir o tempo
+                return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def get_item_safe(obj, idx, return_key=False):
+    """
+    Obtém um item de forma segura de uma lista ou dicionário.
+
+    Args:
+        obj (list | dict): O objeto de onde o item será obtido. Pode ser uma lista ou um dicionário.
+        idx (int | Any): O índice (para listas) ou chave/índice (para dicionários) do item a ser obtido.
+        return_key (bool, opcional): Se True, retorna a chave ao invés do valor (apenas para dicionários). Padrão é False.
+
+    Returns:
+        Any: O valor correspondente ao índice ou chave, ou None se o índice/chave não existir ou ocorrer um erro.
+
+    Explicação do código:
+    1. Verifica se o objeto é uma lista:
+        - Se for, tenta acessar o índice fornecido.
+        - Retorna o valor correspondente se o índice for válido, ou None caso contrário.
+    2. Caso o objeto não seja uma lista, assume que é um dicionário:
+        - Verifica se o índice fornecido está nas chaves do dicionário.
+        - Retorna a chave (se `return_key=True`) ou o valor correspondente.
+    3. Se o índice não for uma chave válida, tenta acessar o dicionário como se o índice fosse um número:
+        - Obtém a chave correspondente ao índice numérico.
+        - Retorna a chave (se `return_key=True`) ou o valor correspondente.
+        - Caso ocorra um erro (índice inválido ou tipo incorreto), retorna None.
     """
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds.")
-        return result
+    if isinstance(obj, list):
+        # Verifica se o objeto é uma lista e tenta acessar o índice fornecido.
+        return obj[idx] if len(obj) > idx else None
+    elif isinstance(obj, dict):
+        # Verifica se o objeto é um dicionário.
+        if idx in obj:
+            # Verifica se o índice fornecido está nas chaves do dicionário.
+            return idx if return_key else obj[idx]
+        try:
+            # Tenta acessar o dicionário como se o índice fosse um número.
+            key = list(obj.keys())[idx]
+            return key if return_key else obj[key]
+        except (IndexError, TypeError):
+            # Retorna None caso ocorra um erro (índice inválido ou tipo incorreto).
+            return None
+    return None
 
-    return wrapper
+
+def to_float_resilient(value, default=None):
+    """
+    Converte um valor para float de forma resiliente, lidando com diferentes formatos.
+
+    Args:
+        value (Any): O valor a ser convertido.
+        default (Any, opcional): Valor padrão a ser retornado em caso de falha na conversão. Padrão é None.
+
+    Returns:
+        float | Any: O valor convertido para float ou o valor padrão em caso de falha na conversão.
+    """
+
+    if value is None or isinstance(value, float) and np.isnan(value):
+        return default
+    try:
+        if isinstance(value, str):
+            value = value.replace(".", "").replace(",", ".")
+        return float(value)
+    except Exception:
+        return default
 
 
 def convert_value(value: Any, expected_type: str) -> Any:
