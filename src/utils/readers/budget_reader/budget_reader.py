@@ -654,37 +654,25 @@ def read_budget_table(
     return None, None, None
 
 
-# Função para adicionar e salvar resultados processados em um arquivo
-def append_and_save_results(
-    all_tables: List[pd.DataFrame],
-    all_metadatas: List[Dict[str, Any]],
-    output_file: str,
-) -> None:
+def save_results(output_path, output_file, data_result, metadata_result):
     """
-    Adiciona os resultados processados (tabelas e metadados) a um arquivo Excel existente ou cria um novo arquivo e salva os dados.
+    Salva os resultados processados (tabelas e metadados) em um arquivo Excel.
 
     Args:
-        all_tables (List[pd.DataFrame]): Lista de DataFrames contendo as tabelas processadas.
-        all_metadatas (List[Dict[str, Any]]): Lista de dicionários contendo os metadados processados.
+        output_path (str | Path): Caminho do diretório onde o arquivo será salvo.
         output_file (str): Nome do arquivo de saída.
+        data_result (pd.DataFrame): DataFrame contendo os dados processados.
+        metadata_result (pd.DataFrame): DataFrame contendo os metadados processados.
 
     Returns:
         None
+
+    Raises:
+        Exception: Caso ocorra algum erro durante o salvamento dos resultados.
+
     """
-    # Concatena todas as tabelas
-    data_result = concat_dataframes(dataframes=all_tables, ignore_index=True, fill_missing=False)
-
-    # Seleciona apenas as colunas desejadas
-    data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
-
-    # Concatena todos os metadados em um DataFrame
-    metadata_result = pd.DataFrame(all_metadatas)
-
-    # Loga o sucesso na concatenação
-    logger.info("Todas as tabelas e metadados foram concatenados com sucesso.")
-
     # Define o caminho completo do arquivo de saída
-    output_path = Path(base_dir, DIR_OUTPUTS, output_file)
+    output_path = Path(output_path, output_file)
 
     # Cria o diretório de saída, se não existir
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -709,6 +697,46 @@ def append_and_save_results(
         logger.success(f"Resultados salvos com sucesso em {output_path}")
     except Exception as e:
         logger.error(f"Erro ao salvar os resultados em {output_path}: {e}")
+
+
+# Função para adicionar e salvar resultados processados em um arquivo
+def append_and_save_results(
+    all_tables: List[pd.DataFrame],
+    all_metadatas: List[Dict[str, Any]],
+    output_path: Union[str, Path],
+    output_file: str,
+) -> None:
+    """
+    Adiciona os resultados processados (tabelas e metadados) a um arquivo Excel existente ou cria um novo arquivo e salva os dados.
+
+    Args:
+        all_tables (List[pd.DataFrame]): Lista de DataFrames contendo as tabelas processadas.
+        all_metadatas (List[Dict[str, Any]]): Lista de dicionários contendo os metadados processados.
+        output_path (Union[str, Path]): Caminho para salvar o dataframe resultado
+        output_file (str): Nome do arquivo de saída.
+
+    Returns:
+        None
+    """
+    # Concatena todas as tabelas
+    data_result = concat_dataframes(dataframes=all_tables, ignore_index=True, fill_missing=False)
+
+    # Seleciona apenas as colunas desejadas
+    data_result = select_columns(data_result, target_columns=SELECTED_COLUMNS)
+
+    # Concatena todos os metadados em um DataFrame
+    metadata_result = pd.DataFrame(all_metadatas)
+
+    # Loga o sucesso na concatenação
+    logger.info("Todas as tabelas e metadados foram concatenados com sucesso.")
+
+    # Salvando o resultado
+    save_results(output_path=output_path, 
+                 output_file=output_file, 
+                 data_result=data_result, 
+                 metadata_result=metadata_result)
+        
+    return data_result, metadata_result
 
 
 def append_and_save_results_json(
@@ -940,17 +968,14 @@ def orchestrate_budget_reader(
         logger.success(f"Processados com sucesso: {len(all_tables)} arquivos")
 
         # Concatena e salva os resultados
-        append_and_save_results(
+        df_all_tables, df_all_metadatas = append_and_save_results(
             all_tables=all_tables,
             all_metadatas=all_metadata,
+            output_path = Path(base_dir, DIR_OUTPUTS),
             output_file=settings.get(
                 "default_budget_reader.result.file_name_output", "budget_reader_output.xlsx"
             ),
         )
 
     # Retorna os dados consolidados
-    return (
-        concat_dataframes(dataframes=all_tables, ignore_index=True, fill_missing=False)
-        if all_tables
-        else pd.DataFrame()
-    )
+    return df_all_tables, df_all_metadatas
