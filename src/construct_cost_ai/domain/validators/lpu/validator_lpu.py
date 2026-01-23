@@ -104,7 +104,7 @@ def load_budget(
     )
 
     # Coluna valor total
-    column_total_value = settings.get("module_validator_lpu.column_total_value", "VALOR TOTAL")
+    column_total_value = settings.get("module_validator_lpu.budget_data.column_total_value", "VALOR TOTAL")
 
     try:
         # Ler os dados de Orçamento e realizar pré processing

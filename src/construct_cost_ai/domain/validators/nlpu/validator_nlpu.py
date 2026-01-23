@@ -68,7 +68,9 @@ class MissingColumnsError(ValidatorNLPUError):
 
 
 def load_budget(
-    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
+    file_path: Union[str, Path], 
+    validator_output_data: bool = False, 
+    output_dir_file: str = None
 ) -> pd.DataFrame:
     """
     Carrega o arquivo de orçamento.
@@ -97,7 +99,7 @@ def load_budget(
     )
 
     # Coluna valor total
-    column_total_value = settings.get("module_validator_nlpu.column_total_value", 
+    column_total_value = settings.get("module_validator_nlpu.budget_data.column_total_value", 
                                       "VALOR TOTAL")
     
     try:
@@ -137,16 +139,16 @@ def load_budget(
     df = calculate_total_item(
         df=df,
         column_total_value=column_total_value,
-        column_quantity=settings.get("module_validator_lpu.budget_data.column_quantity", "qtde"),
+        column_quantity=settings.get("module_validator_nlpu.budget_data.column_quantity", "qtde"),
         column_unit_price=settings.get(
-            "module_validator_lpu.budget_data.column_unit_price", "unitario_orcado"
+            "module_validator_nlpu.budget_data.column_unit_price", "unitario_orcado"
         ),
     )
 
     # Verificando se há colunas para renomear
-    if settings.get("module_validator_lpu.budget_data.columns_to_rename"):
+    if settings.get("module_validator_nlpu.budget_data.columns_to_rename"):
         df = rename_columns(
-            df, rename_dict=settings.get("module_validator_lpu.budget_data.columns_to_rename")
+            df, rename_dict=settings.get("module_validator_nlpu.budget_data.columns_to_rename")
         )
 
     # Verificando se é desejado salvar os dados resultantes
@@ -655,7 +657,9 @@ def validate_nlpu(
                 df_choices_column=settings.get(
                     "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
                 ),
-                threshold=85,
+                threshold=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
+                , 80),
                 replace_column=False,
                 drop_columns_result=False,
             )

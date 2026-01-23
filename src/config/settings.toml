@@ -256,7 +256,7 @@ cells_to_remove_accents = []
 
 column_quantity = "QUANTIDADE"
 column_unit_price = "PRECO PAGO"
-column_total_value = "VALOR TOTAL"
+column_total_value = "VALOR TOTAL PAGO"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = false
@@ -270,7 +270,14 @@ validator_use_merge_fuzzy = true
 # Coluna que indica o resultado do merge fuzzy
 indicator = "_match_fuzzy_budget_lpu"
 
+# Coluna do orçamento para merge fuzzy
+validator_use_merge_fuzzy_column_left = "NOME"
 
+# Coluna da LPU para merge fuzzy
+validator_use_merge_fuzzy_column_right = "ITEM"
+
+# Limiar de similaridade para considerar o merge fuzzy
+validator_use_merge_fuzzy_threshold = 80
 
 [default.module_validator_nlpu.output_settings]
 
