@@ -36,7 +36,7 @@ def read_data_saude_esteira():
 
     # Diretório onde estão os dados de saúde das esteiras
     dir_data = Path(base_dir, "data/inputs/saude_esteira/BASE_SAUDE_DA_ESTEIRA.xlsx")
-    sheetname = "Sheet1"
+    sheetname = "DOCUMENTOS"
     engine = "calamine"
     list_select_columns = ["cod_upe", "ag", "pmo_dono", "sub_etapa", "fornecedor"]
     filter_dict_values = {"SUB_ETAPA": "ORÇAMENTO - CONSTRUÇÃO E OBRAS"}
@@ -76,12 +76,12 @@ def read_data_lista_upes_documents():
     """
 
     # Diretório onde estão os dados de saúde das esteiras
-    dir_data = Path(base_dir, "data/inputs/saude_esteira/BASE_LISTA_UPES_DOCUMENTS.xlsx")
-    sheetname = "Sheet1"
+    dir_data = Path(base_dir, "data/inputs/saude_esteira/BASE_UPES_DOCUMENTOS.xlsx")
+    sheetname = "DOCUMENTOS"
     engine = "openpyxl"
-    list_select_columns = ["UPE", "NOME ARQUIVO"]
-    filter_dict_values = {}
-    required_columns_with_types = {"UPE": "int", "NOME ARQUIVO": "object"}
+    list_select_columns = ["UPE", "NOME_ARQUIVO", "CLASSIFICACAO_ORCAMENTO"]
+    filter_dict_values = {"CLASSIFICACAO_ORCAMENTO": "024. ORÇAMENTO LPU"}
+    required_columns_with_types = {"UPE": "int", "NOME_ARQUIVO": "object"}
 
     # Lendo os dados da base de saúde das esteiras
     df = transform_case(
@@ -132,12 +132,17 @@ def merge_backtest_saude_esteira(df_result_tables, df_result_metadatas):
 
         # Obtendo o código da UPE correspondente na base da lista de documentos por upe
         value_upe = df_lista_upes_documents.loc[
-            df_lista_upes_documents["NOME ARQUIVO"] == value.get("SOURCE_FILE"), "UPE"
+            df_lista_upes_documents["NOME_ARQUIVO"] == value.get("SOURCE_FILE"), "UPE"
         ].squeeze()
 
-        if not pd.isna(value_upe):
-            cod_upe = value_upe
 
+        if isinstance(value_upe, (pd.Series, np.ndarray)):
+            if not value_upe.empty and not value_upe.isna().all():
+                cod_upe = value_upe.iloc[0]
+                df_result_metadatas.at[idx, "CÓDIGO_UPE"] = cod_upe
+        
+        elif not pd.isna(value_upe):
+            cod_upe = int(value_upe)
             df_result_metadatas.at[idx, "CÓDIGO_UPE"] = cod_upe
 
         # Atualizando os dados com base na esteira de saúde

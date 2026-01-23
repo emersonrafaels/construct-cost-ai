@@ -558,8 +558,12 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
 
 def apply_match_fuzzy_budget_lpu(df_budget, df_lpu):
     
-    # Separando os dados que queremos que tenha match fuzzy
-    df_budget_match_fuzzy["VALIDADOR_LPU"] = "ITEM_NAO_LPU"
+    # Separando os dados que queremos que tenha match 
+    
+    # Dados que iremos fazer match fuzzy
+    df_budget_match_fuzzy = df_budget[df_budget["VALIDADOR_LPU"] == "ITEM_NAO_LPU"]
+    
+    # Restante dos dados
     df_budget_not_match = df_budget[
         df_budget["VALIDADOR_LPU"] != "ITEM_NAO_LPU"]
     
@@ -579,6 +583,9 @@ def apply_match_fuzzy_budget_lpu(df_budget, df_lpu):
         replace_column=False,
         drop_columns_result=False,
     )
+    
+    # Realizando o tratamento após o match fuzzy
+    print(df_match_fuzzy_budget_lpu.head())
 
 
 def validate_nlpu(

@@ -83,7 +83,7 @@ def process_fuzzy_comparison_dataframes(
     # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
     matches = df[df_column].apply(
         lambda x: fuzzy_match(
-            value=x, choices=choices, top_matches=1, threshold=threshold, library=library
+            value=str(x), choices=choices, top_matches=1, threshold=threshold, library=library
         )
     )
 
