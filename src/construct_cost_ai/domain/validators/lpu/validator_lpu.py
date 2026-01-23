@@ -49,8 +49,10 @@ from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
 from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
     run_lpu_validation_reporting,
 )
+from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
 from utils.fuzzy.fuzzy_functions import process_fuzzy_comparison_dataframes
+
 
 settings = get_settings()
 
@@ -695,43 +697,6 @@ def load_constructors(
     # Verificando se é desejado salvar os dados resultantes
     if validator_output_data:
         export_data(data=df, file_path=output_dir_file)
-
-    return df
-
-
-def calculate_total_item(
-    df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str
-) -> pd.DataFrame:
-    """
-    Calcula o valor total orçado em um DataFrame.
-
-    Args:
-        df (pd.DataFrame): DataFrame contendo os dados.
-        column_total_value (str): Nome da coluna de valor total orçado.
-        column_quantity (str): Nome da coluna de quantidade.
-        column_unit_price (str): Nome da coluna de preço unitário.
-
-    Returns:
-        pd.DataFrame: DataFrame atualizado com a coluna de valor total orçado calculada ou convertida.
-    """
-
-    # Verifica se a coluna de valor total orçado existe
-    if column_total_value not in df.columns:
-
-        # Se não existe, ele calcula usando quantidade * preço unitário
-        df[column_total_value] = df[column_quantity] * df[column_unit_price]
-    else:
-        # Nesse caso a coluna existe, então:
-        # 1 - Garante que está no formato numérico
-        df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
-
-        # Filtra linhas onde o valor total é nulo ou menor/igual a zero
-        mask = df[column_total_value].isna() | (df[column_total_value] <= 0)
-
-        # 2 - Recalcula o valor total apenas para essas linhas
-        df.loc[mask, column_total_value] = (
-            df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
-        )
 
     return df
 

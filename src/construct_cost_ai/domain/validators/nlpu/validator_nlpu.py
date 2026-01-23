@@ -43,11 +43,11 @@ from utils.lpu.lpu_functions import (
     separate_regions,
 )
 
+from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
 from utils.fuzzy.fuzzy_functions import process_fuzzy_comparison_dataframes
 
 settings = get_settings()
-
 
 class ValidatorNLPUError(Exception):
     """Exceção base para erros do validador LPU."""
@@ -85,6 +85,7 @@ def load_budget(
         FileNotFoundError: Se o arquivo não for encontrado
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes
     """
+    
     file_path = Path(file_path)
 
     if not file_path.exists():
@@ -92,26 +93,27 @@ def load_budget(
 
     # Colunas obrigatórias
     required_columns = settings.get(
-        "module_validator_lpu.budget_data.required_columns_with_types", []
+        "module_validator_nlpu.budget_data.required_columns_with_types", []
     )
 
     # Coluna valor total
-    column_total_value = settings.get("module_validator_lpu.column_total_value", "VALOR TOTAL")
-
+    column_total_value = settings.get("module_validator_nlpu.column_total_value", 
+                                      "VALOR TOTAL")
+    
     try:
         # Ler os dados de Orçamento e realizar pré processing
         df = transform_case(
             read_data(
                 file_path=file_path,
-                sheet_name=settings.get("module_validator_lpu.budget_data.sheet_name", "Tables"),
+                sheet_name=settings.get("module_validator_nlpu.budget_data.sheet_name", "Tables"),
             ),
             columns_to_upper=True,
             cells_to_upper=True,
             cells_to_remove_spaces=settings.get(
-                "module_validator_lpu.budget_data.cells_to_remove_spaces", []
+                "module_validator_nlpu.budget_data.cells_to_remove_spaces", []
             ),
             cells_to_remove_accents=settings.get(
-                "module_validator_lpu.budget_data.cells_to_remove_accents", []
+                "module_validator_nlpu.budget_data.cells_to_remove_accents", []
             ),
             cells_to_strip=True,
         )
@@ -599,7 +601,7 @@ def validate_nlpu(
         df_budget = load_budget(
             file_path_budget,
             validator_output_data=settings.get(
-                "module_validator_lpu.budget_data.validator_save_sot", True
+                "module_validator_nlpu.budget_data.validator_save_sot", True
             ),
             output_dir_file=Path(
                 base_dir, settings.get("module_validator_lpu.budget_data.dir_path_file_sot")
@@ -770,6 +772,7 @@ def orchestrate_validate_nlpu(
     logger.debug(f"Orçamento: {path_file_budget}")
     logger.debug(f"LPU: {path_file_lpu}")
     logger.debug(f"Saída: {output_dir}")
+    logger.debug(f"Arquivo de saída: {output_file}")
 
     try:
         df_result = validate_nlpu(
