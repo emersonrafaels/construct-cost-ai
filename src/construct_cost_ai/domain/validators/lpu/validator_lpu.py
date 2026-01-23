@@ -1080,19 +1080,27 @@ def validate_lpu(
             "module_validator_lpu.merge_budget_metadata_agencies_constructors.indicator",
             "_merge_bud_met_age_constr",
         )
-        
+
         validator_use_merge_fuzzy_agencies_constructors = settings.get(
-                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy"
-            )
-        
+            "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy"
+        )
+
         if validator_use_merge_fuzzy_agencies_constructors:
-            
+
             # Aplicando match fuzzy
-            df_merge_budget_metadata_agencias = process_fuzzy_comparison_dataframes(df=df_merge_budget_metadata_agencias, df_choices=df_constructors, df_column=settings.get(
-                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_left"
-            ), df_choices_column=settings.get(
-                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_right"
-            ), threshold=70, replace_column=True, drop_columns_result=True)
+            df_merge_budget_metadata_agencias = process_fuzzy_comparison_dataframes(
+                df=df_merge_budget_metadata_agencias,
+                df_choices=df_constructors,
+                df_column=settings.get(
+                    "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_left"
+                ),
+                df_choices_column=settings.get(
+                    "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_right"
+                ),
+                threshold=70,
+                replace_column=True,
+                drop_columns_result=True,
+            )
 
         df_merge_budget_metadata_agencias_constructors = merge_data_with_columns(
             df_left=df_merge_budget_metadata_agencias,
@@ -1158,14 +1166,12 @@ def validate_lpu(
             validate=settings.get("module_validator_lpu.merge_budget_lpu.validate", "many_to_one"),
             use_two_stage_merge=True,
             validator_output_data=settings.get(
-                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_save_sot",
+                "module_validator_lpu.merge_budget_lpu.validator_save_sot",
                 True,
             ),
             output_dir_file=Path(
                 base_dir,
-                settings.get(
-                    "module_validator_lpu.merge_budget_metadata_agencies_constructors.dir_path_file_sot"
-                ),
+                settings.get("module_validator_lpu.merge_budget_lpu.dir_path_file_sot"),
             ),
         )
 
@@ -1175,13 +1181,6 @@ def validate_lpu(
     except Exception as e:
         logger.error(f"Erro ao cruzar dados: {e}")
         raise ValidatorLPUError(f"Erro ao cruzar dados: {e}")
-
-    # Salvar o resultado em um arquivo Excel
-    export_data(
-        data=df_merge_budget_metadata_agencias_constructors_lpu,
-        file_path=Path(output_dir, "PRE_CALCULATE_LPU_DISCREPANCIES.xlsx"),
-        index=False,
-    )
 
     # 3. Calcula discrepâncias
     try:

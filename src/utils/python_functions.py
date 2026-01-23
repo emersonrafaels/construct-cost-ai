@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 
+
 def measure_execution_time(condition=True):
     """
     Decorator para medir o tempo de execução de uma função, com comportamento condicional.
@@ -14,6 +15,7 @@ def measure_execution_time(condition=True):
     Returns:
         callable: A função decorada com medição de tempo, ou a função original se a condição for False.
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -27,7 +29,9 @@ def measure_execution_time(condition=True):
             else:
                 # Se a condição for False, executa a função diretamente sem medir o tempo
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

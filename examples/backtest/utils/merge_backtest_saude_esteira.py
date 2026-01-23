@@ -113,12 +113,14 @@ def merge_backtest_saude_esteira(df_result_tables, df_result_metadatas):
     Retorna:
         pd.DataFrame: DataFrame enriquecido com dados adicionais das esteiras de saúde e documentos UPE.
     """
-    
+
     # Transformando os dados de entrada para letras maiúsculas
     df_result_tables = transform_case(df_result_tables, columns_to_upper=True, cells_to_upper=True)
 
     # Transformando os dados de entrada para letras maiúsculas
-    df_result_metadatas = transform_case(df_result_metadatas, columns_to_upper=True, cells_to_upper=True)
+    df_result_metadatas = transform_case(
+        df_result_metadatas, columns_to_upper=True, cells_to_upper=True
+    )
 
     # Lendo os dados das fontes externas
     df_saude_esteira = read_data_saude_esteira()
@@ -135,7 +137,7 @@ def merge_backtest_saude_esteira(df_result_tables, df_result_metadatas):
 
         if not pd.isna(value_upe):
             cod_upe = value_upe
-            
+
             df_result_metadatas.at[idx, "CÓDIGO_UPE"] = cod_upe
 
         # Atualizando os dados com base na esteira de saúde

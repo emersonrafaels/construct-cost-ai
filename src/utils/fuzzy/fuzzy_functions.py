@@ -66,7 +66,7 @@ def process_fuzzy_comparison_dataframes(
     Returns:
         pd.DataFrame: DataFrame de orçamentos com uma nova coluna contendo os melhores matches.
     """
-    
+
     # Iniciando as colunas
     col_best_match = "BEST_MATCH"
     col_score_match = "SCORE_MATCH"
@@ -94,13 +94,15 @@ def process_fuzzy_comparison_dataframes(
     # Substituir a coluna original pelo best_match, se solicitado
     if replace_column:
         df[df_column] = df[col_best_match]
-    
+
     if drop_columns_result:
-        df=drop_columns(df, drop_column_list=[col_best_match, col_score_match])
+        df = drop_columns(df, drop_column_list=[col_best_match, col_score_match])
 
     # Salvar o resultado em um arquivo Excel
     if validator_export_data:
         export_data(data=df, file_path=output_file, index=False)
-        logger.info(f"Função: process_fuzzy_comparison_dataframes - Resultado salvo em: {output_file}")
+        logger.info(
+            f"Função: process_fuzzy_comparison_dataframes - Resultado salvo em: {output_file}"
+        )
 
     return df

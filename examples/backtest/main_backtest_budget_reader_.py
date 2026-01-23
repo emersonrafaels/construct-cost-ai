@@ -37,8 +37,9 @@ settings = get_settings()
 DIR_OUTPUTS = settings.get("default_budget_reader.dir_outputs.path", "outputs")
 
 output_file = settings.get(
-                "default_budget_reader.result.file_name_output", "budget_reader_output.xlsx"
-            )
+    "default_budget_reader.result.file_name_output", "budget_reader_output.xlsx"
+)
+
 
 def main_orchestrate_budget_reader():
 
@@ -50,8 +51,10 @@ def main_orchestrate_budget_reader():
     )
 
     # Realizando a leitura dos dados de saude da esteira
-    df_result_metadatas = merge_backtest_saude_esteira(df_result_tables=df_result_tables, df_result_metadatas=df_result_metadatas)
-    
+    df_result_metadatas = merge_backtest_saude_esteira(
+        df_result_tables=df_result_tables, df_result_metadatas=df_result_metadatas
+    )
+
     # Salvando o resultado
     save_results(
         output_path=Path(base_dir, DIR_OUTPUTS),
@@ -59,7 +62,7 @@ def main_orchestrate_budget_reader():
         data_result=df_result_tables,
         metadata_result=df_result_metadatas,
     )
-    
+
     logger.success("Metadados atualizados")
 
 
