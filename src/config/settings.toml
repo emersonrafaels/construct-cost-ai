@@ -36,13 +36,16 @@ header = 1
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"CD_PONTO" = "int", "NOME DO PONTO" = "object", "REGIAO" = "object", "UF" = "object", "MUNICIPIO" = "object"}
 
+# Lista de colunas para selecionar
+list_columns_select = ["CD_PONTO", "NOME DO PONTO", "MUNICIPIO", "UF", "REGIAO"]
+
 # Colunas para normalização de valores
 cells_to_remove_spaces = []
 cells_to_remove_accents = []
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/BASE_AGENCIAS.xlsx"
+dir_path_file_sot = "data/outputs/sor/01_SOR_BASE_AGENCIAS.xlsx"
 
 [default.module_validator_lpu.constructors_data]
 
@@ -53,6 +56,9 @@ sheet_name = "Sheet1"
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"FORNECEDOR" = "object", "REGIAO" = "object", "GRUPO" = "object"}
 
+# Lista de colunas para selecionar
+list_columns_select = ["FORNECEDOR", "REGIAO", "GRUPO"]
+
 # Colunas para normalização de valores
 columns_to_remove_accents = true
 cells_to_remove_spaces = ["GRUPO"]
@@ -60,7 +66,7 @@ cells_to_remove_accents = true
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/BASE_GRUPOS_CONSTRUTORAS.xlsx"
+dir_path_file_sot = "data/outputs/sor/01_SOR_BASE_GRUPOS_CONSTRUTORAS.xlsx"
 
 [default.module_validator_lpu.budget_data]
 
@@ -84,7 +90,7 @@ column_total_value = "VALOR TOTAL"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/01_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
+dir_path_file_sot = "data/outputs/sor/01_SOR_BASE_RESULTADO_ORCAMENTOS_CONCATENADOS.xlsx"
 
 [default.module_validator_lpu.budget_metadados]
 
@@ -94,6 +100,9 @@ sheet_name = "Metadata"
 
 # Colunas obrigatórias com tipos
 required_columns_with_types = {"CÓDIGO_UPE" = "int", "NUMERO_AGENCIA" = "int", "CONSTRUTORA" = "object", "SOURCE_FILE" = "object"}
+
+# Lista de colunas para selecionar
+list_columns_select = ["CÓDIGO_UPE", "NUMERO_AGENCIA", "CONSTRUTORA", "TIPO", "PROGRAMA_DONO", "SOURCE_FILE"]
 
 # Colunas para normalização de valores
 cells_to_remove_spaces = []
@@ -105,7 +114,7 @@ column_source_file = "SOURCE_FILE"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/01_BASE_RESULTADO_ORCAMENTOS_METADADOS.xlsx"
+dir_path_file_sot = "data/outputs/sor/01_SOR_BASE_RESULTADO_ORCAMENTOS_METADADOS.xlsx"
 
 [default.module_validator_lpu.lpu_data]
 
@@ -131,7 +140,7 @@ groups = ["GRUPO1", "GRUPO2", "GRUPO3", "GRUPO 1", "GRUPO 2", "GRUPO 3"]
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/BASE_LPU.xlsx"
+dir_path_file_sot = "data/outputs/sor/01_SOR_BASE_LPU.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata]
 left_on = "SOURCE_FILE"
@@ -140,12 +149,20 @@ how = "left"
 validate = "many_to_one"
 indicator = "_merge_bud_met"
 
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/02_MERGE01_ORCA_META.xlsx"
+
 [default.module_validator_lpu.merge_budget_metadata_agencies]
 left_on = "NUMERO_AGENCIA"
 right_on = "CD_PONTO"
 how = "left"
 validate = "many_to_one"
 indicator = "_merge_bud_met_age"
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/02_MERGE02_ORCA_META_AG.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies_constructors]
 left_on = ["CONSTRUTORA", "REGIAO"]
@@ -154,6 +171,10 @@ how = "left"
 validate = "many_to_one"
 handle_duplicates = true
 indicator = "_merge_bud_met_age_constr"
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/02_MERGE03_ORCA_META_AG_CONSTRU.xlsx"
 
 [default.module_validator_lpu.merge_budget_lpu]
 
@@ -184,6 +205,10 @@ columns_lpu_merge_one = ["CÓD ITEM", "REGIAO", "GRUPO"]
 
 # Segundo conjunto de colunas testadas no merge (na ordem)
 columns_lpu_merge_two = ["ITEM", "REGIAO", "GRUPO"]
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/02_MERGE04_ORCA_META_AG_CONSTRU_LPU.xlsx"
 
 [default.module_validator_lpu.output_settings]
 

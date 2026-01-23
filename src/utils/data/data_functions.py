@@ -248,6 +248,7 @@ def transform_case(
     Aplica transformações específicas em colunas e células de um DataFrame, como transformar em maiúsculas/minúsculas,
     remover espaços, remover acentos e aplicar strip.
     """
+
     def transform_value(
         value,
         to_upper=False,
@@ -456,13 +457,18 @@ def ensure_columns_exist(df: pd.DataFrame, columns: list, default_value=None) ->
     return df
 
 
-def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
+def select_columns(
+    df: pd.DataFrame,
+    target_columns: list,
+    keep_dataframe_original_target_columns_empty: bool = True,
+) -> pd.DataFrame:
     """
     Seleciona colunas de um DataFrame com base em uma lista de colunas alvo, mantendo a ordem fornecida.
 
     Args:
         df (pd.DataFrame): DataFrame original.
         target_columns (list): Lista de nomes de colunas desejadas.
+        keep_dataframe_original_target_columns_empty
 
     Returns:
         pd.DataFrame: DataFrame com as colunas correspondentes selecionadas.
@@ -470,8 +476,16 @@ def select_columns(df: pd.DataFrame, target_columns: list) -> pd.DataFrame:
     # Verifica quais colunas da lista alvo existem no DataFrame
     existing_columns = [col for col in target_columns if col in df.columns]
 
-    # Retorna o DataFrame com as colunas existentes na ordem fornecida
-    return df[existing_columns]
+    # Se não há coluna para filtrar e está com opção de manter dataframe original caso essa condição aconteça
+    if not existing_columns and keep_dataframe_original_target_columns_empty:
+
+        # Retorna o DataFrame original
+        return df
+
+    else:
+
+        # Retorna o DataFrame com as colunas existentes na ordem fornecida
+        return df[existing_columns]
 
 
 def export_to_json(
@@ -762,11 +776,13 @@ def merge_data_with_columns(
     handle_duplicates: bool = False,
     use_similarity_for_unmatched: bool = False,  # Adicionado para habilitar similaridade
     similarity_threshold: float = 90.0,  # Adicionado para definir o limite de similaridade
+    validator_output_data: bool = False,
+    output_dir_file: str = None,
 ) -> pd.DataFrame:
     """
     Realiza um merge entre dois DataFrames, permitindo selecionar colunas específicas, lidar com duplicidades e usar similaridade para linhas não correspondidas.
 
-    Parâmetros:
+    Args:
         df_left (pd.DataFrame): DataFrame da esquerda.
         df_right (pd.DataFrame): DataFrame da direita.
         left_on (list): Colunas do DataFrame da esquerda para realizar o merge.
@@ -780,6 +796,8 @@ def merge_data_with_columns(
         handle_duplicates (bool): Se True, remove duplicidades automaticamente em caso de erro.
         use_similarity_for_unmatched (bool): Se True, realiza um merge secundário usando similaridade para linhas não correspondidas. Padrão é False.
         similarity_threshold (float): Pontuação mínima de similaridade (0-100) para considerar uma correspondência. Padrão é 90.0.
+        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
+        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
 
     Returns:
         pd.DataFrame: O DataFrame resultante do merge.
@@ -862,6 +880,10 @@ def merge_data_with_columns(
             except Exception as e:
                 logger.error(f"Erro ao concatenar DataFrames: {e}")
                 raise
+
+        # Verificando se é desejado salvar os dados resultantes
+        if validator_output_data:
+            export_data(data=merged_df, file_path=output_dir_file)
 
         return merged_df
 
