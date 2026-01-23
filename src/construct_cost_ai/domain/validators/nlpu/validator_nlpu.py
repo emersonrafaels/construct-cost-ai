@@ -1,5 +1,5 @@
 """
-Módulo de Validação LPU - Verifica discrepâncias entre orçamento e base de preços.
+Módulo de Validação Não LPU - Verifica discrepâncias entre orçamento e base de preços.
 
 Este módulo realiza a conciliação entre o orçamento enviado pela construtora
 e a base de dados oficial da LPU (Lista de Preços Unitários), identificando discrepâncias
@@ -43,34 +43,11 @@ from utils.lpu.lpu_functions import (
     separate_regions,
     merge_budget_lpu,
 )
-from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
-    calculate_lpu_discrepancies,
-)
-from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
-    run_lpu_validation_reporting,
-)
+
 from utils.python_functions import get_item_safe
 from utils.fuzzy.fuzzy_functions import process_fuzzy_comparison_dataframes
 
 settings = get_settings()
-
-
-class ValidatorLPUError(Exception):
-    """Exceção base para erros do validador LPU."""
-
-    pass
-
-
-class FileNotFoundError(ValidatorLPUError):
-    """Exceção para arquivo não encontrado."""
-
-    pass
-
-
-class MissingColumnsError(ValidatorLPUError):
-    """Exceção para colunas obrigatórias ausentes."""
-
-    pass
 
 
 def load_budget(
@@ -547,216 +524,6 @@ def load_lpu(
     return df_wide, df_long
 
 
-def load_agencies(
-    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
-) -> pd.DataFrame:
-    """
-    Carrega o arquivo de agências.
-
-    Args:
-        file_path: Caminho para o arquivo de agências (Excel ou CSV).
-        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
-        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
-
-    Returns:
-        DataFrame com a base de agências carregada.
-
-    Raises:
-        FileNotFoundError: Se o arquivo não for encontrado.
-        MissingColumnsError: Se colunas obrigatórias estiverem ausentes.
-    """
-
-    logger.info("Iniciando o carregamento da base de agências")
-
-    file_path = Path(file_path)
-
-    if not file_path.exists():
-        raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
-
-    # Colunas obrigatórias
-    required_columns = settings.get(
-        "module_validator_lpu.agencies_data.required_columns_with_types", []
-    )
-
-    try:
-        # Ler os dados de Agências e realizar pré processing
-        df = transform_case(
-            read_data(
-                file_path=file_path,
-                sheet_name=settings.get("module_validator_lpu.agencies_data.sheet_name", "Sheet1"),
-                header=settings.get("module_validator_lpu.agencies_data.header", 1),
-            ),
-            columns_to_upper=True,
-            cells_to_upper=True,
-            cells_to_remove_spaces=settings.get(
-                "module_validator_lpu.agencies_data.cells_to_remove_spaces", []
-            ),
-            cells_to_remove_accents=settings.get(
-                "module_validator_lpu.agencies_data.cells_to_remove_accents", []
-            ),
-        )
-    except Exception as e:
-        logger.error(f"Erro ao carregar o arquivo de agências: {e}")
-        raise
-
-    # Valida colunas obrigatórias
-    missing_columns = set(required_columns.keys()) - set(df.columns)
-    if missing_columns:
-        raise MissingColumnsError(
-            f"Colunas obrigatórias ausentes na base de agências: {missing_columns}"
-        )
-
-    # Garante tipos corretos usando cast_columns
-    try:
-        df = cast_columns(df, required_columns)
-    except ValueError as e:
-        logger.error(f"Erro ao converter tipos de colunas na base de agências: {e}")
-        raise
-
-    # Verificando se é desejado salvar os dados resultantes
-    if validator_output_data:
-        export_data(data=df, file_path=output_dir_file)
-
-    return df
-
-
-def load_constructors(
-    file_path: Union[str, Path],
-    validator_output_data: bool = False,
-    output_dir_file: str = None,
-) -> pd.DataFrame:
-    """
-    Carrega o arquivo de construtoras.
-
-    Args:
-        file_path: Caminho para o arquivo de construtoras (Excel ou CSV).
-        validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
-        output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
-
-    Returns:
-        DataFrame com a base de construtoras carregada.
-
-    Raises:
-        FileNotFoundError: Se o arquivo não for encontrado.
-        MissingColumnsError: Se colunas obrigatórias estiverem ausentes.
-    """
-
-    logger.info("Iniciando o carregamento da base de construtoras")
-
-    file_path = Path(file_path)
-
-    if not file_path.exists():
-        raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
-
-    # Colunas obrigatórias
-    required_columns = settings.get(
-        "module_validator_lpu.constructors_data.required_columns_with_types", []
-    )
-
-    try:
-        # Ler os dados de Fornecedores/Construtoras e realizar pré processing
-        df = transform_case(
-            read_data(
-                file_path=file_path,
-                sheet_name=settings.get(
-                    "module_validator_lpu.constructors_data.sheet_name", "Sheet1"
-                ),
-            ),
-            columns_to_upper=True,
-            cells_to_upper=True,
-            columns_to_remove_accents=settings.get(
-                "module_validator_lpu.constructors_data.columns_to_remove_accents", []
-            ),
-            cells_to_remove_spaces=settings.get(
-                "module_validator_lpu.constructors_data.cells_to_remove_spaces", []
-            ),
-            cells_to_remove_accents=settings.get(
-                "module_validator_lpu.constructors_data.cells_to_remove_accents", []
-            ),
-        )
-    except Exception as e:
-        logger.error(f"Erro ao carregar o arquivo de construtoras: {e}")
-        raise
-
-    # Valida colunas obrigatórias
-    missing_columns = set(required_columns.keys()) - set(df.columns)
-    if missing_columns:
-        raise MissingColumnsError(
-            f"Colunas obrigatórias ausentes na base de construtoras: {missing_columns}"
-        )
-
-    # Garante tipos corretos usando cast_columns
-    try:
-        df = cast_columns(df, required_columns)
-    except ValueError as e:
-        logger.error(f"Erro ao converter tipos de colunas na base de construtoras: {e}")
-        raise
-
-    # Verificando se é desejado salvar os dados resultantes
-    if validator_output_data:
-        export_data(data=df, file_path=output_dir_file)
-
-    return df
-
-
-def calculate_total_item(
-    df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str
-) -> pd.DataFrame:
-    """
-    Calcula o valor total orçado em um DataFrame.
-
-    Args:
-        df (pd.DataFrame): DataFrame contendo os dados.
-        column_total_value (str): Nome da coluna de valor total orçado.
-        column_quantity (str): Nome da coluna de quantidade.
-        column_unit_price (str): Nome da coluna de preço unitário.
-
-    Returns:
-        pd.DataFrame: DataFrame atualizado com a coluna de valor total orçado calculada ou convertida.
-    """
-
-    # Verifica se a coluna de valor total orçado existe
-    if column_total_value not in df.columns:
-
-        # Se não existe, ele calcula usando quantidade * preço unitário
-        df[column_total_value] = df[column_quantity] * df[column_unit_price]
-    else:
-        # Nesse caso a coluna existe, então:
-        # 1 - Garante que está no formato numérico
-        df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
-
-        # Filtra linhas onde o valor total é nulo ou menor/igual a zero
-        mask = df[column_total_value].isna() | (df[column_total_value] <= 0)
-
-        # 2 - Recalcula o valor total apenas para essas linhas
-        df.loc[mask, column_total_value] = (
-            df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
-        )
-
-    return df
-
-
-def get_default_settings(key):
-    """
-    Retorna os valores padrão das configurações do validador LPU.
-
-    Returns:
-        Dicionário com configurações padrão
-    """
-    return {
-        "default_budget_path": settings.validador_lpu.caminho_padrao_orcamento,
-        "default_lpu_path": settings.validador_lpu.caminho_padrao_lpu,
-        "output_dir": settings.validador_lpu.output_dir,
-        "tolerance_percentual": settings.validador_lpu.tolerancia_percentual,
-        "basic_excel_file": settings.validador_lpu.arquivo_excel_basico,
-        "complete_excel_file": settings.validador_lpu.arquivo_excel_completo,
-        "csv_file": settings.validador_lpu.arquivo_csv,
-        "html_file": settings.validador_lpu.arquivo_html,
-        "top_n_divergences": settings.validador_lpu.top_n_divergencias,
-        "top_n_divergences_extended": settings.validador_lpu.top_n_divergencias_extended,
-    }
-
-
 def validate_and_merge(
     df_left: pd.DataFrame,
     df_right: pd.DataFrame,
@@ -1219,7 +986,7 @@ def validate_lpu(
             output_dir,
             settings.get("module_validator_lpu.output_settings.file_path_stats_output_pdf"),
         )
-        run_lpu_validation_reporting(
+        calculate_validation_stats_and_generate_report(
             df_result=df_result,
             validator_output_pdf=settings.get(
                 "module_validator_lpu.stats.validator_output_pdf", True
@@ -1231,12 +998,9 @@ def validate_lpu(
     return df_result
 
 
-def orchestrate_validate_lpu(
+def orchestrate_validate_nlpu(
     file_path_budget: Union[str, Path] = None,
-    file_path_metadata: Union[str, Path] = None,
     file_path_lpu: Union[str, Path] = None,
-    file_path_agencies: Union[str, Path] = None,
-    file_path_constructors: Union[str, Path] = None,
     output_dir: Union[str, Path] = None,
     output_file: str = None,
     verbose: bool = True,
@@ -1246,10 +1010,7 @@ def orchestrate_validate_lpu(
 
     Args:
         file_path_budget: Caminho para o arquivo de orçamento (padrão nas configurações se None).
-        file_path_metadata: Caminho para o arquivo de metadados dos orçamentos (padrão nas configurações se None).
         file_path_lpu: Caminho para o arquivo da LPU (padrão nas configurações se None).
-        file_path_agencies: Caminho para o arquivo de agências (padrão nas configurações se None).
-        file_path_constructors: Caminho para o arquivo de construtoras (padrão nas configurações se None).
         output_dir: Diretório para salvar resultados (padrão nas configurações se None).
         output_file: Nome base para os arquivos de saída (padrão nas configurações se None).
         verbose: Se True, exibe estatísticas no console.
@@ -1264,13 +1025,8 @@ def orchestrate_validate_lpu(
     # Arquivo de orçamento
     path_file_budget = Path(
         base_dir,
-        file_path_budget or settings.get("module_validator_lpu.budget_data.file_path"),
-    )
-
-    # Arquivo de metadados
-    path_file_metadata = Path(
-        base_dir,
-        file_path_metadata or settings.get("module_validator_lpu.budget_metadados.file_path"),
+        settings.get("module_validator_lpu.output_settings.output_dir"),
+        file_path_budget or settings.get("module_validator_lpu.output_settings.file_path_output"),
     )
 
     # Arquivo da LPU
@@ -1278,25 +1034,14 @@ def orchestrate_validate_lpu(
         base_dir, file_path_lpu or settings.get("module_validator_lpu.lpu_data.file_path")
     )
 
-    # Arquivo de com as informações das agências
-    path_file_agencies = Path(
-        base_dir, file_path_agencies or settings.get("module_validator_lpu.agencies_data.file_path")
-    )
-
-    # Arquivo com as informações das construtoras
-    path_file_constructors = Path(
-        base_dir,
-        file_path_constructors or settings.get("module_validator_lpu.constructors_data.file_path"),
-    )
-
     # Diretório de outputs dos resultados
     output_dir = Path(
-        base_dir, output_dir or settings.get("module_validator_lpu.output_settings.output_dir")
+        base_dir, output_dir or settings.get("module_validator_nlpu.output_settings.output_dir")
     )
 
     # Nome do arquivo de output
     output_file = output_file or settings.get(
-        "module_validator_lpu.output_settings.file_path_output"
+        "module_validator_nlpu.output_settings.file_path_output"
     )
 
     logger.debug(f"Orçamento: {path_file_budget}")

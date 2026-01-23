@@ -237,6 +237,20 @@ validator_output_pdf = true
 top_n_divergencias = 10
 top_n_divergencias_extended = 20
 
+[default.module_validator_nlpu.output_settings]
+
+# Lista de colunas no resultado final
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
+
+# Nomes dos arquivos de saída
+output_dir = "data/outputs"
+file_path_output = "spec/03_BASE_RESULTADO_VALIDADOR_NLPU.xlsx"
+file_path_output_csv = "spec/03_BASE_RESULTADO_VALIDADOR_NLPU.csv"
+file_path_output_complete_excel = "spec/03_BASE_RESULTADO_COMPLETO_VALIDADOR_NLPU.xlsx"
+
+file_path_output_complete_html = "spec/03_RESULTADO_COMPLETO_VALIDADOR_NLPU.html"
+file_path_stats_output_pdf = "spec/03_ESTATISTICAS_VALIDADOR_NLPU.pdf"
+
 [regex_patterns]
 group_pattern = "-GRUPO\\d+"
 
