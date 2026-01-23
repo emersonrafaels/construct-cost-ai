@@ -30,6 +30,7 @@ from utils.data.data_functions import (
     merge_data_with_columns,
     two_stage_merge,
     rename_columns,
+    export_data,
 )
 
 settings = get_settings()
@@ -168,17 +169,24 @@ def merge_budget_lpu(
     use_two_stage_merge: bool = False,
     validator_output_data: bool = False,
     output_dir_file: str = None,
-) -> dict:
+) -> tuple[pd.DataFrame, int]:
     """
 
     Realiza o cruzamento entre os dados e a base de LPU
 
     # Args
+        df_budget: DataFrame de orçamentos (pd.DataFrame)
+        df_lpu: DataFrame de LPU (pd.DataFrame)
+        columns_on_budget: Lista de listas com as colunas do orçamento para o cruzamento (List[List[str]])
+        columns_on_lpu: Lista de listas com as colunas da LPU para o cruzamento (List[List[str]])
+        how: Tipo de merge a ser realizado (str)
+        Validate: Tipo de validação do merge (str)
+        use_two_stage_merge: Validador se deve usar merge em duas etapas (Boolean)
         validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
         output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
 
-
     # Returns
+        dict: Tupla contendo o DataFrame resultante e a quantidade de dados cruzados com sucesso.
 
     """
 
@@ -238,5 +246,9 @@ def merge_budget_lpu(
 
             # Obtendo a quantidade de dados com cruzamento realizado com sucesso
             len_merged = len(merged_df[merged_df["_merge"] == both])
+
+    # Verificando se é desejado salvar os dados resultantes
+    if validator_output_data:
+        export_data(data=merged_df, file_path=output_dir_file)
 
     return merged_df, len_merged

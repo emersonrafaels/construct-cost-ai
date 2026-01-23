@@ -21,7 +21,7 @@ column_total_paid = "VALOR TOTAL PAGO"
 column_total_lpu = "VALOR TOTAL LPU"
 column_difference = "DIFERENÇA TOTAL"
 column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
-column_status = "STATUS CONCILIAÇÃO"
+column_status = "VALIDADOR_LPU"
 
 # Opção para obter as estatísticas de status LPU
 get_lpu_status = true
@@ -151,7 +151,7 @@ indicator = "_merge_bud_met"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE01_ORCA_META.xlsx"
+dir_path_file_sot = "data/outputs/sot/02_MERGE_01_ORCA_META.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies]
 left_on = "NUMERO_AGENCIA"
@@ -162,7 +162,7 @@ indicator = "_merge_bud_met_age"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE02_ORCA_META_AG.xlsx"
+dir_path_file_sot = "data/outputs/sot/02_MERGE_02_ORCA_META_AG.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies_constructors]
 left_on = ["CONSTRUTORA", "REGIAO"]
@@ -172,9 +172,14 @@ validate = "many_to_one"
 handle_duplicates = true
 indicator = "_merge_bud_met_age_constr"
 
+# Validando se é desejado usar merge fuzzy para construtoras
+validator_use_merge_fuzzy = true
+validator_use_merge_fuzzy_column_left = "CONSTRUTORA"
+validator_use_merge_fuzzy_column_right = "FORNECEDOR"
+
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE03_ORCA_META_AG_CONSTRU.xlsx"
+dir_path_file_sot = "data/outputs/sot/02_MERGE_03_ORCA_META_AG_CONSTRU.xlsx"
 
 [default.module_validator_lpu.merge_budget_lpu]
 
@@ -208,22 +213,21 @@ columns_lpu_merge_two = ["ITEM", "REGIAO", "GRUPO"]
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE04_ORCA_META_AG_CONSTRU_LPU.xlsx"
+dir_path_file_sot = "data/outputs/sot/02_MERGE_04_ORCA_META_AG_CONSTRU_LPU.xlsx"
 
 [default.module_validator_lpu.output_settings]
 
 # Lista de colunas no resultado final
-list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'STATUS CONCILIAÇÃO', 'SOURCE_FILE', 'SHEET_NAME_orc']
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
 
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"
-file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
-file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
-file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
+file_path_output = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+file_path_output_csv = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.csv"
+file_path_output_complete_excel = "spec/02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
 
-file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
-file_path_stats_output_pdf = "02_ESTATISTICAS_VALIDADOR_LPU.pdf"
-
+file_path_output_complete_html = "spec/02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
+file_path_stats_output_pdf = "spec/02_ESTATISTICAS_VALIDADOR_LPU.pdf"
 [default.module_validator_lpu.stats]
 
 # Variável para salvar o relatório de estatísticas em PDF
@@ -232,6 +236,62 @@ validator_output_pdf = true
 # Configurações de exportação
 top_n_divergencias = 10
 top_n_divergencias_extended = 20
+
+[default.module_validator_nlpu.budget_data]
+
+# Caminhos padrão
+output_dir = "data/outputs"
+file_path = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+sheet_name = "Sheet1"
+
+# Colunas obrigatórias com tipos
+required_columns_with_types = {}
+
+# Colunas para renomear
+columns_to_rename = {}
+
+# Colunas para normalização de valores
+cells_to_remove_spaces = []
+cells_to_remove_accents = []
+
+column_quantity = "QUANTIDADE"
+column_unit_price = "PRECO PAGO"
+column_total_value = "VALOR TOTAL PAGO"
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = false
+dir_path_file_sot = "data/outputs/sot/03_VALIDADOR_NLPU_01_FUZZY_BUDGET_LPU.xlsx"
+
+[default.module_validator_nlpu.match_fuzzy_budget_lpu]
+
+# Validador para uso do merge fuzzy
+validator_use_merge_fuzzy = true
+
+# Coluna que indica o resultado do merge fuzzy
+indicator = "_match_fuzzy_budget_lpu"
+
+# Coluna do orçamento para merge fuzzy
+validator_use_merge_fuzzy_column_left = "NOME"
+
+# Coluna da LPU para merge fuzzy
+validator_use_merge_fuzzy_column_right = "ITEM"
+
+# Limiar de similaridade para considerar o merge fuzzy
+validator_use_merge_fuzzy_threshold = 80
+
+[default.module_validator_nlpu.output_settings]
+
+# Lista de colunas no resultado final
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
+
+# Nomes dos arquivos de saída
+output_dir = "data/outputs"
+file_path_output = "spec/03_BASE_RESULTADO_VALIDADOR_NLPU.xlsx"
+file_path_output_csv = "spec/03_BASE_RESULTADO_VALIDADOR_NLPU.csv"
+file_path_output_complete_excel = "spec/03_BASE_RESULTADO_COMPLETO_VALIDADOR_NLPU.xlsx"
+
+file_path_output_complete_html = "spec/03_RESULTADO_COMPLETO_VALIDADOR_NLPU.html"
+file_path_stats_output_pdf = "spec/03_ESTATISTICAS_VALIDADOR_NLPU.pdf"
 
 [regex_patterns]
 group_pattern = "-GRUPO\\d+"

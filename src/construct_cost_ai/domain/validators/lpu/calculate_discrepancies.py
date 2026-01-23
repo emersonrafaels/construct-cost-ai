@@ -64,35 +64,51 @@ def calculate_lpu_discrepancies(
         pd.DataFrame: DataFrame atualizado com as colunas calculadas.
     """
 
+    def calculate_total_item(
+        df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str
+    ) -> None:
+        """
+        Calcula o valor total orçado em um DataFrame.
+
+        Args:
+            df (pd.DataFrame): DataFrame contendo os dados.
+            column_total_value (str): Nome da coluna de valor total orçado.
+            column_quantity (str): Nome da coluna de quantidade.
+            column_unit_price (str): Nome da coluna de preço unitário.
+
+        Returns:
+            None: Atualiza o DataFrame com a coluna de valor total orçado calculada ou convertida.
+        """
+
+        # Verifica se a coluna de valor total orçado existe
+        if column_total_value not in df.columns:
+
+            # Se não existe, ele calcula usando quantidade * preço unitário
+            df[column_total_value] = df[column_quantity] * df[column_unit_price]
+        else:
+            # Nesse caso a coluna existe, então:
+            # 1 - Garante que está no formato numérico
+            df[column_total_value] = pd.to_numeric(df[column_total_value], errors="coerce")
+
+            # Filtra linhas onde o valor total é nulo ou menor/igual a zero
+            mask = df[column_total_value].isna() | (df[column_total_value] <= 0)
+
+            # 2 - Recalcula o valor total apenas para essas linhas
+            df.loc[mask, column_total_value] = (
+                df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
+            )
+
     def calculate_total_paid(df: pd.DataFrame) -> None:
         """
         Calcula o valor total pago com base na quantidade e no preço unitário pago.
         """
-        if column_quantity not in df.columns or column_unit_price_paid not in df.columns:
-            logger.error(
-                f"Colunas '{column_quantity}' ou '{column_unit_price_paid}' não encontradas no DataFrame."
-            )
-        else:
-            if verbose:
-                logger.info(
-                    f"Calculando valor total pago usando as colunas '{column_quantity}' e '{column_unit_price_paid}'..."
-                )
-            df[column_total_paid] = df[column_quantity] * df[column_unit_price_paid]
+        calculate_total_item(df, column_total_paid, column_quantity, column_unit_price_paid)
 
     def calculate_total_lpu(df: pd.DataFrame) -> None:
         """
         Calcula o valor total da LPU com base na quantidade e no preço unitário da LPU.
         """
-        if column_quantity not in df.columns or column_unit_price_lpu not in df.columns:
-            logger.error(
-                f"Colunas '{column_quantity}' ou '{column_unit_price_lpu}' não encontradas no DataFrame."
-            )
-        else:
-            if verbose:
-                logger.info(
-                    f"Calculando valor total da LPU usando as colunas '{column_quantity}' e '{column_unit_price_lpu}'..."
-                )
-            df[column_total_lpu] = df[column_quantity] * df[column_unit_price_lpu]
+        calculate_total_item(df, column_total_lpu, column_quantity, column_unit_price_lpu)
 
     def calculate_difference(df: pd.DataFrame) -> None:
         """
@@ -131,14 +147,22 @@ def calculate_lpu_discrepancies(
             str: Classificação da discrepância.
         """
         if pd.isna(pct):
-            return "Sem base LPU"
+            return "ITEM_NAO_LPU"
         if abs(pct) <= tol:
             return "OK"
-        return "Para ressarcimento" if pct > 0 else "Abaixo LPU"
+        return "PARA RESSARCIMENTO" if pct > 0 else "ABAIXO LPU"
 
-    def assign_status(df: pd.DataFrame) -> None:
+    def assign_status(df: pd.DataFrame, column_status) -> None:
         """
         Atribui um status de conciliação com base na discrepância e na tolerância.
+
+        # Args:
+            df (pd.DataFrame): DataFrame contendo os dados.
+            column_status (str): Nome da coluna para o status de conciliação.
+
+        # Returns:
+            None: Atualiza o DataFrame com a coluna de status atribuída.
+
         """
         if tol_percentile is not None:
             if not (0 <= tol_percentile <= 100):
@@ -154,6 +178,6 @@ def calculate_lpu_discrepancies(
     calculate_total_lpu(df)
     calculate_difference(df)
     calculate_discrepancy(df)
-    assign_status(df)
+    assign_status(df, column_status=column_status)
 
     return df
