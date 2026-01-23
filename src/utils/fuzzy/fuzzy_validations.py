@@ -82,8 +82,6 @@ from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple, Uni
 base_dir = Path(__file__).parents[4]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from utils.python_functions import measure_execution_time
-
 
 # =========================================================
 # 1) Normalização de texto
@@ -186,7 +184,6 @@ def fuzzy_match(
 # =========================================================
 # 4) Função fuzzy match (com correções principais)
 # =========================================================
-@measure_execution_time
 def fuzzy_match(
     value: str,
     choices: Sequence[str],

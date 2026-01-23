@@ -72,7 +72,7 @@ base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
-from src.utils.python_functions import to_float_resilient
+from utils.python_functions import to_float_resilient
 
 
 def read_data(

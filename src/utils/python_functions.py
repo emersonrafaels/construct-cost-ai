@@ -4,28 +4,31 @@ from typing import Any
 
 import numpy as np
 
-
-def measure_execution_time(func):
+def measure_execution_time(condition=True):
     """
-    Decorator to measure the execution time of a function.
+    Decorator para medir o tempo de execução de uma função, com comportamento condicional.
 
     Args:
-        func (callable): The function to be decorated.
+        condition (bool): Define se o decorator será aplicado ou não. Padrão é True.
 
     Returns:
-        callable: The wrapped function with execution time measurement.
+        callable: A função decorada com medição de tempo, ou a função original se a condição for False.
     """
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds.")
-        return result
-
-    return wrapper
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if condition:
+                start_time = time.time()
+                result = func(*args, **kwargs)
+                end_time = time.time()
+                execution_time = end_time - start_time
+                print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds.")
+                return result
+            else:
+                # Se a condição for False, executa a função diretamente sem medir o tempo
+                return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def get_item_safe(obj, idx, return_key=False):
