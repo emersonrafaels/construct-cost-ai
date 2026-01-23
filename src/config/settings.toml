@@ -172,6 +172,11 @@ validate = "many_to_one"
 handle_duplicates = true
 indicator = "_merge_bud_met_age_constr"
 
+# Validando se é desejado usar merge fuzzy para construtoras
+validator_use_merge_fuzzy = true
+validator_use_merge_fuzzy_column_left = "CONSTRUTORA"
+validator_use_merge_fuzzy_column_right = "FORNECEDOR"
+
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
 dir_path_file_sot = "data/outputs/sot/02_MERGE03_ORCA_META_AG_CONSTRU.xlsx"

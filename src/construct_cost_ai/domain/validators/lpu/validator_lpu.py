@@ -50,6 +50,7 @@ from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
     calculate_validation_stats_and_generate_report,
 )
 from utils.python_functions import get_item_safe
+from utils.fuzzy.fuzzy_functions import process_fuzzy_comparison_dataframes
 
 settings = get_settings()
 
@@ -623,7 +624,6 @@ def load_constructors(
     file_path: Union[str, Path],
     validator_output_data: bool = False,
     output_dir_file: str = None,
-    validator_match_fuzzy: bool = False,
 ) -> pd.DataFrame:
     """
     Carrega o arquivo de construtoras.
@@ -632,7 +632,6 @@ def load_constructors(
         file_path: Caminho para o arquivo de construtoras (Excel ou CSV).
         validator_output_data: Validador se é desejado salvar os dados após processamento (Boolean)
         output_dir_file: Arquivo que deve ser salvo, se o validator_output_data for True (str)
-        validator_match_fuzzy: Validador se é desejado melhorar o nome das construtoras usando fuzzy matching (Boolean)
 
     Returns:
         DataFrame com a base de construtoras carregada.
@@ -692,10 +691,6 @@ def load_constructors(
     except ValueError as e:
         logger.error(f"Erro ao converter tipos de colunas na base de construtoras: {e}")
         raise
-
-    # Valida se é desejado melhorar o nome das construtoras usando fuzzy matching
-    if validator_match_fuzzy:
-        pass
 
     # Verificando se é desejado salvar os dados resultantes
     if validator_output_data:
@@ -1085,6 +1080,19 @@ def validate_lpu(
             "module_validator_lpu.merge_budget_metadata_agencies_constructors.indicator",
             "_merge_bud_met_age_constr",
         )
+        
+        validator_use_merge_fuzzy_agencies_constructors = settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy"
+            )
+        
+        if validator_use_merge_fuzzy_agencies_constructors:
+            
+            # Aplicando match fuzzy
+            df_merge_budget_metadata_agencias = process_fuzzy_comparison_dataframes(df=df_merge_budget_metadata_agencias, df_choices=df_constructors, df_column=settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_left"
+            ), df_choices_column=settings.get(
+                "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_right"
+            ), threshold=70, replace_column=True, drop_columns_result=True)
 
         df_merge_budget_metadata_agencias_constructors = merge_data_with_columns(
             df_left=df_merge_budget_metadata_agencias,
@@ -1104,7 +1112,7 @@ def validate_lpu(
                 "many_to_one",
             ),
             indicator=indicator,
-            use_similarity_for_unmatched=True,
+            use_similarity_for_unmatched=False,
             similarity_threshold=70,
             validator_output_data=settings.get(
                 "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_save_sot",
