@@ -21,7 +21,7 @@ column_total_paid = "VALOR TOTAL PAGO"
 column_total_lpu = "VALOR TOTAL LPU"
 column_difference = "DIFERENÇA TOTAL"
 column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
-column_status = "STATUS CONCILIAÇÃO"
+column_status = "VALIDADOR_LPU"
 
 # Opção para obter as estatísticas de status LPU
 get_lpu_status = true
@@ -218,17 +218,16 @@ dir_path_file_sot = "data/outputs/sot/02_MERGE04_ORCA_META_AG_CONSTRU_LPU.xlsx"
 [default.module_validator_lpu.output_settings]
 
 # Lista de colunas no resultado final
-list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'STATUS CONCILIAÇÃO', 'SOURCE_FILE', 'SHEET_NAME_orc']
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
 
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"
-file_path_output = "02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
-file_path_output_csv = "02_BASE_RESULTADO_VALIDADOR_LPU.csv"
-file_path_output_complete_excel = "02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
+file_path_output = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
+file_path_output_csv = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.csv"
+file_path_output_complete_excel = "spec/02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
 
-file_path_output_complete_html = "02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
-file_path_stats_output_pdf = "02_ESTATISTICAS_VALIDADOR_LPU.pdf"
-
+file_path_output_complete_html = "spec/02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
+file_path_stats_output_pdf = "spec/02_ESTATISTICAS_VALIDADOR_LPU.pdf"
 [default.module_validator_lpu.stats]
 
 # Variável para salvar o relatório de estatísticas em PDF

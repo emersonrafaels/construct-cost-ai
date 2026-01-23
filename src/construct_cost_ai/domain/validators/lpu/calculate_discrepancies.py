@@ -152,16 +152,24 @@ def calculate_lpu_discrepancies(
             return "OK"
         return "PARA RESSARCIMENTO" if pct > 0 else "ABAIXO LPU"
 
-    def assign_status(df: pd.DataFrame) -> None:
+    def assign_status(df: pd.DataFrame, column_status) -> None:
         """
         Atribui um status de conciliação com base na discrepância e na tolerância.
+        
+        # Args:
+            df (pd.DataFrame): DataFrame contendo os dados.
+            column_status (str): Nome da coluna para o status de conciliação.
+            
+        # Returns:
+            None: Atualiza o DataFrame com a coluna de status atribuída.
+        
         """
         if tol_percentile is not None:
             if not (0 <= tol_percentile <= 100):
                 logger.error("'tol_percentile' deve estar entre 0 e 100.")
             else:
                 tolerance_value = tol_percentile  # A tolerância é diretamente o valor percentual
-                df["VALIDADOR_LPU"] = df[column_discrepancy].apply(
+                df[column_status] = df[column_discrepancy].apply(
                     lambda pct: classify_discrepancy(pct, tolerance_value)
                 )
 
@@ -170,6 +178,6 @@ def calculate_lpu_discrepancies(
     calculate_total_lpu(df)
     calculate_difference(df)
     calculate_discrepancy(df)
-    assign_status(df)
+    assign_status(df, column_status=column_status)
 
     return df
