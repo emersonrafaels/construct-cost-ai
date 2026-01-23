@@ -81,7 +81,9 @@ def _get_cfg(settings) -> Dict[str, Any]:
     return {
         # colunas
         "col_status": settings.get("module_validator_lpu.column_status", "VALIDADOR_LPU"),
-        "col_total_paid": settings.get("module_validator_lpu.column_total_paid", "VALOR TOTAL PAGO"),
+        "col_total_paid": settings.get(
+            "module_validator_lpu.column_total_paid", "VALOR TOTAL PAGO"
+        ),
         "col_difference": settings.get("module_validator_lpu.column_difference", "DIFERENÇA TOTAL"),
         "col_total_lpu": settings.get("module_validator_lpu.column_total_lpu", "VALOR TOTAL LPU"),
         "col_agency": settings.get("module_validator_lpu.column_agency", "NUMERO_AGENCIA"),
@@ -192,7 +194,9 @@ def generate_statistics_report_business(
 
     # Status distribution
     status_counts = df[col_status].value_counts().rename_axis("STATUS").reset_index(name="ITENS")
-    status_counts["%"] = (status_counts["ITENS"] / total_items * 100).round(1) if total_items else 0.0
+    status_counts["%"] = (
+        (status_counts["ITENS"] / total_items * 100).round(1) if total_items else 0.0
+    )
 
     # Pareto: top agencies by refund
     if all(c in df.columns for c in [col_agency, col_city, col_uf]):
@@ -277,7 +281,10 @@ def generate_statistics_report_business(
     kpi_data = [
         ["Itens analisados", f"{total_items:,}".replace(",", ".")],
         ["Valor total pago", _brl(total_paid)],
-        ["Valor total LPU (onde aplicável)", _brl(total_lpu) if col_lpu_total in df.columns else "—"],
+        [
+            "Valor total LPU (onde aplicável)",
+            _brl(total_lpu) if col_lpu_total in df.columns else "—",
+        ],
         ["Diferença total (pago - LPU)", _brl(total_div)],
         [f"Potencial ressarcimento ({status_refund})", _brl(refund_value)],
         [f"Volume {status_below} (|dif|)", _brl(below_abs)],
@@ -322,7 +329,9 @@ def generate_statistics_report_business(
 
     # Pareto section
     elements.append(Paragraph("Pareto de ressarcimento (drill-down)", h2))
-    elements.append(Paragraph("Concentradores de impacto financeiro para priorização de tratativas.", body))
+    elements.append(
+        Paragraph("Concentradores de impacto financeiro para priorização de tratativas.", body)
+    )
     elements.append(Spacer(1, 8))
     elements.append(Image(_as_path_str(chart_pareto), width=16.5 * cm, height=8 * cm))
     elements.append(Spacer(1, 10))

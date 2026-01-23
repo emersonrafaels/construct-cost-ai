@@ -237,6 +237,16 @@ validator_output_pdf = true
 top_n_divergencias = 10
 top_n_divergencias_extended = 20
 
+[default.module_validator_nlpu.match_fuzzy_budget_lpu]
+
+# Validador para uso do merge fuzzy
+validator_use_merge_fuzzy = true
+
+# Coluna que indica o resultado do merge fuzzy
+indicator = "_match_fuzzy_budget_lpu"
+
+
+
 [default.module_validator_nlpu.output_settings]
 
 # Lista de colunas no resultado final

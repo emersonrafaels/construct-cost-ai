@@ -155,14 +155,14 @@ def calculate_lpu_discrepancies(
     def assign_status(df: pd.DataFrame, column_status) -> None:
         """
         Atribui um status de conciliação com base na discrepância e na tolerância.
-        
+
         # Args:
             df (pd.DataFrame): DataFrame contendo os dados.
             column_status (str): Nome da coluna para o status de conciliação.
-            
+
         # Returns:
             None: Atualiza o DataFrame com a coluna de status atribuída.
-        
+
         """
         if tol_percentile is not None:
             if not (0 <= tol_percentile <= 100):
