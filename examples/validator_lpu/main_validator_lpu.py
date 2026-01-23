@@ -7,10 +7,10 @@ Este script exemplifica como utilizar o módulo de validação LPU (Lista de Pre
 
 __author__ = "Emerson V. Rafael (emervin)"
 __copyright__ = "Verificador Inteligente de Orçamentos de Obras"
-__credits__ = ["Emerson V. Rafael", "Lucas Ken", "Clarissa Simoyama"]
+__credits__ = ["Emerson V. Rafael", "Clarissa Simoyama"]
 __license__ = "MIT"
 __version__ = "1.0.0"
-__maintainer__ = "Emerson V. Rafael (emervin), Lucas Ken (kushida), Clarissa Simoyama (simoyam)"
+__maintainer__ = "Emerson V. Rafael (emervin), Clarissa Simoyama (simoyam)"
 __squad__ = "DataCraft"
 __email__ = "emersonssmile@gmail.com"
 __status__ = "Development"
