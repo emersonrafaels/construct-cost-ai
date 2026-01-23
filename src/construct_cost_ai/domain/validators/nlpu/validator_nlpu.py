@@ -556,6 +556,31 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
     return df_result
 
 
+def apply_match_fuzzy_budget_lpu(df_budget, df_lpu):
+    
+    # Separando os dados que queremos que tenha match fuzzy
+    df_budget_match_fuzzy["VALIDADOR_LPU"] = "ITEM_NAO_LPU"
+    df_budget_not_match = df_budget[
+        df_budget["VALIDADOR_LPU"] != "ITEM_NAO_LPU"]
+    
+    # Aplicando match fuzzy
+    df_match_fuzzy_budget_lpu = process_fuzzy_comparison_dataframes(
+        df=df_budget_match_fuzzy,
+        df_choices=df_lpu,
+        df_column=settings.get(
+            "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_left"
+        ),
+        df_choices_column=settings.get(
+            "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
+        ),
+        threshold=settings.get(
+            "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
+        , 80),
+        replace_column=False,
+        drop_columns_result=False,
+    )
+
+
 def validate_nlpu(
     file_path_budget: Union[str, Path] = None,
     file_path_lpu: Union[str, Path] = None,
@@ -648,20 +673,8 @@ def validate_nlpu(
         if validator_use_merge_fuzzy_budget_lpu:
 
             # Aplicando match fuzzy
-            df_match_fuzzy_budget_lpu = process_fuzzy_comparison_dataframes(
-                df=df_budget,
-                df_choices=df_lpu_long,
-                df_column=settings.get(
-                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_left"
-                ),
-                df_choices_column=settings.get(
-                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
-                ),
-                threshold=settings.get(
-                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
-                , 80),
-                replace_column=False,
-                drop_columns_result=False,
+            df_match_fuzzy_budget_lpu = apply_match_fuzzy_budget_lpu(
+                df_budget=df_budget, df_lpu=df_lpu_long
             )
 
         if verbose:
