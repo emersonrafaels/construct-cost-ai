@@ -36,6 +36,7 @@ from utils.data.data_functions import (
     select_columns,
     rename_columns,
     filter_by_merge_column,
+    remove_duplicate_columns
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
@@ -777,12 +778,14 @@ def validate_and_merge(
     return merged_df, matched_count, total_count
 
 
-def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
+def generate_format_result(df: pd.DataFrame, 
+                           vaLidator_remove_duplicate_columns: bool = False) -> pd.DataFrame:
     """
     Cria o DataFrame de resultado formatado para exportação.
 
     Args:
         df (pd.DataFrame): DataFrame com os resultados completos da validação.
+        
 
     Returns:
         pd.DataFrame: DataFrame formatado para exportação.
@@ -795,6 +798,9 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
 
     if list_select_columns:
         df_result = select_columns(df=df, target_columns=list_select_columns)
+        
+    if vaLidator_remove_duplicate_columns:
+        df_result = remove_duplicate_columns(df=df_result)
 
     return df_result
 
@@ -1169,7 +1175,8 @@ def validate_lpu(
         raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
 
     # Formatando o resultado final
-    df_result = generate_format_result(df_result)
+    df_result = generate_format_result(df=df_result,
+                                       vaLidator_remove_duplicate_columns=True)
 
     # Salvar o resultado em um arquivo Excel
     export_data(
@@ -1182,10 +1189,14 @@ def validate_lpu(
 
     # Estatísticas
     if settings.get("module_validator_lpu.get_lpu_status", False):
+        
+        # Definindo o local de salvamento do PDF de estatísticas
         output_pdf = Path(
             output_dir,
             settings.get("module_validator_lpu.output_settings.file_path_stats_output_pdf"),
         )
+        
+        # Executando o PDF de estatísticas
         run_lpu_validation_reporting(
             df_result=df_result,
             validator_output_pdf=settings.get(

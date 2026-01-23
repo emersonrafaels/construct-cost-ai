@@ -147,10 +147,10 @@ def calculate_lpu_discrepancies(
             str: Classificação da discrepância.
         """
         if pd.isna(pct):
-            return "ITEM_NAO_LPU"
+            return "ITEM NAO LPU"
         if abs(pct) <= tol:
             return "OK"
-        return "PARA RESSARCIMENTO" if pct > 0 else "ABAIXO LPU"
+        return "PARA RESSARCIMENTO" if pct > 0 else "OK"
 
     def assign_status(df: pd.DataFrame, column_status) -> None:
         """

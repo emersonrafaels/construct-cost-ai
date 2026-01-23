@@ -1454,3 +1454,26 @@ def filter_dataframe_dict_values(
         return filtered_df
 
     return df
+
+
+def remove_duplicate_columns(df: pd.DataFrame, keep: str = "first") -> pd.DataFrame:
+    """
+    Remove colunas duplicadas de um DataFrame, mantendo a primeira ou a última ocorrência.
+
+    Args:
+        df (pd.DataFrame): DataFrame de entrada.
+        keep (str): Estratégia para manter as colunas:
+                    - "first": Mantém a primeira ocorrência (padrão).
+                    - "last": Mantém a última ocorrência.
+
+    Returns:
+        pd.DataFrame: DataFrame sem colunas duplicadas.
+    """
+    if keep not in ["first", "last"]:
+        raise ValueError("O parâmetro 'keep' deve ser 'first' ou 'last'.")
+
+    # Identifica colunas duplicadas
+    duplicated_columns = df.columns.duplicated(keep=keep)
+
+    # Remove as colunas duplicadas
+    return df.loc[:, ~duplicated_columns]
