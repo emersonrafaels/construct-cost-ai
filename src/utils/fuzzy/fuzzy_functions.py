@@ -106,3 +106,66 @@ def process_fuzzy_comparison_dataframes(
         )
 
     return df
+
+
+def apply_match_fuzzy_two_dataframes(
+    df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    filter_cols_to_match: dict = None,
+    list_columns_get_df_right: list = None,
+    df_left_column: str = None,
+    df_choices_column: str = None,
+    threshold: int = 80,
+    replace_column: bool = False,
+    drop_columns_result: bool = False,
+    merge_fuzzy_column_right: str = None
+) -> pd.DataFrame:
+    """
+    Realiza um match fuzzy entre dois DataFrames e combina os resultados.
+
+    Args:
+        df_left (pd.DataFrame): DataFrame à esquerda (base principal para o match).
+        df_right (pd.DataFrame): DataFrame à direita (base de referência para o match).
+        filter_cols_to_match (dict, opcional): Filtros a serem aplicados no DataFrame à esquerda antes do match.
+        list_columns_get_df_right (list, opcional): Colunas do DataFrame à direita a serem incluídas no resultado.
+        df_left_column (str, opcional): Nome da coluna no DataFrame à esquerda usada para o match.
+        df_choices_column (str, opcional): Nome da coluna no DataFrame à direita usada como referência para o match.
+        threshold (int, opcional): Pontuação mínima para considerar um match válido. Padrão é 80.
+        replace_column (bool, opcional): Substitui a coluna original pelo melhor match, se True. Padrão é False.
+        drop_columns_result (bool, opcional): Remove colunas auxiliares do resultado, se True. Padrão é False.
+        merge_fuzzy_column_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
+
+    Returns:
+        pd.DataFrame: DataFrame combinado com linhas correspondentes e não correspondentes.
+    """
+    filter_cols_to_match = filter_cols_to_match or {}
+    list_columns_get_df_right = list_columns_get_df_right or []
+
+    # Filtra as linhas do DataFrame à esquerda com base nos filtros fornecidos
+    df_left_match_fuzzy = filter_dataframe_dict_values(df=df_left, filters=filter_cols_to_match)
+
+    # Identifica as linhas que não atendem aos critérios de filtro
+    df_left_unmatched = df_left[~df_left.index.isin(df_left_match_fuzzy.index)]
+
+    # Realiza o match fuzzy entre os DataFrames filtrados
+    df_match_fuzzy_budget_lpu = process_fuzzy_comparison_dataframes(
+        df=df_left_match_fuzzy,
+        df_choices=df_right,
+        df_column=df_left_column,
+        df_choices_column=df_choices_column,
+        threshold=threshold,
+        replace_column=replace_column,
+        drop_columns_result=drop_columns_result,
+    )
+
+    # Preenche as colunas especificadas do DataFrame à direita no DataFrame à esquerda
+    for col in list_columns_get_df_right:
+        if col in df_right.columns:
+            df_left_match_fuzzy[col] = df_match_fuzzy_budget_lpu["BEST_MATCH"].map(
+                df_right.set_index(merge_fuzzy_column_right or df_choices_column)[col]
+            )
+
+    # Combina as linhas correspondentes e não correspondentes em um único DataFrame
+    df_result = pd.concat([df_left_match_fuzzy, df_left_unmatched], axis=0)
+
+    return df_result
