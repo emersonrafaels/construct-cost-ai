@@ -36,6 +36,7 @@ from utils.data.data_functions import (
     select_columns,
     rename_columns,
     filter_by_merge_column,
+    filter_dataframe_dict_values,
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
@@ -45,7 +46,7 @@ from utils.lpu.lpu_functions import (
 
 from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
-from utils.fuzzy.fuzzy_functions import process_fuzzy_comparison_dataframes
+from utils.fuzzy.fuzzy_functions import apply_match_fuzzy_two_dataframes
 
 settings = get_settings()
 
@@ -556,29 +557,51 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
     return df_result
 
 
-def apply_match_fuzzy_budget_lpu(df_budget, df_lpu):
+def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
+    df_right: pd.DataFrame,
+    df_left_column: str = None,
+    df_choices_column: str = None,
+    filter_cols_to_match: dict = None,
+    list_columns_get_df_right: list = None,
+    threshold: int = 80,
+    replace_column: bool = False,
+    drop_columns_result: bool = False,
+    merge_fuzzy_column_right: str = None) -> pd.DataFrame:
     
-    # Separando os dados que queremos que tenha match fuzzy
-    df_budget_match_fuzzy["VALIDADOR_LPU"] = "ITEM_NAO_LPU"
-    df_budget_not_match = df_budget[
-        df_budget["VALIDADOR_LPU"] != "ITEM_NAO_LPU"]
+    """
+    Realiza um match fuzzy entre dois DataFrames e combina os resultados.
+
+    Args:
+        df_left (pd.DataFrame): DataFrame à esquerda (base principal para o match).
+        df_right (pd.DataFrame): DataFrame à direita (base de referência para o match).
+        df_left_column (str, opcional): Nome da coluna no DataFrame à esquerda usada para o match.
+        df_choices_column (str, opcional): Nome da coluna no DataFrame à direita usada como referência para o match.
+        filter_cols_to_match (dict, opcional): Filtros a serem aplicados no DataFrame à esquerda antes do match.
+        list_columns_get_df_right (list, opcional): Colunas do DataFrame à direita a serem incluídas no resultado.
+        threshold (int, opcional): Pontuação mínima para considerar um match válido. Padrão é 80.
+        replace_column (bool, opcional): Substitui a coluna original pelo melhor match, se True. Padrão é False.
+        drop_columns_result (bool, opcional): Remove colunas auxiliares do resultado, se True. Padrão é False.
+        merge_fuzzy_column_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
+
+    Returns:
+        pd.DataFrame: DataFrame combinado com linhas correspondentes e não correspondentes.
+    """
     
-    # Aplicando match fuzzy
-    df_match_fuzzy_budget_lpu = process_fuzzy_comparison_dataframes(
-        df=df_budget_match_fuzzy,
-        df_choices=df_lpu,
-        df_column=settings.get(
-            "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_left"
-        ),
-        df_choices_column=settings.get(
-            "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
-        ),
-        threshold=settings.get(
-            "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
-        , 80),
-        replace_column=False,
-        drop_columns_result=False,
+    df_result = apply_match_fuzzy_two_dataframes(
+        df_left=df_left,
+        df_right=df_right,
+        filter_cols_to_match=filter_cols_to_match,
+        list_columns_get_df_right=list_columns_get_df_right,
+        df_left_column=df_left_column,
+        df_choices_column=df_choices_column,
+        threshold=threshold,
+        replace_column=replace_column,
+        drop_columns_result=drop_columns_result,
+        merge_fuzzy_column_right=merge_fuzzy_column_right
     )
+
+    # Retornar o DataFrame final
+    return df_result
 
 
 def validate_nlpu(
@@ -674,7 +697,27 @@ def validate_nlpu(
 
             # Aplicando match fuzzy
             df_match_fuzzy_budget_lpu = apply_match_fuzzy_budget_lpu(
-                df_budget=df_budget, df_lpu=df_lpu_long
+                df_left=df_budget, 
+                df_right=df_lpu_long,
+                df_left_column=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_left"
+                ),
+                df_choices_column=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
+                ),
+                filter_cols_to_match=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.filter_cols_to_match"
+                ),
+                list_columns_get_df_right=[],
+                threshold=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
+                ),
+                replace_column=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.replace_column"
+                ),
+                drop_columns_result=settings.get(
+                    "module_validator_nlpu.match_fuzzy_budget_lpu.drop_columns_result"
+                ),
             )
 
         if verbose:

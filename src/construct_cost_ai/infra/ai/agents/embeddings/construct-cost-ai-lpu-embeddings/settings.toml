@@ -1,0 +1,7 @@
+[default]
+
+[default.agent]
+
+[default.agent.construct-cost-ai-lpu-embeddings]
+
+system_prompt = ""

@@ -1014,6 +1014,7 @@ def validate_lpu(
                 "module_validator_lpu.merge_budget_metadata_agencies.validate", "many_to_one"
             ),
             indicator=indicator,
+            handle_duplicates=True,
             validator_output_data=settings.get(
                 "module_validator_lpu.merge_budget_metadata_agencies.validator_save_sot", True
             ),
@@ -1085,6 +1086,7 @@ def validate_lpu(
                 "many_to_one",
             ),
             indicator=indicator,
+            handle_duplicates=True,
             use_similarity_for_unmatched=False,
             similarity_threshold=70,
             validator_output_data=settings.get(
