@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def calculate_total_item(
     df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str
 ) -> pd.DataFrame:

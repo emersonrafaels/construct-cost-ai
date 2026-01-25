@@ -146,7 +146,9 @@ def _infer_budget_count(df: pd.DataFrame, *, verbose: bool) -> int:
 def _get_cfg(settings) -> Dict[str, Any]:
     return {
         "col_status": settings.get("module_validator_lpu.column_status", "VALIDADOR_LPU"),
-        "col_total_paid": settings.get("module_validator_lpu.column_total_paid", "VALOR TOTAL PAGO"),
+        "col_total_paid": settings.get(
+            "module_validator_lpu.column_total_paid", "VALOR TOTAL PAGO"
+        ),
         "col_difference": settings.get("module_validator_lpu.column_difference", "DIFERENÇA TOTAL"),
         "col_total_lpu": settings.get("module_validator_lpu.column_total_lpu", "VALOR TOTAL LPU"),
         "col_agency": settings.get("module_validator_lpu.column_agency", "NUMERO_AGENCIA"),

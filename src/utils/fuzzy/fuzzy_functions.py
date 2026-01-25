@@ -118,7 +118,7 @@ def apply_match_fuzzy_two_dataframes(
     threshold: int = 80,
     replace_column: bool = False,
     drop_columns_result: bool = False,
-    merge_fuzzy_column_right: str = None
+    merge_fuzzy_column_right: str = None,
 ) -> pd.DataFrame:
     """
     Realiza um match fuzzy entre dois DataFrames e combina os resultados.

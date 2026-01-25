@@ -13,7 +13,6 @@ __status__ = "Development"
 
 import sys
 from pathlib import Path
-from typing import Union, Tuple, List, Optional, Literal, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -24,48 +23,54 @@ sys.path.insert(0, str(Path(base_dir, "src")))
 
 from config.config_logger import logger
 from config.config_dynaconf import get_settings
-from utils.data.data_functions import (
-    transform_case,
-)
-
-settings = get_settings()
 
 
-def calculate_lpu_discrepancies(
-    df: pd.DataFrame,
-    column_quantity: str = "qtde",
-    column_unit_price_paid: str = "unitario_pago",
-    column_unit_price_lpu: str = "unitario_lpu",
-    column_total_paid: str = "valor_pago",
-    column_total_lpu: str = "valor_lpu",
-    column_difference: str = "dif_total",
-    column_discrepancy: str = "discrepancia_percentual",
-    column_status: str = "status_conciliacao",
-    tol_percentile: float = None,
-    verbose: bool = False,
-) -> pd.DataFrame:
+class LPUDiscrepancyConfig:
     """
-    Calcula discrepâncias entre valores pagos e valores da LPU em um DataFrame.
-
-    Args:
-        df (pd.DataFrame): DataFrame de entrada contendo os dados.
-        column_quantity (str): Nome da coluna para quantidade.
-        column_unit_price_paid (str): Nome da coluna para preço unitário pago.
-        column_unit_price_lpu (str): Nome da coluna para preço unitário LPU.
-        column_total_paid (str): Nome da coluna para valor total pago.
-        column_total_lpu (str): Nome da coluna para valor total LPU.
-        column_difference (str): Nome da coluna para a diferença entre valores pagos e LPU.
-        column_discrepancy (str): Nome da coluna para a discrepância percentual.
-        column_status (str): Nome da coluna para o status de conciliação.
-        tol_percentile (float): Percentual de tolerância para discrepâncias.
-        verbose (bool): Se True, habilita logs detalhados.
-
-    Returns:
-        pd.DataFrame: DataFrame atualizado com as colunas calculadas.
+    Classe para encapsular as configurações e parâmetros do cálculo de discrepâncias.
     """
+
+    def __init__(
+        self,
+        settings=get_settings(),
+        column_quantity: str = "qtde",
+        column_unit_price_paid: str = "unitario_pago",
+        column_unit_price_lpu: str = "unitario_lpu",
+        column_total_paid: str = "valor_pago",
+        column_total_lpu: str = "valor_lpu",
+        column_difference: str = "dif_total",
+        column_discrepancy: str = "discrepancia_percentual",
+        column_status: str = "status_conciliacao",
+        tol_percentile: float = 5.0,
+        verbose: bool = True,
+    ):
+        self.settings = settings
+        self.column_quantity = column_quantity
+        self.column_unit_price_paid = column_unit_price_paid
+        self.column_unit_price_lpu = column_unit_price_lpu
+        self.column_total_paid = column_total_paid
+        self.column_total_lpu = column_total_lpu
+        self.column_difference = column_difference
+        self.column_discrepancy = column_discrepancy
+        self.column_status = column_status
+        self.tol_percentile = tol_percentile
+        self.verbose = verbose
+
+
+class LPUDiscrepancyCalculator:
+    """
+    Classe para calcular discrepâncias entre valores pagos e valores da LPU.
+    """
+
+    def __init__(self, config: LPUDiscrepancyConfig):
+        self.config = config
 
     def calculate_total_item(
-        df: pd.DataFrame, column_total_value: str, column_quantity: str, column_unit_price: str
+        self,
+        df: pd.DataFrame,
+        column_total_value: str,
+        column_quantity: str,
+        column_unit_price: str,
     ) -> None:
         """
         Calcula o valor total orçado em um DataFrame.
@@ -98,86 +103,121 @@ def calculate_lpu_discrepancies(
                 df.loc[mask, column_quantity] * df.loc[mask, column_unit_price]
             )
 
-    def calculate_total_paid(df: pd.DataFrame) -> None:
+    def calculate_total_paid(self, df: pd.DataFrame) -> None:
         """
         Calcula o valor total pago com base na quantidade e no preço unitário pago.
         """
-        calculate_total_item(df, column_total_paid, column_quantity, column_unit_price_paid)
+        self.calculate_total_item(
+            df,
+            self.config.column_total_paid,
+            self.config.column_quantity,
+            self.config.column_unit_price_paid,
+        )
 
-    def calculate_total_lpu(df: pd.DataFrame) -> None:
+    def calculate_total_lpu(self, df: pd.DataFrame) -> None:
         """
         Calcula o valor total da LPU com base na quantidade e no preço unitário da LPU.
         """
-        calculate_total_item(df, column_total_lpu, column_quantity, column_unit_price_lpu)
+        self.calculate_total_item(
+            df,
+            self.config.column_total_lpu,
+            self.config.column_quantity,
+            self.config.column_unit_price_lpu,
+        )
 
-    def calculate_difference(df: pd.DataFrame) -> None:
+    def calculate_difference(self, df: pd.DataFrame) -> None:
         """
         Calcula a diferença entre os valores totais pagos e os valores totais da LPU.
         """
-        if column_total_paid not in df.columns or column_total_lpu not in df.columns:
+        if (
+            self.config.column_total_paid not in df.columns
+            or self.config.column_total_lpu not in df.columns
+        ):
             logger.error(
-                f"Colunas '{column_total_paid}' ou '{column_total_lpu}' não encontradas no DataFrame."
+                f"Colunas '{self.config.column_total_paid}' ou '{self.config.column_total_lpu}' não encontradas no DataFrame."
             )
         else:
-            if verbose:
-                logger.info("Calculando diferença entre valor total pago e valor total da LPU...")
-            df[column_difference] = df[column_total_paid] - df[column_total_lpu]
+            if self.config.verbose:
+                logger.info("Calculando diferença entre valor total pago e valor total da LPU")
+            df[self.config.column_difference] = (
+                df[self.config.column_total_paid] - df[self.config.column_total_lpu]
+            )
 
-    def calculate_discrepancy(df: pd.DataFrame) -> None:
+    def calculate_discrepancy(self, df: pd.DataFrame) -> None:
         """
         Calcula a discrepância percentual com base na diferença e no valor total da LPU.
         """
-        if tol_percentile is None:
+        if self.config.tol_percentile is None:
             logger.error("Parâmetro 'tol_percentile' não fornecido.")
         else:
-            if verbose:
-                logger.info(f"Calculando discrepâncias com tolerância de {tol_percentile}%...")
-            denom = df[column_total_lpu].replace({0: np.nan})  # Evita divisão por zero
-            df[column_discrepancy] = (df[column_difference] / denom) * 100
+            if self.config.verbose:
+                logger.info(
+                    f"Calculando discrepâncias com tolerância de {self.config.tol_percentile}%..."
+                )
+            denom = df[self.config.column_total_lpu].replace({0: np.nan})  # Evita divisão por zero
+            df[self.config.column_discrepancy] = (df[self.config.column_difference] / denom) * 100
 
-    def classify_discrepancy(pct: float, tol: float) -> str:
+    def classify_discrepancy(self, pct: float) -> str:
         """
         Classifica a discrepância com base no valor de tolerância.
 
         Args:
             pct (float): Discrepância percentual.
-            tol (float): Valor de tolerância.
 
         Returns:
             str: Classificação da discrepância.
         """
         if pd.isna(pct):
             return "ITEM NAO LPU"
-        if abs(pct) <= tol:
+        if abs(pct) <= self.config.tol_percentile:
             return "OK"
         return "PARA RESSARCIMENTO" if pct > 0 else "OK"
 
-    def assign_status(df: pd.DataFrame, column_status) -> None:
+    def assign_status(self, df: pd.DataFrame) -> None:
         """
         Atribui um status de conciliação com base na discrepância e na tolerância.
 
         # Args:
             df (pd.DataFrame): DataFrame contendo os dados.
-            column_status (str): Nome da coluna para o status de conciliação.
 
         # Returns:
             None: Atualiza o DataFrame com a coluna de status atribuída.
 
         """
-        if tol_percentile is not None:
-            if not (0 <= tol_percentile <= 100):
+        if self.config.tol_percentile is not None:
+            if not (0 <= self.config.tol_percentile <= 100):
                 logger.error("'tol_percentile' deve estar entre 0 e 100.")
             else:
-                tolerance_value = tol_percentile  # A tolerância é diretamente o valor percentual
-                df[column_status] = df[column_discrepancy].apply(
-                    lambda pct: classify_discrepancy(pct, tolerance_value)
+                tolerance_value = (
+                    self.config.tol_percentile
+                )  # A tolerância é diretamente o valor percentual
+                df[self.config.column_status] = df[self.config.column_discrepancy].apply(
+                    lambda pct: self.classify_discrepancy(pct)
                 )
 
-    # Executa as etapas em sequência
-    calculate_total_paid(df)
-    calculate_total_lpu(df)
-    calculate_difference(df)
-    calculate_discrepancy(df)
-    assign_status(df, column_status=column_status)
+    def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Executa o cálculo completo das discrepâncias no DataFrame.
 
-    return df
+        Args:
+            df (pd.DataFrame): DataFrame de entrada contendo os dados.
+
+        Returns:
+            pd.DataFrame: DataFrame atualizado com as colunas calculadas.
+        """
+        self.calculate_total_paid(df)
+        self.calculate_total_lpu(df)
+        self.calculate_difference(df)
+        self.calculate_discrepancy(df)
+        self.assign_status(df)
+        return df
+
+
+# Exemplo de uso
+if __name__ == "__main__":
+    config = LPUDiscrepancyConfig(tol_percentile=5.0)
+    calculator = LPUDiscrepancyCalculator(config)
+
+    # Suponha que `df` seja o DataFrame de entrada
+    df = pd.DataFrame()  # Substitua pelo DataFrame real
+    result = calculator.calculate(df)

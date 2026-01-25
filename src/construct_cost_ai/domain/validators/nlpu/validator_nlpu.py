@@ -50,6 +50,7 @@ from utils.fuzzy.fuzzy_functions import apply_match_fuzzy_two_dataframes
 
 settings = get_settings()
 
+
 class ValidatorNLPUError(Exception):
     """Exceção base para erros do validador LPU."""
 
@@ -69,9 +70,7 @@ class MissingColumnsError(ValidatorNLPUError):
 
 
 def load_budget(
-    file_path: Union[str, Path], 
-    validator_output_data: bool = False, 
-    output_dir_file: str = None
+    file_path: Union[str, Path], validator_output_data: bool = False, output_dir_file: str = None
 ) -> pd.DataFrame:
     """
     Carrega o arquivo de orçamento.
@@ -88,7 +87,7 @@ def load_budget(
         FileNotFoundError: Se o arquivo não for encontrado
         MissingColumnsError: Se colunas obrigatórias estiverem ausentes
     """
-    
+
     file_path = Path(file_path)
 
     if not file_path.exists():
@@ -100,9 +99,10 @@ def load_budget(
     )
 
     # Coluna valor total
-    column_total_value = settings.get("module_validator_nlpu.budget_data.column_total_value", 
-                                      "VALOR TOTAL")
-    
+    column_total_value = settings.get(
+        "module_validator_nlpu.budget_data.column_total_value", "VALOR TOTAL"
+    )
+
     try:
         # Ler os dados de Orçamento e realizar pré processing
         df = transform_case(
@@ -557,7 +557,8 @@ def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
     return df_result
 
 
-def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
+def apply_match_fuzzy_budget_lpu(
+    df_left: pd.DataFrame,
     df_right: pd.DataFrame,
     df_left_column: str = None,
     df_choices_column: str = None,
@@ -566,8 +567,8 @@ def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
     threshold: int = 80,
     replace_column: bool = False,
     drop_columns_result: bool = False,
-    merge_fuzzy_column_right: str = None) -> pd.DataFrame:
-    
+    merge_fuzzy_column_right: str = None,
+) -> pd.DataFrame:
     """
     Realiza um match fuzzy entre dois DataFrames e combina os resultados.
 
@@ -586,7 +587,7 @@ def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
     Returns:
         pd.DataFrame: DataFrame combinado com linhas correspondentes e não correspondentes.
     """
-    
+
     df_result = apply_match_fuzzy_two_dataframes(
         df_left=df_left,
         df_right=df_right,
@@ -597,7 +598,7 @@ def apply_match_fuzzy_budget_lpu(df_left: pd.DataFrame,
         threshold=threshold,
         replace_column=replace_column,
         drop_columns_result=drop_columns_result,
-        merge_fuzzy_column_right=merge_fuzzy_column_right
+        merge_fuzzy_column_right=merge_fuzzy_column_right,
     )
 
     # Retornar o DataFrame final
@@ -697,7 +698,7 @@ def validate_nlpu(
 
             # Aplicando match fuzzy
             df_match_fuzzy_budget_lpu = apply_match_fuzzy_budget_lpu(
-                df_left=df_budget, 
+                df_left=df_budget,
                 df_right=df_lpu_long,
                 df_left_column=settings.get(
                     "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_left"
