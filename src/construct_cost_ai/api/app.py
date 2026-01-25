@@ -5,7 +5,7 @@ Este módulo cria e configura a aplicação FastAPI para validação de orçamen
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
-__copyright__ = "Copyright 2025, Construct Cost AI"
+__copyright__ = "Copyright 2026, Verificador Inteligente de Orçamentos de Obras, DataCraft"
 __credits__ = ["Emerson V. Rafael"]
 __license__ = "MIT"
 __version__ = "1.0.0"

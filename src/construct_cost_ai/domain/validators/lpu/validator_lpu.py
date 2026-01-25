@@ -7,7 +7,7 @@ nos valores com tolerância configurável.
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
-__copyright__ = "Copyright 2025, Construct Cost AI"
+__copyright__ = "Copyright 2026, Verificador Inteligente de Orçamentos de Obras, DataCraft"
 __credits__ = ["Emerson V. Rafael"]
 __license__ = "MIT"
 __version__ = "1.0.0"
@@ -798,26 +798,30 @@ class LPUValidator:
         return merged_df, matched_count, total_count
 
     def generate_format_result(
-        self, df: pd.DataFrame, vaLidator_remove_duplicate_columns: bool = False
+        self,
+        df: pd.DataFrame,
+        list_select_columns: list = None,
+        dict_rename_columns: dict = None,
+        vaLidator_remove_duplicate_columns: bool = False,
     ) -> pd.DataFrame:
         """
         Cria o DataFrame de resultado formatado para exportação.
 
         Args:
             df (pd.DataFrame): DataFrame com os resultados completos da validação.
-
+            list_select_columns (list): Lista de colunas a serem selecionadas.
+            dict_rename_columns (dict): Dicionário para renomear colunas.
+            vaLidator_remove_duplicate_columns (bool): Se True, remove colunas duplicadas.
 
         Returns:
             pd.DataFrame: DataFrame formatado para exportação.
         """
 
-        # Seleciona as colunas necessárias para o resultado final
-        list_select_columns = self.settings.get(
-            "module_validator_lpu.output_settings.list_columns_result", []
-        )
-
         if list_select_columns:
             df_result = select_columns(df=df, target_columns=list_select_columns)
+
+        if dict_rename_columns:
+            df_result = rename_columns(df=df_result, rename_dict=dict_rename_columns)
 
         if vaLidator_remove_duplicate_columns:
             df_result = remove_duplicate_columns(df=df_result)
@@ -1234,7 +1238,14 @@ class LPUValidator:
 
         # Formatando o resultado final
         df_result = self.generate_format_result(
-            df=df_result, vaLidator_remove_duplicate_columns=True
+            df=df_result,
+            list_select_columns=self.settings.get(
+                "module_validator_lpu.output_settings.list_columns_result", []
+            ),
+            dict_rename_columns=self.settings.get(
+                "module_validator_lpu.output_settings.dict_rename_result", []
+            ),
+            vaLidator_remove_duplicate_columns=True,
         )
 
         # Salvar o resultado em um arquivo Excel
@@ -1264,7 +1275,7 @@ class LPUValidator:
                     "module_validator_lpu.stats.validator_output_pdf", True
                 ),
                 output_pdf=output_pdf,
-                verbose=self.settings.get("module_validator_lpu.verbose", True),
+                verbose=verbose,
             )
 
         return df_result
