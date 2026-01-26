@@ -135,12 +135,11 @@ def merge_backtest_saude_esteira(df_result_tables, df_result_metadatas):
             df_lista_upes_documents["NOME_ARQUIVO"] == value.get("SOURCE_FILE"), "UPE"
         ].squeeze()
 
-
         if isinstance(value_upe, (pd.Series, np.ndarray)):
             if not value_upe.empty and not value_upe.isna().all():
                 cod_upe = value_upe.iloc[0]
                 df_result_metadatas.at[idx, "CÓDIGO_UPE"] = cod_upe
-        
+
         elif not pd.isna(value_upe):
             cod_upe = int(value_upe)
             df_result_metadatas.at[idx, "CÓDIGO_UPE"] = cod_upe

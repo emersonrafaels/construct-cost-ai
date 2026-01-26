@@ -1,3 +1,6 @@
-[submodule "src/utils/agent/stackspot"]
-	path = src/utils/agent/stackspot
+[submodule "examples/agents/stackspot"]
+	path = examples/agents/stackspot
+	url = https://github.com/emersonrafaels/stackspot-agent-template.git
+[submodule "src/construct_cost_ai/infra/ai/frameworks/stackspot"]
+	path = src/construct_cost_ai/infra/ai/frameworks/stackspot
 	url = https://github.com/emersonrafaels/stackspot-agent-template.git

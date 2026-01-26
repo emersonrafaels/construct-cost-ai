@@ -22,9 +22,10 @@ from pathlib import Path
 base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from construct_cost_ai.domain.validators.nlpu.validator_nlpu import orchestrate_validate_nlpu
+from construct_cost_ai.domain.validators.nlpu.validator_nlpu import NLPUValidator
 
 if __name__ == "__main__":
 
-    # Executa a orquestração do módulo de validação Não LPU
-    df_result = orchestrate_validate_nlpu()
+    # Executa a orquestração do módulo de validação LPU
+    nlpu_validator = NLPUValidator()
+    df_result = nlpu_validator.orchestrate_validate_nlpu()
