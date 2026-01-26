@@ -42,7 +42,10 @@ from utils.lpu.lpu_functions import (
     separate_regions,
     merge_budget_lpu,
 )
-
+from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
+    LPUDiscrepancyConfig,
+    LPUDiscrepancyCalculator,
+)
 from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
 from utils.fuzzy.fuzzy_functions import apply_match_fuzzy_two_dataframes
@@ -801,30 +804,46 @@ class NLPUValidator:
             logger.error(f"Erro ao cruzar dados: {e}")
             raise ValidatorNLPUError(f"Erro ao cruzar dados: {e}")
 
-        """
-        # Calcula discrepâncias
+        # 3. Calcula discrepâncias
         try:
-            df_result = calculate_lpu_discrepancies(
-                df=df_merge_budget_metadata_agencias_constructors_lpu,
-                column_quantity=settings.get("module_validator_lpu.column_quantity"),
-                column_unit_price_paid=settings.get("module_validator_lpu.column_unit_price_paid"),
-                column_unit_price_lpu=settings.get("module_validator_lpu.column_unit_price_lpu"),
-                column_total_paid=settings.get("module_validator_lpu.column_total_paid"),
-                column_total_lpu=settings.get("module_validator_lpu.column_total_lpu"),
-                column_difference=settings.get("module_validator_lpu.column_difference"),
-                column_discrepancy=settings.get("module_validator_lpu.column_discrepancy"),
-                column_status=settings.get("module_validator_lpu.column_stat)us",
-                tol_percentile=settings.get("module_validator_lpu.tol_percentile"),
-                verbose=settings.get("module_validator_lpu.verbose", True),
+            discrepancy_config = LPUDiscrepancyConfig(
+                settings=self.settings,
+                column_quantity=self.settings.get("module_validator_lpu.column_quantity"),
+                column_unit_price_paid=self.settings.get(
+                    "module_validator_lpu.column_unit_price_paid"
+                ),
+                column_unit_price_lpu=self.settings.get(
+                    "module_validator_lpu.column_unit_price_lpu"
+                ),
+                column_total_paid=self.settings.get("module_validator_lpu.column_total_paid"),
+                column_total_lpu=self.settings.get("module_validator_lpu.column_total_lpu"),
+                column_difference=self.settings.get("module_validator_lpu.column_difference"),
+                column_discrepancy=self.settings.get("module_validator_lpu.column_discrepancy"),
+                column_status=self.settings.get("module_validator_lpu.column_status"),
+                tol_percentile=self.settings.get("module_validator_lpu.tol_percentile"),
+                verbose=verbose,
+            )
+
+            discrepancy_calculator = LPUDiscrepancyCalculator(config=discrepancy_config)
+
+            df_result = discrepancy_calculator.calculate(
+                df=df_match_fuzzy_budget_lpu
             )
         except Exception as e:
             logger.error(f"Erro ao calcular discrepâncias: {e}")
-            raise ValidatorNLPUError(f"Erro ao calcular discrepâncias: {e}")
-            
-        """
+            raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
 
         # Formatando o resultado final
-        df_result = self.generate_format_result(df_result)
+        df_result = self.generate_format_result(
+            df=df_result,
+            list_select_columns=self.settings.get(
+                "module_validator_lpu.output_settings.list_columns_result", []
+            ),
+            dict_rename_columns=self.settings.get(
+                "module_validator_lpu.output_settings.dict_rename_result", []
+            ),
+            vaLidator_remove_duplicate_columns=True,
+        )
 
         # Salvar o resultado em um arquivo Excel
         export_data(

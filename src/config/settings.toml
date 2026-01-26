@@ -240,6 +240,18 @@ validator_output_pdf = true
 top_n_divergencias = 10
 top_n_divergencias_extended = 20
 
+[default.module_validator_nlpu]
+
+# Colunas padrão para cálculo de discrepâncias
+column_quantity = "QUANTIDADE"
+column_unit_price_paid = "PRECO PAGO"
+column_unit_price_lpu = "PRECO LPU"
+column_total_paid = "VALOR TOTAL PAGO"
+column_total_lpu = "VALOR TOTAL LPU"
+column_difference = "DIFERENÇA TOTAL"
+column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
+column_status = "VALIDADOR_NLPU"
+
 [default.module_validator_nlpu.budget_data]
 
 # Caminhos padrão
