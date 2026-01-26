@@ -27,8 +27,8 @@ from pathlib import Path
 base_dir = Path(__file__).parents[3]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from utils.frameworks.stackspot.src.agents.chat import AgentChat
-from utils.frameworks.stackspot.src.models.chat_session import ChatSession
+from construct_cost_ai.infra.ai.frameworks.stackspot.src.agents.chat import AgentChat
+from construct_cost_ai.infra.ai.frameworks.stackspot.src.models.chat_session import ChatSession
 
 if __name__ == "__main__":
     
@@ -53,3 +53,5 @@ if __name__ == "__main__":
         base_url=base_url,
         chat_endpoint=chat_endpoint,
     )
+    
+    print(chat)

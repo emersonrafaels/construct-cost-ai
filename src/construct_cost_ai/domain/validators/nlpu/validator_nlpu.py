@@ -560,6 +560,7 @@ class NLPUValidator:
         return df_result
 
     def apply_match_fuzzy_budget_lpu(
+        self,
         df_left: pd.DataFrame,
         df_right: pd.DataFrame,
         df_left_column: str = None,
@@ -570,6 +571,8 @@ class NLPUValidator:
         replace_column: bool = False,
         drop_columns_result: bool = False,
         merge_fuzzy_column_right: str = None,
+        validator_get_columns_from_best_match: bool = False,
+        keep_original_columns_names_df_right: bool = False,
     ) -> pd.DataFrame:
         """
         Realiza um match fuzzy entre dois DataFrames e combina os resultados.
@@ -585,6 +588,8 @@ class NLPUValidator:
             replace_column (bool, opcional): Substitui a coluna original pelo melhor match, se True. Padrão é False.
             drop_columns_result (bool, opcional): Remove colunas auxiliares do resultado, se True. Padrão é False.
             merge_fuzzy_column_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
+            validator_get_columns_from_best_match (bool, opcional): Se True, obtém colunas adicionais do melhor match. Padrão é False.
+            keep_original_columns_names_df_right (bool, opcional): Se True, mantém os nomes originais das colunas do DataFrame à direita. Padrão é False.
 
         Returns:
             pd.DataFrame: DataFrame combinado com linhas correspondentes e não correspondentes.
@@ -601,6 +606,7 @@ class NLPUValidator:
             replace_column=replace_column,
             drop_columns_result=drop_columns_result,
             merge_fuzzy_column_right=merge_fuzzy_column_right,
+            validator_get_columns_from_best_match=validator_get_columns_from_best_match,
         )
 
         # Retornar o DataFrame final
@@ -687,11 +693,13 @@ class NLPUValidator:
             # Realiza o merge entre budget e lpu usando match fuzzy
             logger.info(f"🔗 Cruzando orçamento com LPU usando Match Fuzzy")
 
+            # Indicador que será criado no merge
             indicator = settings.get(
                 "module_validator_nlpu.match_fuzzy_budget_lpu.indicator",
                 "_match_fuzzy_budget_lpu",
             )
 
+            # Validador se é desejado fazer o merge fuzzy
             validator_use_merge_fuzzy_budget_lpu = settings.get(
                 "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy"
             )
@@ -721,6 +729,15 @@ class NLPUValidator:
                     drop_columns_result=settings.get(
                         "module_validator_nlpu.match_fuzzy_budget_lpu.drop_columns_result"
                     ),
+                    merge_fuzzy_column_right=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
+                    ),
+                    validator_get_columns_from_best_match=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.validator_get_columns_from_best_match"
+                    ),
+                    keep_original_columns_names_df_right=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.keep_original_columns_names_df_right"
+                    ),  
                 )
 
             if verbose:

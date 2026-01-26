@@ -274,13 +274,19 @@ validator_use_merge_fuzzy = true
 indicator = "_match_fuzzy_budget_lpu"
 
 # Coluna do orçamento para merge fuzzy
-validator_use_merge_fuzzy_column_left = "NOME"
+validator_use_merge_fuzzy_column_left = "NOME ITEM"
 
 # Coluna da LPU para merge fuzzy
 validator_use_merge_fuzzy_column_right = "ITEM"
 
+# Validando se deve obter as colunas do dataframe da direita quando acontecer o merge
+validator_get_columns_from_best_match = true
+
+# Se queremos manter o nome das colunas originais do dataframe da direita (df_lpu)
+keep_original_columns_names_df_right = false # Nesse caso, ele irá incluir um suffixo no nome
+
 # Dictionário de colunas para filtro antes do merge fuzzy
-filter_cols_to_match = {"VALIDADOR_LPU" = ["ITEM_NAO_LPU"]}
+filter_cols_to_match = {"VALIDADOR_LPU" = ["ITEM NAO LPU"]}
 
 # Validator para substituir a coluna original pelo melhor match
 replace_column = false
@@ -294,7 +300,7 @@ validator_use_merge_fuzzy_threshold = 80
 [default.module_validator_nlpu.output_settings]
 
 # Lista de colunas no resultado final
-list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME ITEM', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
 
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"
