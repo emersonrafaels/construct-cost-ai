@@ -1,15 +1,13 @@
 """
-Realiza o backtest completo do produto: Módulo de Validação LPU (Lista de Preços Unitários)
+Realiza o uso do Módulo: validator_lpu
+------------------------
 
-1) Lê orçamentos a partir de um diretório específico.
-2) Aplica o módulo de validação LPU para cruzar orçamentos com dados
-3) Aplica o módulo de validação Não LPU - Match Fuzzy
-
+Este script exemplifica como utilizar o módulo de validação LPU (Lista de Preços Unitários) para cruzar orçamentos com dados de LPU, metadados, agências e construtoras. Ele demonstra a leitura de arquivos de orçamento a partir de um diretório específico e a aplicação do módulo de validação para verificar a consistência dos dados.
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
 __copyright__ = "Verificador Inteligente de Orçamentos de Obras"
-__credits__ = ["Emerson V. Rafael", "Lucas Ken", "Clarissa Simoyama"]
+__credits__ = ["Emerson V. Rafael", "Clarissa Simoyama"]
 __license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Emerson V. Rafael (emervin), Clarissa Simoyama (simoyam)"
@@ -24,16 +22,10 @@ from pathlib import Path
 base_dir = Path(__file__).parents[2]
 sys.path.insert(0, str(Path(base_dir, "src")))
 
-from construct_cost_ai.domain.validators.lpu.validator_lpu import orchestrate_validate_lpu
-
-
-def main_orchestrate_validate_lpu():
-
-    # Executa a validação LPU
-    orchestrate_validate_lpu()
-
+from construct_cost_ai.domain.validators.lpu.validator_lpu import LPUValidator
 
 if __name__ == "__main__":
 
     # Executa a orquestração do módulo de validação LPU
-    main_orchestrate_validate_lpu()
+    lpu_validator = LPUValidator()
+    df_result = lpu_validator.orchestrate_validate_lpu()

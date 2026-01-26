@@ -166,6 +166,7 @@ def merge_budget_lpu(
     columns_on_lpu: List[List[str]],
     how: str = "inner",
     validate: str = "many_to_many",
+    indicator: str = "_merge",
     use_two_stage_merge: bool = False,
     validator_output_data: bool = False,
     output_dir_file: str = None,
@@ -195,9 +196,9 @@ def merge_budget_lpu(
     lpu = df_lpu.copy()
 
     # Verifica se a coluna _merge já existe e renomeia para evitar conflitos
-    if "_merge" in budget.columns:
+    if "_merge" in budget.columns or indicator in budget.columns:
         budget = budget.rename(columns={"_merge": "_merge_budget"})
-    if "_merge" in lpu.columns:
+    if "_merge" in lpu.columns or indicator in lpu.columns:
         lpu = lpu.rename(columns={"_merge": "_merge_lpu"})
 
     # Verifica se é desejado usar o merge em duas etapas
@@ -217,20 +218,20 @@ def merge_budget_lpu(
             handle_duplicates=True,
         )
 
-        if "_merge" in merged_df.columns:
+        if indicator in merged_df.columns:
             # Obtendo a quantidade de dados com cruzamento realizado com sucesso
-            len_merged = len(merged_df[merged_df["_merge"] == "both"])
+            len_merged = len(merged_df[merged_df[indicator] == "both"])
 
     else:
         # Itera sobre as combinações de colunas para realizar múltiplos merges
         for idx, (budget_cols, lpu_cols) in enumerate(zip(columns_on_budget, columns_on_lpu)):
 
             # Realizando o cruzamento considerando um único estágio de merge
-            # Verifica se a coluna _merge já existe e renomeia para evitar conflitos
-            if "_merge" in budget.columns:
-                budget = budget.rename(columns={"_merge": f"_merge_budget_{idx}"})
-            if "_merge" in lpu.columns:
-                lpu = lpu.rename(columns={"_merge": f"_merge_lpu_{idx}"})
+            # Verifica se a coluna 'indicator' já existe e renomeia para evitar conflitos
+            if indicator in budget.columns:
+                budget = budget.rename(columns={indicator: f"{indicator}_budget_{idx}"})
+            if indicator in lpu.columns:
+                lpu = lpu.rename(columns={indicator: f"{indicator}_lpu_{idx}"})
 
             merged_df = merge_data_with_columns(
                 df_left=budget,
@@ -238,14 +239,14 @@ def merge_budget_lpu(
                 left_on=budget_cols,
                 right_on=lpu_cols,
                 how=how,
-                validate=validate_norm,
+                validate=validate,
                 suffixes=("_budget", f"_lpu_{idx}"),
-                indicator=True,
+                indicator=indicator,
                 handle_duplicates=True,
             )
 
             # Obtendo a quantidade de dados com cruzamento realizado com sucesso
-            len_merged = len(merged_df[merged_df["_merge"] == both])
+            len_merged = len(merged_df[merged_df[indicator] == "both"])
 
     # Verificando se é desejado salvar os dados resultantes
     if validator_output_data:

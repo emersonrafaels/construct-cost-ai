@@ -207,6 +207,8 @@ def apply_match_fuzzy_two_dataframes(
     list_columns_merge_fuzzy_df_right: Union[list, str] = None,
     validator_get_columns_from_best_match: bool = False,
     keep_original_columns_names_df_right: bool = False,
+    col_best_match: str = "BEST_MATCH",
+    col_score_match: str = "SCORE_MATCH",
 ) -> pd.DataFrame:
     """
     Realiza um match fuzzy entre dois DataFrames e combina os resultados.
@@ -225,6 +227,8 @@ def apply_match_fuzzy_two_dataframes(
         list_columns_merge_fuzzy_df_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
         validator_get_columns_from_best_match (bool, opcional): Se True, obtém colunas do DataFrame à direita com base no melhor match. Padrão é False.
         keep_original_columns_names_df_right (bool, opcional): Se True, mantém os nomes originais das colunas do DataFrame à direita. Padrão é False.
+        col_best_match (str, opcional): Nome da coluna para armazenar o melhor match. Padrão é "BEST_MATCH".
+        col_score_match (str, opcional): Nome da coluna para armazenar o score do match. Padrão é "SCORE_MATCH".    
 
     Returns:
         pd.DataFrame: DataFrame combinado com linhas correspondentes e não correspondentes.
@@ -248,6 +252,8 @@ def apply_match_fuzzy_two_dataframes(
         threshold=threshold,
         replace_column=replace_column,
         drop_columns_result=drop_columns_result,
+        col_best_match=col_best_match,
+        col_score_match=col_score_match,
     )
     
 
@@ -257,7 +263,7 @@ def apply_match_fuzzy_two_dataframes(
         df_match_fuzzy = get_columns_from_best_match(
             df_fuzzy_result=df_match_fuzzy,
             df_right=df_right,
-            best_match_column="BEST_MATCH",
+            best_match_column=best_match_column,
             columns_to_get=list_columns_get_df_right,
             list_columns_merge_fuzzy_df_left=list_columns_merge_fuzzy_df_left,
             list_columns_merge_fuzzy_df_right=list_columns_merge_fuzzy_df_right,

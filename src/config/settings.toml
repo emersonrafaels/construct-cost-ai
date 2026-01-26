@@ -151,7 +151,7 @@ indicator = "_merge_bud_met"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE_01_ORCA_META.xlsx"
+dir_path_file_sot = "data/outputs/sot/01_validador_lpu/01_MERGE_ORCA_META.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies]
 left_on = "NUMERO_AGENCIA"
@@ -162,7 +162,7 @@ indicator = "_merge_bud_met_age"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE_02_ORCA_META_AG.xlsx"
+dir_path_file_sot = "data/outputs/sot/01_validador_lpu/02_MERGE_ORCA_META_AG.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies_constructors]
 left_on = ["CONSTRUTORA", "REGIAO"]
@@ -179,7 +179,7 @@ validator_use_merge_fuzzy_column_right = "FORNECEDOR"
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE_03_ORCA_META_AG_CONSTRU.xlsx"
+dir_path_file_sot = "data/outputs/sot/01_validador_lpu/03_MERGE_ORCA_META_AG_CONSTRU.xlsx"
 
 [default.module_validator_lpu.merge_budget_lpu]
 
@@ -213,7 +213,7 @@ columns_lpu_merge_two = ["ITEM", "REGIAO", "GRUPO"]
 
 # Validando se é desejado salvar os dados após processamento
 validator_save_sot = true
-dir_path_file_sot = "data/outputs/sot/02_MERGE_04_ORCA_META_AG_CONSTRU_LPU.xlsx"
+dir_path_file_sot = "data/outputs/sot/01_validador_lpu/04_MERGE_ORCA_META_AG_CONSTRU_LPU.xlsx"
 
 [default.module_validator_lpu.output_settings]
 
@@ -261,32 +261,41 @@ column_quantity = "QUANTIDADE"
 column_unit_price = "PRECO PAGO"
 column_total_value = "VALOR TOTAL PAGO"
 
-# Validando se é desejado salvar os dados após processamento
-validator_save_sot = false
-dir_path_file_sot = "data/outputs/sot/03_VALIDADOR_NLPU_01_FUZZY_BUDGET_LPU.xlsx"
-
 [default.module_validator_nlpu.match_fuzzy_budget_lpu]
 
 # Validador para uso do merge fuzzy
 validator_use_merge_fuzzy = true
 
 # Coluna que indica o resultado do merge fuzzy
-indicator = "_match_fuzzy_budget_lpu"
+indicator = "_merge_fuzzy_budget_lpu"
+
+# Nome da coluna que será criado após o match fuzzy
+col_best_match = "MATCH FUZZY - ITEM LPU"
+col_score_match = "SCORE MATCH FUZZY - ITEM LPU"
 
 # Coluna do Budget para merge fuzzy
 column_validator_use_merge_fuzzy_df_left = "NOME ITEM"
 
-# Lista de colunas para merge fizzy no Budget
-list_columns_merge_fuzzy_df_left = ["NOME ITEM", "REGIAO", "GRUPO"]
-
 # Coluna da LPU para merge fuzzy
 column_validator_use_merge_fuzzy_df_right = "ITEM"
+
+# Lista de colunas para merge fuzzy no Budget
+list_columns_merge_fuzzy_df_left = ["MATCH FUZZY - ITEM LPU", "REGIAO", "GRUPO"]
 
 # Lista de colunas para merge fuzzy na LPU
 list_columns_merge_fuzzy_df_right = ["ITEM", "REGIAO", "GRUPO"]
 
+# Como o merge deve ser feito (preservando dados da base de budget)
+how = "left"
+
+# Tipo de validador do merge
+validate = "many_to_one"
+
+# Se deve tentar abordagem de merge em dois estágios
+use_two_stage_merge = false
+
 # Validando se deve obter as colunas do dataframe da direita quando acontecer o merge
-validator_get_columns_from_best_match = true
+validator_get_columns_from_best_match = false
 
 # Se queremos manter o nome das colunas originais do dataframe da direita (df_lpu)
 keep_original_columns_names_df_right = false # Nesse caso, ele irá incluir um suffixo no nome
@@ -302,6 +311,10 @@ drop_columns_result = false
 
 # Limiar de similaridade para considerar o merge fuzzy
 validator_use_merge_fuzzy_threshold = 80
+
+# Validando se é desejado salvar os dados após processamento
+validator_save_sot = true
+dir_path_file_sot = "data/outputs/sot/02_validador_nlpu/01_MATCH_FUZZY_BUDGET_LPU.xlsx"
 
 [default.module_validator_nlpu.output_settings]
 
