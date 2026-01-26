@@ -7,11 +7,12 @@ nos valores com tolerância configurável.
 """
 
 __author__ = "Emerson V. Rafael (emervin)"
-__copyright__ = "Copyright 2026, Verificador Inteligente de Orçamentos de Obras, DataCraft"
-__credits__ = ["Emerson V. Rafael"]
+__copyright__ = "Verificador Inteligente de Orçamentos de Obras"
+__credits__ = ["Emerson V. Rafael", "Clarissa Simoyama"]
 __license__ = "MIT"
 __version__ = "1.0.0"
-__maintainer__ = "Emerson V. Rafael"
+__maintainer__ = "Emerson V. Rafael (emervin), Clarissa Simoyama (simoyam)"
+__squad__ = "DataCraft"
 __email__ = "emersonssmile@gmail.com"
 __status__ = "Development"
 
