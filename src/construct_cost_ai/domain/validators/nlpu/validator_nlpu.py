@@ -570,7 +570,8 @@ class NLPUValidator:
         threshold: int = 80,
         replace_column: bool = False,
         drop_columns_result: bool = False,
-        merge_fuzzy_column_right: str = None,
+        list_columns_merge_fuzzy_df_left: Union[list, str] = None,
+        list_columns_merge_fuzzy_df_right: Union[list, str] = None,
         validator_get_columns_from_best_match: bool = False,
         keep_original_columns_names_df_right: bool = False,
     ) -> pd.DataFrame:
@@ -587,7 +588,8 @@ class NLPUValidator:
             threshold (int, opcional): Pontuação mínima para considerar um match válido. Padrão é 80.
             replace_column (bool, opcional): Substitui a coluna original pelo melhor match, se True. Padrão é False.
             drop_columns_result (bool, opcional): Remove colunas auxiliares do resultado, se True. Padrão é False.
-            merge_fuzzy_column_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
+            list_columns_merge_fuzzy_df_left (Union[list, str], opcional): Lista de colunas no DataFrame à esquerda usadas para mapear colunas adicionais. Padrão é None.
+            list_columns_merge_fuzzy_df_right (Union[list, str], opcional): Lista de colunas no DataFrame à direita usadas para mapear colunas adicionais. Padrão é None.
             validator_get_columns_from_best_match (bool, opcional): Se True, obtém colunas adicionais do melhor match. Padrão é False.
             keep_original_columns_names_df_right (bool, opcional): Se True, mantém os nomes originais das colunas do DataFrame à direita. Padrão é False.
 
@@ -605,8 +607,10 @@ class NLPUValidator:
             threshold=threshold,
             replace_column=replace_column,
             drop_columns_result=drop_columns_result,
-            merge_fuzzy_column_right=merge_fuzzy_column_right,
+            list_columns_merge_fuzzy_df_left=list_columns_merge_fuzzy_df_left,
+            list_columns_merge_fuzzy_df_right=list_columns_merge_fuzzy_df_right,
             validator_get_columns_from_best_match=validator_get_columns_from_best_match,
+            keep_original_columns_names_df_right=keep_original_columns_names_df_right,
         )
 
         # Retornar o DataFrame final
@@ -711,10 +715,10 @@ class NLPUValidator:
                     df_left=df_budget,
                     df_right=df_lpu_long,
                     df_left_column=settings.get(
-                        "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_left"
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.column_validator_use_merge_fuzzy_df_left"
                     ),
                     df_choices_column=settings.get(
-                        "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.column_validator_use_merge_fuzzy_df_right"
                     ),
                     filter_cols_to_match=settings.get(
                         "module_validator_nlpu.match_fuzzy_budget_lpu.filter_cols_to_match"
@@ -729,8 +733,11 @@ class NLPUValidator:
                     drop_columns_result=settings.get(
                         "module_validator_nlpu.match_fuzzy_budget_lpu.drop_columns_result"
                     ),
-                    merge_fuzzy_column_right=settings.get(
-                        "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_column_right"
+                    list_columns_merge_fuzzy_df_left=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.list_columns_merge_fuzzy_df_left"
+                    ),
+                    list_columns_merge_fuzzy_df_right=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.list_columns_merge_fuzzy_df_right"
                     ),
                     validator_get_columns_from_best_match=settings.get(
                         "module_validator_nlpu.match_fuzzy_budget_lpu.validator_get_columns_from_best_match"

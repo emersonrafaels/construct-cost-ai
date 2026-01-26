@@ -20,7 +20,7 @@ __status__ = "Development"
 import sys
 from pathlib import Path
 from pprint import pprint
-from typing import Callable
+from typing import Callable, Union
 
 import pandas as pd
 from fuzzywuzzy import fuzz
@@ -41,7 +41,8 @@ def get_columns_from_best_match(
     df_right: pd.DataFrame,
     best_match_column: str = "BEST_MATCH",
     columns_to_get: list = None,
-    merge_column_right: str = None,
+    list_columns_merge_fuzzy_df_left: Union[list, str] = None,
+    list_columns_merge_fuzzy_df_right: Union[list, str] = None,
     keep_original_columns_names_df_right: bool = False,
 ) -> pd.DataFrame:
     """
@@ -52,51 +53,59 @@ def get_columns_from_best_match(
         df_right (pd.DataFrame): DataFrame de referência (direita) contendo os dados a serem obtidos.
         best_match_column (str): Nome da coluna no DataFrame fuzzy que contém os melhores matches. Default é "BEST_MATCH".
         columns_to_get (list): Lista de colunas do DataFrame `df_right` a serem obtidas. Default é None (todas as colunas).
-        merge_column_right (str): Nome da coluna no DataFrame `df_right` usada para mapear os dados. Default é None (usa `BEST_MATCH`).
+        list_columns_merge_fuzzy_df_left (Union[list, str]): Coluna(s) no DataFrame `df_fuzzy_result` usada(s) para o merge. Default é None (usa `BEST_MATCH`).
+        list_columns_merge_fuzzy_df_right (Union[list, str]): Coluna(s) no DataFrame `df_right` usada(s) para o merge. Default é None (usa `BEST_MATCH`).
         keep_original_columns_names_df_right (bool): Se True, mantém os nomes originais das colunas do `df_right`. Default é False.
 
     Returns:
         pd.DataFrame: DataFrame atualizado com as colunas obtidas do `df_right`.
     """
     columns_to_get = columns_to_get or df_right.columns.tolist()
-    merge_column_right = merge_column_right or best_match_column
 
-    # Garantir que a coluna de merge existe no DataFrame `df_right`
-    if merge_column_right not in df_right.columns:
-        raise ValueError(f"A coluna '{merge_column_right}' não foi encontrada no DataFrame `df_right`.")
+    # Garantir que list_columns_merge_fuzzy_df_left e list_columns_merge_fuzzy_df_right sejam listas
+    if isinstance(list_columns_merge_fuzzy_df_left, str):
+        list_columns_merge_fuzzy_df_left = [list_columns_merge_fuzzy_df_left]
+    if isinstance(list_columns_merge_fuzzy_df_right, str):
+        list_columns_merge_fuzzy_df_right = [list_columns_merge_fuzzy_df_right]
 
-    # Garantir que a coluna `BEST_MATCH` existe no DataFrame fuzzy
-    if best_match_column not in df_fuzzy_result.columns:
-        raise ValueError(f"A coluna '{best_match_column}' não foi encontrada no DataFrame fuzzy.")
+    # Usar `best_match_column` como padrão se as listas não forem fornecidas
+    list_columns_merge_fuzzy_df_left = list_columns_merge_fuzzy_df_left or [best_match_column]
+    list_columns_merge_fuzzy_df_right = list_columns_merge_fuzzy_df_right or [best_match_column]
+
+    # Garantir que as colunas de merge existem nos DataFrames
+    for col in list_columns_merge_fuzzy_df_left:
+        if col not in df_fuzzy_result.columns:
+            raise ValueError(f"A coluna '{col}' não foi encontrada no DataFrame `df_fuzzy_result`.")
+    for col in list_columns_merge_fuzzy_df_right:
+        if col not in df_right.columns:
+            raise ValueError(f"A coluna '{col}' não foi encontrada no DataFrame `df_right`.")
 
     # Garantir que a coluna de merge no `df_right` possui valores únicos
-    if not df_right[merge_column_right].is_unique:
+    if not df_right[list_columns_merge_fuzzy_df_right].drop_duplicates().shape[0] == df_right.shape[0]:
         logger.warning(
-            f"A coluna '{merge_column_right}' no DataFrame `df_right` contém valores duplicados. Apenas a primeira ocorrência será usada."
+            f"As colunas '{list_columns_merge_fuzzy_df_right}' no DataFrame `df_right` contêm valores duplicados. Apenas a primeira ocorrência será usada."
         )
-        df_right = df_right.drop_duplicates(subset=merge_column_right)
-
-    # Realizar o merge de todas as colunas de uma vez
-    if not columns_to_get:
-        columns_to_get = df_right.columns.tolist()
+        df_right = df_right.drop_duplicates(subset=list_columns_merge_fuzzy_df_right)
 
     # Garantir que as colunas especificadas existem no DataFrame `df_right`
     missing_columns = [col for col in columns_to_get if col not in df_right.columns]
     if missing_columns:
         logger.warning(f"As seguintes colunas não foram encontradas no DataFrame `df_right`: {missing_columns}")
-        
-    # Remover merge_column_right de columns_to_get, se estiver presente
-    columns_to_get = [col for col in columns_to_get if col != merge_column_right]
+
+    # Remover colunas de merge de columns_to_get, se estiverem presentes
+    columns_to_get = [col for col in columns_to_get if col not in list_columns_merge_fuzzy_df_right]
 
     # Selecionar as colunas necessárias para o merge
-    df_right_subset = df_right[[merge_column_right] + columns_to_get].drop_duplicates(subset=merge_column_right)
+    df_right_subset = df_right[list_columns_merge_fuzzy_df_right + columns_to_get].drop_duplicates(
+        subset=list_columns_merge_fuzzy_df_right
+    )
 
     # Realizar o merge
-    df_temp = df_fuzzy_result[[best_match_column]].merge(
+    df_temp = df_fuzzy_result[list_columns_merge_fuzzy_df_left].merge(
         df_right_subset,
         how="left",
-        left_on=best_match_column,
-        right_on=merge_column_right
+        left_on=list_columns_merge_fuzzy_df_left,
+        right_on=list_columns_merge_fuzzy_df_right
     )
 
     # Adicionar as colunas ao DataFrame resultante
@@ -194,7 +203,8 @@ def apply_match_fuzzy_two_dataframes(
     threshold: int = 80,
     replace_column: bool = False,
     drop_columns_result: bool = False,
-    merge_fuzzy_column_right: str = None,
+    list_columns_merge_fuzzy_df_left: Union[list, str] = None,
+    list_columns_merge_fuzzy_df_right: Union[list, str] = None,
     validator_get_columns_from_best_match: bool = False,
     keep_original_columns_names_df_right: bool = False,
 ) -> pd.DataFrame:
@@ -211,7 +221,8 @@ def apply_match_fuzzy_two_dataframes(
         threshold (int, opcional): Pontuação mínima para considerar um match válido. Padrão é 80.
         replace_column (bool, opcional): Substitui a coluna original pelo melhor match, se True. Padrão é False.
         drop_columns_result (bool, opcional): Remove colunas auxiliares do resultado, se True. Padrão é False.
-        merge_fuzzy_column_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
+        list_columns_merge_fuzzy_df_left (str, opcional): Nome da coluna no DataFrame à esquerda usada para mapear colunas adicionais. Padrão é None.
+        list_columns_merge_fuzzy_df_right (str, opcional): Nome da coluna no DataFrame à direita usada para mapear colunas adicionais. Padrão é None.
         validator_get_columns_from_best_match (bool, opcional): Se True, obtém colunas do DataFrame à direita com base no melhor match. Padrão é False.
         keep_original_columns_names_df_right (bool, opcional): Se True, mantém os nomes originais das colunas do DataFrame à direita. Padrão é False.
 
@@ -248,7 +259,8 @@ def apply_match_fuzzy_two_dataframes(
             df_right=df_right,
             best_match_column="BEST_MATCH",
             columns_to_get=list_columns_get_df_right,
-            merge_column_right=merge_fuzzy_column_right,
+            list_columns_merge_fuzzy_df_left=list_columns_merge_fuzzy_df_left,
+            list_columns_merge_fuzzy_df_right=list_columns_merge_fuzzy_df_right,
             keep_original_columns_names_df_right=keep_original_columns_names_df_right
         )
 
