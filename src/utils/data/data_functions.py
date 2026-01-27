@@ -1477,3 +1477,94 @@ def remove_duplicate_columns(df: pd.DataFrame, keep: str = "first") -> pd.DataFr
 
     # Remove as colunas duplicadas
     return df.loc[:, ~duplicated_columns]
+
+
+def check_multiple_conditions_and_create_column(
+    df: pd.DataFrame,
+    conditions: List[Tuple[str, str, Union[str, int, float]]],
+    new_column_name: str,
+    operator: str = "and",
+    default_value: bool = False,
+) -> pd.DataFrame:
+    """
+    Verifica condições em múltiplas colunas e cria ou atualiza uma nova coluna com True/False.
+
+    Args:
+        df (pd.DataFrame): DataFrame de entrada.
+        conditions (List[Tuple[str, str, Union[str, int, float]]]): Lista de condições no formato
+            [(coluna, operador, valor), ...]. Exemplo: [("coluna1", "==", 10), ("coluna2", ">", 5)].
+        new_column_name (str): Nome da nova coluna a ser criada ou atualizada.
+        operator (str): Operador lógico entre condições ("and" ou "or"). Default é "and".
+        default_value (bool): Valor padrão para a nova coluna, caso ela precise ser criada. Default é False.
+
+    Returns:
+        pd.DataFrame: DataFrame atualizado com a nova coluna.
+    """
+    # Verifica se todas as colunas existem no DataFrame
+    for col, _, _ in conditions:
+        if col not in df.columns:
+            raise ValueError(f"A coluna '{col}' não existe no DataFrame.")
+
+    # Cria a nova coluna com o valor padrão, se necessário
+    if new_column_name not in df.columns:
+        df[new_column_name] = default_value
+
+    # Mapeia os operadores para funções
+    operators = {
+        "==": lambda x, y: x == y,
+        "!=": lambda x, y: x != y,
+        ">": lambda x, y: x > y,
+        "<": lambda x, y: x < y,
+        ">=": lambda x, y: x >= y,
+        "<=": lambda x, y: x <= y,
+        "in": lambda x, y: x.isin(y) if isinstance(y, list) else x == y,
+        "not in": lambda x, y: ~x.isin(y) if isinstance(y, list) else x != y,
+    }
+
+    # Aplica as condições
+    condition_results = []
+    for col, op, value in conditions:
+        if op not in operators:
+            raise ValueError(f"Operador '{op}' não suportado.")
+        condition_results.append(operators[op](df[col], value))
+
+    # Combina as condições usando o operador lógico
+    if operator == "and":
+        df[new_column_name] = pd.concat(condition_results, axis=1).all(axis=1)
+    elif operator == "or":
+        df[new_column_name] = pd.concat(condition_results, axis=1).any(axis=1)
+    else:
+        raise ValueError("O operador lógico deve ser 'and' ou 'or'.")
+
+    return df
+
+
+def generate_format_result(
+        df: pd.DataFrame,
+        list_select_columns: list = None,
+        dict_rename_columns: dict = None,
+        vaLidator_remove_duplicate_columns: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Cria o DataFrame de resultado formatado para exportação.
+
+        Args:
+            df (pd.DataFrame): DataFrame com os resultados completos da validação.
+            list_select_columns (list): Lista de colunas a serem selecionadas.
+            dict_rename_columns (dict): Dicionário para renomear colunas.
+            vaLidator_remove_duplicate_columns (bool): Se True, remove colunas duplicadas.
+
+        Returns:
+            pd.DataFrame: DataFrame formatado para exportação.
+        """
+
+        if list_select_columns:
+            df_result = select_columns(df=df, target_columns=list_select_columns)
+
+        if dict_rename_columns:
+            df_result = rename_columns(df=df_result, rename_dict=dict_rename_columns)
+
+        if vaLidator_remove_duplicate_columns:
+            df_result = remove_duplicate_columns(df=df_result)
+
+        return df_result

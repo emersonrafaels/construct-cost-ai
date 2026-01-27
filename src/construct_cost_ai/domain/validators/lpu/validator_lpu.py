@@ -37,7 +37,7 @@ from utils.data.data_functions import (
     select_columns,
     rename_columns,
     filter_by_merge_column,
-    remove_duplicate_columns,
+    generate_format_result,
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
@@ -801,37 +801,6 @@ class LPUValidator:
 
         return merged_df, matched_count, total_count
 
-    def generate_format_result(
-        self,
-        df: pd.DataFrame,
-        list_select_columns: list = None,
-        dict_rename_columns: dict = None,
-        vaLidator_remove_duplicate_columns: bool = False,
-    ) -> pd.DataFrame:
-        """
-        Cria o DataFrame de resultado formatado para exportação.
-
-        Args:
-            df (pd.DataFrame): DataFrame com os resultados completos da validação.
-            list_select_columns (list): Lista de colunas a serem selecionadas.
-            dict_rename_columns (dict): Dicionário para renomear colunas.
-            vaLidator_remove_duplicate_columns (bool): Se True, remove colunas duplicadas.
-
-        Returns:
-            pd.DataFrame: DataFrame formatado para exportação.
-        """
-
-        if list_select_columns:
-            df_result = select_columns(df=df, target_columns=list_select_columns)
-
-        if dict_rename_columns:
-            df_result = rename_columns(df=df_result, rename_dict=dict_rename_columns)
-
-        if vaLidator_remove_duplicate_columns:
-            df_result = remove_duplicate_columns(df=df_result)
-
-        return df_result
-
     def validate_lpu(
         self,
         file_path_budget: Union[str, Path] = None,
@@ -1247,7 +1216,7 @@ class LPUValidator:
             raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
 
         # Formatando o resultado final
-        df_result = self.generate_format_result(
+        df_result = generate_format_result(
             df=df_result,
             list_select_columns=self.settings.get(
                 "module_validator_lpu.output_settings.list_columns_result", []

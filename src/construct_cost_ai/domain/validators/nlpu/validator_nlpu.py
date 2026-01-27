@@ -35,6 +35,7 @@ from utils.data.data_functions import (
     transform_case,
     select_columns,
     rename_columns,
+    generate_format_result,
 )
 from utils.lpu.lpu_functions import (
     generate_region_group_combinations,
@@ -541,27 +542,45 @@ class NLPUValidator:
         )
 
         return merged_df, matched_count, total_count
-
-    def generate_format_result(df: pd.DataFrame) -> pd.DataFrame:
+    
+    def create_column_result(
+        self,
+        df: pd.DataFrame,
+    ) -> pd.DataFrame:
         """
-        Cria o DataFrame de resultado formatado para exportação.
+        Cria novas colunas no DataFrame com base em condições específicas.
 
         Args:
-            df (pd.DataFrame): DataFrame com os resultados completos da validação.
+            df (pd.DataFrame): DataFrame onde as colunas serão criadas.
 
         Returns:
-            pd.DataFrame: DataFrame formatado para exportação.
+            pd.DataFrame: DataFrame com as novas colunas criadas.
         """
+        # Criando a coluna "TIPO ITEM - ORÇAMENTO CONSTRUTORA"
+        column_status_lpu = settings.get("module_validator_lpu.column_status")
+        if column_status_lpu not in df.columns:
+            raise ValueError(f"A coluna '{column_status_lpu}' não foi encontrada no DataFrame.")
 
-        # Seleciona as colunas necessárias para o resultado final
-        list_select_columns = settings.get(
-            "module_validator_lpu.output_settings.list_columns_result", []
+        df["TIPO ITEM - ORÇAMENTO CONSTRUTORA"] = df[column_status_lpu].apply(
+            lambda x: "NAO LPU" if x == "ITEM NAO LPU" else "ITEM LPU"
         )
 
-        if list_select_columns:
-            df_result = select_columns(df=df, target_columns=list_select_columns)
+        # Criando a coluna "TIPO ITEM - VERIFICADOR INTELIGENTE"
+        column_status_nlpu = settings.get("module_validator_nlpu.column_status")
+        if column_status_nlpu not in df.columns:
+            raise ValueError(f"A coluna '{column_status_nlpu}' não foi encontrada no DataFrame.")
 
-        return df_result
+        df["TIPO ITEM - VERIFICADOR INTELIGENTE"] = df.apply(
+            lambda row: "ITEM LPU - MATCH FUZZY"
+            if pd.notna(row[column_status_nlpu]) and row[column_status_nlpu].strip()
+            else row["TIPO ITEM - ORÇAMENTO CONSTRUTORA"],
+            axis=1
+        )
+
+        # Criando a coluna de resultado final
+        # df["RESULTADO FINAL"] = ...
+
+        return df
 
     def apply_match_fuzzy_budget_lpu(
         self,
@@ -852,16 +871,16 @@ class NLPUValidator:
             raise ValidatorNLPUError(f"Erro ao calcular discrepâncias: {e}")
 
         # Formatando o resultado final
-        df_result = self.generate_format_result(
+        df_result = self.create_column_result(generate_format_result(
             df=df_result,
             list_select_columns=self.settings.get(
-                "module_validator_lpu.output_settings.list_columns_result", []
+                "module_validator_nlpu.output_settings.list_columns_result", []
             ),
             dict_rename_columns=self.settings.get(
-                "module_validator_lpu.output_settings.dict_rename_result", []
+                "module_validator_nlpu.output_settings.dict_rename_result", []
             ),
             vaLidator_remove_duplicate_columns=True,
-        )
+        ))
 
         # Salvar o resultado em um arquivo Excel
         export_data(
