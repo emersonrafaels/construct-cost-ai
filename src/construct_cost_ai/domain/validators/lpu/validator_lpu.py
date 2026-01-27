@@ -49,8 +49,11 @@ from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
     LPUDiscrepancyConfig,
     LPUDiscrepancyCalculator,
 )
-from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats import (
+from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats_pdf import (
     run_lpu_validation_reporting,
+)
+from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_status_html import (
+    run_lpu_validation_reporting_html,
 )
 from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
@@ -1295,15 +1298,15 @@ class LPUValidator:
             """
             
             # Executando o PDF de estatísticas
-            run_lpu_validation_reporting(
+            run_lpu_validation_reporting_html(
                 df_result=df_result,
-                validator_output_pdf=self.settings.get(
-                    "module_validator_lpu.stats.validator_output_pdf", True
+                validator_output_html=self.settings.get(
+                    "module_validator_lpu.stats.validator_output_html", True
                 ),
-                output_pdf=Path(
+                output_html=Path(
                 output_dir,
                 self.settings.get(
-                    "module_validator_lpu.output_settings.file_path_stats_output_pdf"
+                    "module_validator_lpu.output_settings.file_path_stats_output_html"
                 ),
             ),
                 verbose=verbose,

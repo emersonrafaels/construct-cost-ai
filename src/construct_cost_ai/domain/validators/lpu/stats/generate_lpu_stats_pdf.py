@@ -579,10 +579,6 @@ def run_lpu_validation_reporting(
     top_suppliers_n: int = 10,
     top_items_n: int = 10,
 ) -> None:
-    if validator_output_pdf is None:
-        validator_output_pdf = settings.get("module_validator_lpu.stats.validator_output_pdf", True)
-    if verbose is None:
-        verbose = settings.get("module_validator_lpu.verbose", True)
 
     cfg = _get_cfg(settings)
     df_norm = normalize_lpu_result(df_result, cfg)
