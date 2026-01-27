@@ -1112,8 +1112,12 @@ class LPUValidator:
                     df_choices_column=self.settings.get(
                         "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_column_right"
                     ),
-                    threshold=70,
-                    replace_column=True,
+                    threshold=self.settings.get(
+                        "module_validator_lpu.merge_budget_metadata_agencies_constructors.threshold", 70
+                    ),
+                    replace_column=self.settings.get(
+                        "module_validator_lpu.merge_budget_metadata_agencies_constructors.replace_column", True
+                    ),
                     drop_columns_result=True,
                 )
 
@@ -1137,7 +1141,9 @@ class LPUValidator:
                 indicator=indicator,
                 handle_duplicates=True,
                 use_similarity_for_unmatched=False,
-                similarity_threshold=70,
+                similarity_threshold=self.settings.get(
+                        "module_validator_lpu.merge_budget_metadata_agencies_constructors.threshold", 70
+                    ),
                 validator_output_data=self.settings.get(
                     "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_save_sot",
                     True,
@@ -1260,14 +1266,12 @@ class LPUValidator:
 
         # Estatísticas
         if self.settings.get("module_validator_lpu.get_lpu_status", False):
-
-            # Definindo o local de salvamento do PDF de estatísticas
-            output_pdf = Path(
-                output_dir,
-                self.settings.get(
-                    "module_validator_lpu.output_settings.file_path_stats_output_pdf"
-                ),
-            )
+            
+            """
+            
+            1 - PDF de estatísticas com resumo da validação LPU
+            
+            """
 
             # Executando o PDF de estatísticas
             run_lpu_validation_reporting(
@@ -1275,7 +1279,33 @@ class LPUValidator:
                 validator_output_pdf=self.settings.get(
                     "module_validator_lpu.stats.validator_output_pdf", True
                 ),
-                output_pdf=output_pdf,
+                output_pdf=Path(
+                output_dir,
+                self.settings.get(
+                    "module_validator_lpu.output_settings.file_path_stats_output_html"
+                ),
+            ),
+                verbose=verbose,
+            )
+            
+            """
+            
+            2 - HTML interativo com resumo da validação LPU
+            
+            """
+            
+            # Executando o PDF de estatísticas
+            run_lpu_validation_reporting(
+                df_result=df_result,
+                validator_output_pdf=self.settings.get(
+                    "module_validator_lpu.stats.validator_output_pdf", True
+                ),
+                output_pdf=Path(
+                output_dir,
+                self.settings.get(
+                    "module_validator_lpu.output_settings.file_path_stats_output_pdf"
+                ),
+            ),
                 verbose=verbose,
             )
 

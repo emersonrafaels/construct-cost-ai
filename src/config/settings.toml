@@ -21,7 +21,7 @@ column_total_paid = "VALOR TOTAL PAGO"
 column_total_lpu = "VALOR TOTAL LPU"
 column_difference = "DIFERENÇA TOTAL"
 column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
-column_status = "VALIDADOR_LPU"
+column_status = "RESULTADO VALIDADOR LPU"
 
 # Opção para obter as estatísticas de status LPU
 get_lpu_status = true
@@ -172,6 +172,12 @@ validate = "many_to_one"
 handle_duplicates = true
 indicator = "_merge_bud_met_age_constr"
 
+# Threshold usado para o merge fuzzy entre agencias e construtoras
+threshold = 70
+
+# Se True, substitui a coluna original pelo best_match e remove colunas auxiliares. Default é False.
+replace_column = true
+
 # Validando se é desejado usar merge fuzzy para construtoras
 validator_use_merge_fuzzy = true
 validator_use_merge_fuzzy_column_left = "CONSTRUTORA"
@@ -218,7 +224,7 @@ dir_path_file_sot = "data/outputs/sot/01_validador_lpu/04_MERGE_ORCA_META_AG_CON
 [default.module_validator_lpu.output_settings]
 
 # Lista de colunas no resultado final
-list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'RESULTADO VALIDADOR LPU', 'SOURCE_FILE']
 
 # Dict de rename no resultado final
 dict_rename_result = {"ID" = "ID ITEM", "NOME" = "NOME ITEM", "UNIDADE" = "UNIDADE ITEM"}
@@ -229,12 +235,15 @@ file_path_output = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.xlsx"
 file_path_output_csv = "spec/02_BASE_RESULTADO_VALIDADOR_LPU.csv"
 file_path_output_complete_excel = "spec/02_BASE_RESULTADO_COMPLETO_VALIDADOR_LPU.xlsx"
 
-file_path_output_complete_html = "spec/02_RESULTADO_COMPLETO_VALIDADOR_LPU.html"
+file_path_stats_output_html = "spec/02_ESTATISTICAS_VALIDADOR_LPU.html"
 file_path_stats_output_pdf = "spec/02_ESTATISTICAS_VALIDADOR_LPU.pdf"
 [default.module_validator_lpu.stats]
 
 # Variável para salvar o relatório de estatísticas em PDF
 validator_output_pdf = true
+
+# Variável para salvar o relatório de estatísticas em HTML
+validator_output_html = true    
 
 # Configurações de exportação
 top_n_divergencias = 10
@@ -245,12 +254,12 @@ top_n_divergencias_extended = 20
 # Colunas padrão para cálculo de discrepâncias
 column_quantity = "QUANTIDADE"
 column_unit_price_paid = "PRECO PAGO"
-column_unit_price_lpu = "PRECO LPU"
+column_unit_price_lpu = "PRECO LPU_lpu_0"
 column_total_paid = "VALOR TOTAL PAGO"
-column_total_lpu = "VALOR TOTAL LPU"
-column_difference = "DIFERENÇA TOTAL"
-column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
-column_status = "VALIDADOR_NLPU"
+column_total_lpu = "MATCH FUZZY - VALOR TOTAL"
+column_difference = "MATCH FUZZY - DIFERENÇA TOTAL"
+column_discrepancy = "MATCH FUZZY - DISCREPÂNCIA PERCENTUAL"
+column_status = "RESULTADO VALIDADOR NLPU"
 
 [default.module_validator_nlpu.budget_data]
 
@@ -331,7 +340,7 @@ dir_path_file_sot = "data/outputs/sot/02_validador_nlpu/01_MATCH_FUZZY_BUDGET_LP
 [default.module_validator_nlpu.output_settings]
 
 # Lista de colunas no resultado final
-list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME ITEM', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'VALIDADOR_LPU', 'SOURCE_FILE']
+list_columns_result = ['CÓDIGO_UPE', 'PROGRAMA_DONO', 'NUMERO_AGENCIA', 'NOME_AGENCIA', 'REGIAO', 'UF', 'MUNICIPIO', 'CONSTRUTORA', 'GRUPO', 'ID', 'NOME ITEM', 'UNIDADE', 'TIPO', 'GRUPO', 'COMENTÁRIO', 'QUANTIDADE', 'PRECO PAGO', 'VALOR TOTAL PAGO', 'PRECO LPU', 'VALOR TOTAL LPU', 'DIFERENÇA TOTAL', 'DISCREPÂNCIA PERCENTUAL', 'RESULTADO VALIDADOR LPU', 'SOURCE_FILE']
 
 # Nomes dos arquivos de saída
 output_dir = "data/outputs"

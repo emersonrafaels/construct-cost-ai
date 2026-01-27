@@ -808,19 +808,19 @@ class NLPUValidator:
         try:
             discrepancy_config = LPUDiscrepancyConfig(
                 settings=self.settings,
-                column_quantity=self.settings.get("module_validator_lpu.column_quantity"),
+                column_quantity=self.settings.get("module_validator_nlpu.column_quantity"),
                 column_unit_price_paid=self.settings.get(
                     "module_validator_lpu.column_unit_price_paid"
                 ),
                 column_unit_price_lpu=self.settings.get(
-                    "module_validator_lpu.column_unit_price_lpu"
+                    "module_validator_nlpu.column_unit_price_lpu"
                 ),
-                column_total_paid=self.settings.get("module_validator_lpu.column_total_paid"),
-                column_total_lpu=self.settings.get("module_validator_lpu.column_total_lpu"),
-                column_difference=self.settings.get("module_validator_lpu.column_difference"),
-                column_discrepancy=self.settings.get("module_validator_lpu.column_discrepancy"),
-                column_status=self.settings.get("module_validator_lpu.column_status"),
-                tol_percentile=self.settings.get("module_validator_lpu.tol_percentile"),
+                column_total_paid=self.settings.get("module_validator_nlpu.column_total_paid"),
+                column_total_lpu=self.settings.get("module_validator_nlpu.column_total_lpu"),
+                column_difference=self.settings.get("module_validator_nlpu.column_difference"),
+                column_discrepancy=self.settings.get("module_validator_nlpu.column_discrepancy"),
+                column_status=self.settings.get("module_validator_nlpu.column_status"),
+                tol_percentile=self.settings.get("module_validator_nlpu.tol_percentile"),
                 verbose=verbose,
             )
 
