@@ -19,8 +19,6 @@ Notas:
 - Fix WindowsPath/ReportLab: sempre converte caminhos para str no build/imagens.
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, Tuple, List, Any as AnyType

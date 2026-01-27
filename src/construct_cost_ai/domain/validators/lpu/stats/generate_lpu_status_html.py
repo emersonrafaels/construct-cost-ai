@@ -1,18 +1,28 @@
 """
-Relatório Executivo — Validador LPU (HTML + Plotly)
---------------------------------------------------
-Ordem:
-1) Resumo Executivo (KPIs + Distribuição de status)
-2) Top Agências
-3) Top Fornecedores/Construtoras
-4) Top Itens (LPU e NÃO LPU)
+Relatório Executivo — Validador LPU (HTML + Plotly) — Layout Executivo (v2)
+--------------------------------------------------------------------------
+Melhorias desta versão:
+✅ Layout mais executivo:
+  - Header com “chips” (data, itens, orçamentos)
+  - Seções bem separadas (H1/H2 + divisores)
+  - Grid responsivo: cards com títulos, subtítulos e espaçamento melhor
+  - Tipografia mais clara (hierarquia visual)
+✅ Top 10 Agências:
+  - Eixo X forçado para categórico (object/string) para não virar contínuo
+  - Ordenação e hover melhor
+✅ Gráficos (Plotly):
+  - Template “plotly_dark” (combina com tema)
+  - Margens e fontes ajustadas para leitura executiva
 
-Fix:
-- Corrigido erro "unhashable type: 'dict'" (Top Agências não re-agrupa DF já agregado)
-- Orchestrator com defaults: validator_output_html / verbose
+Uso:
+run_lpu_validation_reporting_html(
+    df_result=df_result,
+    output_html="VALIDADOR_LPU_EXECUTIVO.html",
+    top_agencies_n=10,
+    top_suppliers_n=10,
+    top_items_n=10,
+)
 """
-
-from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
@@ -191,9 +201,6 @@ def _top_agencies_raw(
     col_diff: str,
     n: int,
 ) -> pd.DataFrame:
-    """
-    ✅ Retorna DF agregado (raw) para plot.
-    """
     return (
         df_refund.groupby([col_agency, col_city, col_uf])[col_diff]
         .sum()
@@ -211,18 +218,15 @@ def _top_agencies_table_from_raw(
     col_uf: str,
     col_diff: str,
 ) -> pd.DataFrame:
-    """
-    ✅ Formata o DF agregado (sem re-agrupamento) para tabela.
-    """
     out = agencies_raw.rename(
         columns={
             col_agency: "Agência",
             col_city: "Município",
             col_uf: "UF",
-            col_diff: "Valor",
+            col_diff: "Potencial (R$)",
         }
     ).copy()
-    out["Valor"] = out["Valor"].map(lambda x: _brl(float(x)))
+    out["Potencial (R$)"] = out["Potencial (R$)"].map(lambda x: _brl(float(x)))
     return out
 
 
@@ -256,18 +260,10 @@ def _top_suppliers_table_from_raw(
 # -------------------------
 # HTML builder
 # -------------------------
-def _df_to_html_table(df: pd.DataFrame, *, table_id: str, numeric_cols: Optional[list[str]] = None) -> str:
+def _df_to_html_table(df: pd.DataFrame, *, table_id: str) -> str:
     if df is None or len(df) == 0:
         return "<div class='empty'>Sem dados.</div>"
-
-    html = df.to_html(index=False, escape=True, table_id=table_id, classes="tbl", border=0)
-
-    # marca colunas numéricas com class "num" (alinhamento à direita)
-    if numeric_cols:
-        for col in numeric_cols:
-            html = html.replace(f"<th>{col}</th>", f"<th class='num'>{col}</th>")
-            html = html.replace(f"<td>{col}</td>", f"<td class='num'>{col}</td>")  # harmless fallback
-    return html
+    return df.to_html(index=False, escape=True, table_id=table_id, classes="tbl", border=0)
 
 
 def _html_shell(*, title: str, body_html: str) -> str:
@@ -281,55 +277,132 @@ def _html_shell(*, title: str, body_html: str) -> str:
   <style>
     :root {{
       --bg: #0b0f17;
-      --card: #111827;
+      --card: #0f172a;
+      --card2: #111827;
       --muted: #9CA3AF;
       --text: #E5E7EB;
       --line: rgba(255,255,255,0.10);
       --zebra: rgba(255,255,255,0.03);
+      --chip: rgba(255,255,255,0.06);
+      --shadow: 0 18px 40px rgba(0,0,0,0.35);
     }}
     body {{
-      margin: 0; padding: 24px;
+      margin: 0; padding: 28px 18px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;
-      background: var(--bg); color: var(--text);
+      background: radial-gradient(1200px 500px at 20% -10%, rgba(99,102,241,0.22), transparent 60%),
+                  radial-gradient(900px 400px at 90% 10%, rgba(14,165,233,0.16), transparent 60%),
+                  var(--bg);
+      color: var(--text);
     }}
-    .wrap {{ max-width: 1100px; margin: 0 auto; }}
-    .title {{ font-size: 22px; font-weight: 700; }}
-    .subtitle {{ color: var(--muted); margin-top: 6px; }}
+    .wrap {{ max-width: 1120px; margin: 0 auto; }}
+    .header {{
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px;
+      padding: 16px 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }}
+    .h-title {{
+      font-size: 20px;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+    }}
+    .h-sub {{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }}
+    .chips {{
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start;
+    }}
+    .chip {{
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }}
+    .chip span {{
+      color: var(--muted);
+      margin-right: 6px;
+      font-weight: 600;
+    }}
+
     .grid {{
-      display: grid; gap: 12px;
+      display: grid;
       grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
       margin-top: 16px;
     }}
+
+    .section {{
+      grid-column: span 12;
+      margin-top: 8px;
+      padding: 0 2px;
+    }}
+    .section h1 {{
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+      color: var(--text);
+    }}
+    .section p {{
+      margin: 6px 0 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }}
+    .divider {{
+      margin-top: 10px;
+      height: 1px;
+      background: var(--line);
+    }}
+
     .card {{
       grid-column: span 12;
-      background: var(--card);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 14px 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      box-shadow: var(--shadow);
     }}
     .card h2 {{
-      font-size: 14px; margin: 0 0 10px 0;
-      color: var(--text); letter-spacing: .2px;
+      font-size: 13px;
+      margin: 0;
+      letter-spacing: .2px;
     }}
+    .card .hint {{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }}
+
     .kpis {{
-      display: grid; gap: 10px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 12px;
     }}
     .kpi {{
       background: rgba(255,255,255,0.02);
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 12px;
     }}
     .kpi .label {{ color: var(--muted); font-size: 12px; }}
-    .kpi .value {{ margin-top: 6px; font-size: 16px; font-weight: 700; }}
-    .section {{ margin-top: 18px; font-size: 14px; color: var(--muted); }}
+    .kpi .value {{ margin-top: 6px; font-size: 16px; font-weight: 800; }}
+
+    .plot {{ width: 100%; height: 420px; margin-top: 10px; }}
 
     .tbl {{
       width: 100%;
       border-collapse: collapse;
       font-size: 12.5px;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 12px;
     }}
     .tbl th, .tbl td {{
       padding: 10px 10px;
@@ -343,19 +416,19 @@ def _html_shell(*, title: str, body_html: str) -> str:
       background: rgba(17,24,39,0.92);
       backdrop-filter: blur(6px);
       z-index: 1;
+      font-size: 12px;
+      color: rgba(229,231,235,0.95);
     }}
-    .tbl tr:nth-child(even) td {{
-      background: var(--zebra);
-    }}
-    .num {{ text-align: right; white-space: nowrap; }}
+    .tbl tr:nth-child(even) td {{ background: var(--zebra); }}
     .empty {{
       color: var(--muted);
       padding: 10px;
       border: 1px dashed var(--line);
       border-radius: 10px;
+      margin-top: 10px;
     }}
-    .plot {{ width: 100%; height: 420px; }}
-    @media (max-width: 900px) {{
+
+    @media (max-width: 1000px) {{
       .kpis {{ grid-template-columns: 1fr; }}
     }}
   </style>
@@ -394,7 +467,6 @@ def generate_statistics_report_business_html(
     status_refund = _canon_status(cfg.get("status_refund", "PARA RESSARCIMENTO"))
     status_not_lpu = _canon_status(cfg.get("status_not_lpu", "ITEM NAO LPU"))
 
-    # validate minimal
     for c in [col_status, col_paid, col_diff]:
         if c not in df_result.columns:
             raise KeyError(f"Coluna obrigatória ausente: {c}")
@@ -423,15 +495,21 @@ def generate_statistics_report_business_html(
     status_counts["%"] = (status_counts["Itens"] / max(qtd_itens, 1) * 100).round(1).map(_fmt_pct)
 
     # Plotly: status bar
-    fig_status = px.bar(status_counts, x="Status", y="Itens", title=f"Distribuição de status ({col_status})")
+    fig_status = px.bar(
+        status_counts,
+        x="Status",
+        y="Itens",
+        title="Distribuição de status",
+        template="plotly_dark",
+    )
     fig_status.update_layout(
-        margin=dict(l=10, r=10, t=50, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=10, r=10, t=60, b=10),
+        font=dict(size=12),
+        title=dict(x=0, xanchor="left"),
     )
     fig_status_html = fig_status.to_html(include_plotlyjs=False, full_html=False, config={"displaylogo": False})
 
-    # Top Agências
+    # Top Agências (force categorical x)
     has_geo_cols = all(c in df.columns for c in [col_agency, col_city, col_uf])
     df_refund = df[df[col_status].eq(status_refund)]
 
@@ -444,16 +522,22 @@ def generate_statistics_report_business_html(
             col_diff=col_diff,
             n=top_agencies_n,
         )
+
+        # ✅ force x as object/categorical
+        agencies_raw[col_agency] = agencies_raw[col_agency].astype(str)
+
         fig_agencies = px.bar(
             agencies_raw,
             x=col_agency,
             y=col_diff,
-            title=f"Top {int(top_agencies_n)} agências por potencial ressarcimento",
+            title=f"Top {int(top_agencies_n)} agências — potencial ressarcimento",
+            template="plotly_dark",
         )
         fig_agencies.update_layout(
-            margin=dict(l=10, r=10, t=50, b=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=10, r=10, t=60, b=10),
+            font=dict(size=12),
+            title=dict(x=0, xanchor="left"),
+            xaxis=dict(type="category"),  # ✅ garante categórico
         )
         fig_agencies_html = fig_agencies.to_html(include_plotlyjs=False, full_html=False, config={"displaylogo": False})
 
@@ -471,23 +555,32 @@ def generate_statistics_report_business_html(
     # Top Fornecedores/Construtoras
     if col_supplier in df.columns and len(df_refund) > 0:
         suppliers_raw = _top_suppliers_raw(
-            df_refund, col_supplier=col_supplier, col_diff=col_diff, n=top_suppliers_n
+            df_refund,
+            col_supplier=col_supplier,
+            col_diff=col_diff,
+            n=top_suppliers_n,
         )
+        suppliers_raw[col_supplier] = suppliers_raw[col_supplier].astype(str)
+
         fig_suppliers = px.bar(
             suppliers_raw,
             x=col_supplier,
             y=col_diff,
-            title=f"Top {int(top_suppliers_n)} fornecedores/construtoras (ressarcimento)",
+            title=f"Top {int(top_suppliers_n)} fornecedores/construtoras — ressarcimento",
+            template="plotly_dark",
         )
         fig_suppliers.update_layout(
-            margin=dict(l=10, r=10, t=50, b=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=10, r=10, t=60, b=10),
+            font=dict(size=12),
+            title=dict(x=0, xanchor="left"),
+            xaxis=dict(type="category"),
         )
         fig_suppliers_html = fig_suppliers.to_html(include_plotlyjs=False, full_html=False, config={"displaylogo": False})
 
         suppliers_tbl = _top_suppliers_table_from_raw(
-            suppliers_raw, col_supplier=col_supplier, col_diff=col_diff
+            suppliers_raw,
+            col_supplier=col_supplier,
+            col_diff=col_diff,
         )
     else:
         fig_suppliers_html = "<div class='empty'>Sem dados para Top Fornecedores/Construtoras.</div>"
@@ -513,17 +606,38 @@ def generate_statistics_report_business_html(
         denom_for_pct=max(qtd_nao_lpu, 1),
     )
 
-    # Build HTML body
-    title = "Relatório Executivo — Validador LPU (HTML)"
+    # Build HTML body (clear sections)
+    title = "Relatório Executivo — Validador LPU"
     generated_at = datetime.now().strftime("%d/%m/%Y %H:%M")
 
+    header_html = f"""
+      <div class="header">
+        <div>
+          <div class="h-title">{title}</div>
+          <div class="h-sub">Gerado em {generated_at}</div>
+        </div>
+        <div class="chips">
+          <div class="chip"><span>Orçamentos</span>{_fmt_int(qtd_orcamentos)}</div>
+          <div class="chip"><span>Itens</span>{_fmt_int(qtd_itens)}</div>
+          <div class="chip"><span>Total pago</span>{_brl(total_paid)}</div>
+        </div>
+      </div>
+    """
+
     body_html = f"""
-      <div class="title">{title}</div>
-      <div class="subtitle">Gerado em {generated_at}</div>
+      {header_html}
 
       <div class="grid">
+
+        <div class="section">
+          <h1>1) Resumo Executivo</h1>
+          <p>Visão consolidada para decisão: volume, mix LPU vs NÃO LPU e potencial de ressarcimento.</p>
+          <div class="divider"></div>
+        </div>
+
         <div class="card">
-          <h2>Resumo Executivo</h2>
+          <h2>KPIs principais</h2>
+          <div class="hint">Indicadores-chave do processamento atual.</div>
           <div class="kpis">
             <div class="kpi"><div class="label">Quantidade de orçamentos</div><div class="value">{_fmt_int(qtd_orcamentos)}</div></div>
             <div class="kpi"><div class="label">Quantidade de itens</div><div class="value">{_fmt_int(qtd_itens)}</div></div>
@@ -536,32 +650,58 @@ def generate_statistics_report_business_html(
 
         <div class="card">
           <h2>Distribuição de status</h2>
+          <div class="hint">Entenda rapidamente a composição dos itens por classificação.</div>
           <div class="plot">{fig_status_html}</div>
-          <div class="section">Tabela de status</div>
+          <div class="hint">Tabela de status</div>
           {_df_to_html_table(status_counts, table_id="tbl_status")}
         </div>
 
+        <div class="section">
+          <h1>2) Top Agências</h1>
+          <p>Concentração de impacto para priorização operacional (status: {status_refund}).</p>
+          <div class="divider"></div>
+        </div>
+
         <div class="card">
-          <h2>Top {int(top_agencies_n)} Agências (potencial ressarcimento)</h2>
+          <h2>Top {int(top_agencies_n)} agências — potencial ressarcimento</h2>
+          <div class="hint">Ranking por soma da diferença total (itens em {status_refund}).</div>
           <div class="plot">{fig_agencies_html}</div>
-          <div class="section">Tabela de agências</div>
+          <div class="hint">Tabela de agências</div>
           {_df_to_html_table(agencies_tbl, table_id="tbl_agencias")}
         </div>
 
-        <div class="card">
-          <h2>Top {int(top_suppliers_n)} Fornecedores/Construtoras (ressarcimento)</h2>
-          <div class="plot">{fig_suppliers_html}</div>
-          <div class="section">Tabela de fornecedores</div>
-          {_df_to_html_table(suppliers_tbl, table_id="tbl_fornecedores")}
+        <div class="section">
+          <h1>3) Top Fornecedores / Construtoras</h1>
+          <p>Visão de concentradores por fornecedor para tratativa e negociação.</p>
+          <div class="divider"></div>
         </div>
 
         <div class="card">
-          <h2>Top {int(top_items_n)} Itens (frequência)</h2>
-          <div class="section">Top {int(top_items_n)} Itens LPU</div>
+          <h2>Top {int(top_suppliers_n)} fornecedores/construtoras — ressarcimento</h2>
+          <div class="hint">Ranking por potencial (diferença total) no status {status_refund}.</div>
+          <div class="plot">{fig_suppliers_html}</div>
+          <div class="hint">Tabela de fornecedores</div>
+          {_df_to_html_table(suppliers_tbl, table_id="tbl_fornecedores")}
+        </div>
+
+        <div class="section">
+          <h1>4) Top Itens</h1>
+          <p>Itens mais recorrentes para priorizar padronização (LPU) e ações de conversão (NÃO LPU).</p>
+          <div class="divider"></div>
+        </div>
+
+        <div class="card">
+          <h2>Top {int(top_items_n)} itens LPU (mais frequentes)</h2>
+          <div class="hint">Frequência e participação relativa entre itens LPU.</div>
           {_df_to_html_table(top_items_lpu_tbl, table_id="tbl_itens_lpu")}
-          <div class="section">Top {int(top_items_n)} Itens NÃO LPU</div>
+        </div>
+
+        <div class="card">
+          <h2>Top {int(top_items_n)} itens NÃO LPU (mais frequentes)</h2>
+          <div class="hint">Frequência e participação relativa entre itens NÃO LPU.</div>
           {_df_to_html_table(top_items_not_lpu_tbl, table_id="tbl_itens_nao_lpu")}
         </div>
+
       </div>
     """
 
