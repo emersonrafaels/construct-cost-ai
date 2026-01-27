@@ -53,7 +53,7 @@ from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats_pdf import
     run_lpu_validation_reporting,
 )
 from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_status_html import (
-    run_lpu_validation_reporting_html,
+    run_validation_reporting_html,
 )
 from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
@@ -1202,6 +1202,14 @@ class LPUValidator:
                 column_difference=self.settings.get("module_validator_lpu.column_difference"),
                 column_discrepancy=self.settings.get("module_validator_lpu.column_discrepancy"),
                 column_status=self.settings.get("module_validator_lpu.column_status"),
+                name_status_nullable=self.settings.get("module_validator_lpu.name_status_nullable"),
+                name_status_ok=self.settings.get("module_validator_lpu.name_status_ok"),
+                name_status_payment_more=self.settings.get(
+                    "module_validator_lpu.name_status_payment_more"
+                ),
+                name_status_payment_less=self.settings.get(
+                    "module_validator_lpu.name_status_payment_less"
+                ),
                 tol_percentile=self.settings.get("module_validator_lpu.tol_percentile"),
                 verbose=verbose,
             )
@@ -1267,7 +1275,7 @@ class LPUValidator:
             """
             
             # Executando o PDF de estatísticas
-            run_lpu_validation_reporting_html(
+            run_validation_reporting_html(
                 df_result=df_result,
                 validator_output_html=self.settings.get(
                     "module_validator_lpu.stats.validator_output_html", True

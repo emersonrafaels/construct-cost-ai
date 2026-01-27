@@ -22,6 +22,10 @@ column_total_lpu = "VALOR TOTAL LPU"
 column_difference = "DIFERENÇA TOTAL"
 column_discrepancy = "DISCREPÂNCIA PERCENTUAL"
 column_status = "RESULTADO VALIDADOR LPU"
+name_status_nullable = "ITEM NAO LPU"
+name_status_ok = "OK"
+name_status_payment_more = "PARA RESSARCIMENTO"
+name_status_payment_less = "OK"
 
 # Opção para obter as estatísticas de status LPU
 get_lpu_status = true
@@ -361,7 +365,7 @@ file_path_output = "spec/03_BASE_RESULTADO_VALIDADOR_NLPU.xlsx"
 file_path_output_csv = "spec/03_BASE_RESULTADO_VALIDADOR_NLPU.csv"
 file_path_output_complete_excel = "spec/03_BASE_RESULTADO_COMPLETO_VALIDADOR_NLPU.xlsx"
 
-file_path_output_complete_html = "spec/03_RESULTADO_COMPLETO_VALIDADOR_NLPU.html"
+file_path_stats_output_html = "spec/03_RESULTADO_COMPLETO_VALIDADOR_NLPU.html"
 file_path_stats_output_pdf = "spec/03_ESTATISTICAS_VALIDADOR_NLPU.pdf"
 
 [regex_patterns]

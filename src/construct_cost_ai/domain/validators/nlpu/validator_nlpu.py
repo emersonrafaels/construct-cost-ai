@@ -47,6 +47,12 @@ from construct_cost_ai.domain.validators.lpu.calculate_discrepancies import (
     LPUDiscrepancyConfig,
     LPUDiscrepancyCalculator,
 )
+from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_stats_pdf import (
+    run_lpu_validation_reporting,
+)
+from construct_cost_ai.domain.validators.lpu.stats.generate_lpu_status_html import (
+    run_validation_reporting_html,
+)
 from construct_cost_ai.domain.validators.utils.calculate_price_functions import calculate_total_item
 from utils.python_functions import get_item_safe
 from utils.fuzzy.fuzzy_functions import apply_match_fuzzy_two_dataframes
@@ -891,23 +897,51 @@ class NLPUValidator:
 
         logger.success(f"Resultado salvo em: {output_file}")
 
-        """
         # Estatísticas
-        if settings.get("module_validator_lpu.get_lpu_status", False):
-            output_pdf = Path(
-                output_dir,
-                settings.get("module_validator_lpu.output_settings.file_path_stats_output_pdf"),
-            )
-            calculate_validation_stats_and_generate_report(
-                df_result=df_result,
-                validator_output_pdf=settings.get(
-                    "module_validator_lpu.stats.validator_output_pdf", True
-                ),
-                output_pdf=output_pdf,
-                verbose=settings.get("module_validator_lpu.verbose", True),
-            )
+        if self.settings.get("module_validator_lpu.get_lpu_status", False):
             
-        """
+            """
+            
+            1 - PDF de estatísticas com resumo da validação LPU
+            
+            """
+
+            # # Executando o PDF de estatísticas
+            # run_lpu_validation_reporting(
+            #     df_result=df_result,
+            #     validator_output_pdf=self.settings.get(
+            #         "module_validator_lpu.stats.validator_output_pdf", True
+            #     ),
+            #     output_pdf=Path(
+            #     output_dir,
+            #     self.settings.get(
+            #         "module_validator_lpu.output_settings.file_path_stats_output_html"
+            #     ),
+            # ),
+            #     verbose=verbose,
+            # )
+            
+            """
+            
+            2 - HTML interativo com resumo da validação LPU
+            
+            """
+            
+            # Executando o PDF de estatísticas
+            run_validation_reporting_html(
+                df_result=df_result,
+                validator_output_html=self.settings.get(
+                    "module_validator_nlpu.stats.validator_output_html", True
+                ),
+                output_html=Path(
+                output_dir,
+                self.settings.get(
+                    "module_validator_nlpu.output_settings.file_path_stats_output_html"
+                ),
+            ),
+                create_stats_nlpu=True,
+                verbose=verbose,
+            )
 
         return df_result
 
