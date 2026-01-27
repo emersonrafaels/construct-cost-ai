@@ -41,6 +41,10 @@ class LPUDiscrepancyConfig:
         column_difference: str = "dif_total",
         column_discrepancy: str = "discrepancia_percentual",
         column_status: str = "status_conciliacao",
+        name_status_nullable: str = "ITEM NAO LPU",
+        name_status_ok: str = "OK",
+        name_status_payment_more: str = "PARA RESSARCIMENTO",
+        name_status_payment_less: str = "PARA COMPLEMENTO",
         tol_percentile: float = 5.0,
         verbose: bool = True,
     ):
@@ -55,6 +59,12 @@ class LPUDiscrepancyConfig:
         self.column_status = column_status
         self.tol_percentile = tol_percentile
         self.verbose = verbose
+        
+        # Definição de constantes para os status
+        self.status_nullable = name_status_nullable
+        self.status_ok = name_status_ok
+        self.status_payment_more = name_status_payment_more
+        self.status_payment_less = name_status_payment_less
 
 
 class LPUDiscrepancyCalculator:
@@ -168,10 +178,10 @@ class LPUDiscrepancyCalculator:
             str: Classificação da discrepância.
         """
         if pd.isna(pct):
-            return "ITEM NAO LPU"
+            return self.config.status_nullable
         if abs(pct) <= self.config.tol_percentile:
-            return "OK"
-        return "PARA RESSARCIMENTO" if pct > 0 else "OK"
+            return self.config.status_ok
+        return self.config.status_payment_more if pct > 0 else self.config.status_payment_less
 
     def assign_status(self, df: pd.DataFrame) -> None:
         """

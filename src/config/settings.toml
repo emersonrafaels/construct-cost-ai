@@ -263,6 +263,10 @@ column_total_lpu = "MATCH FUZZY - VALOR TOTAL"
 column_difference = "MATCH FUZZY - DIFERENÇA TOTAL"
 column_discrepancy = "MATCH FUZZY - DISCREPÂNCIA PERCENTUAL"
 column_status = "RESULTADO VALIDADOR NLPU"
+name_status_nullable = ""
+name_status_ok = "OK"
+name_status_payment_more = "PARA RESSARCIMENTO"
+name_status_payment_less = "ABAIXO LPU"
 
 [default.module_validator_nlpu.budget_data]
 

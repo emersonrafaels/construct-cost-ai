@@ -830,6 +830,14 @@ class NLPUValidator:
                 column_difference=self.settings.get("module_validator_nlpu.column_difference"),
                 column_discrepancy=self.settings.get("module_validator_nlpu.column_discrepancy"),
                 column_status=self.settings.get("module_validator_nlpu.column_status"),
+                name_status_nullable=self.settings.get("module_validator_nlpu.name_status_nullable"),
+                name_status_ok=self.settings.get("module_validator_nlpu.name_status_ok"),
+                name_status_payment_more=self.settings.get(
+                    "module_validator_nlpu.name_status_payment_more"
+                ),
+                name_status_payment_less=self.settings.get(
+                    "module_validator_nlpu.name_status_payment_less"
+                ),
                 tol_percentile=self.settings.get("module_validator_nlpu.tol_percentile"),
                 verbose=verbose,
             )
