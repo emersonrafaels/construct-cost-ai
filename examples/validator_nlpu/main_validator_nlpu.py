@@ -16,7 +16,10 @@ __email__ = "emersonssmile@gmail.com"
 __status__ = "Development"
 
 import sys
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings("ignore")
 
 # Adicionar src ao path
 base_dir = Path(__file__).parents[2]

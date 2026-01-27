@@ -231,3 +231,4 @@ reportlab==4.4.9
 python-calamine==0.6.1
 rapidfuzz==3.14.3
 plotly==6.5.2
+joblib==1.5.3

@@ -573,6 +573,8 @@ class NLPUValidator:
         filter_cols_to_match: dict = None,
         list_columns_get_df_right: list = None,
         threshold: int = 80,
+        library: str = "fuzzywuzzy",
+        use_multiprocessing: bool = False,
         replace_column: bool = False,
         drop_columns_result: bool = False,
         list_columns_merge_fuzzy_df_left: Union[list, str] = None,
@@ -615,6 +617,8 @@ class NLPUValidator:
             df_left_column=df_left_column,
             df_choices_column=df_choices_column,
             threshold=threshold,
+            library=library,
+            use_multiprocessing=use_multiprocessing,
             replace_column=replace_column,
             drop_columns_result=drop_columns_result,
             list_columns_merge_fuzzy_df_left=list_columns_merge_fuzzy_df_left,
@@ -770,6 +774,12 @@ class NLPUValidator:
                     threshold=settings.get(
                         "module_validator_nlpu.match_fuzzy_budget_lpu.validator_use_merge_fuzzy_threshold"
                     ),
+                    library=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.library"
+                    ),
+                    use_multiprocessing=settings.get(
+                        "module_validator_nlpu.match_fuzzy_budget_lpu.use_multiprocessing"
+                    ),
                     replace_column=settings.get(
                         "module_validator_nlpu.match_fuzzy_budget_lpu.replace_column"
                     ),
@@ -831,7 +841,7 @@ class NLPUValidator:
             )
         except Exception as e:
             logger.error(f"Erro ao calcular discrepâncias: {e}")
-            raise ValidatorLPUError(f"Erro ao calcular discrepâncias: {e}")
+            raise ValidatorNLPUError(f"Erro ao calcular discrepâncias: {e}")
 
         # Formatando o resultado final
         df_result = self.generate_format_result(

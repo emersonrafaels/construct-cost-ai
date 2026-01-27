@@ -22,7 +22,10 @@ from pathlib import Path
 from pprint import pprint
 from typing import Callable, Union
 
+import multiprocessing
 import pandas as pd
+import numpy as np
+from joblib import Parallel, delayed
 from fuzzywuzzy import fuzz
 
 # Adicionar src ao path
@@ -34,6 +37,51 @@ from utils.fuzzy.fuzzy_validations import fuzzy_match
 from utils.data.data_functions import export_data
 from utils.python_functions import measure_execution_time
 from config.config_logger import logger
+
+def process_chunk(chunk, choices, threshold, library):
+    """
+    Processa um chunk de dados aplicando fuzzy matching.
+
+    Args:
+        chunk (pd.Series): Chunk de dados a ser processado.
+        choices (list): Lista de escolhas para o fuzzy matching.
+        threshold (int): Pontuação mínima para considerar um match válido.
+        library (str): Biblioteca de fuzzy matching a ser usada.
+
+    Returns:
+        pd.Series: Resultados do fuzzy matching para o chunk.
+    """
+    return chunk.apply(
+        lambda x: fuzzy_match(value=str(x), choices=choices, top_matches=1, threshold=threshold, library=library)
+    )
+
+def parallel_fuzzy_matching(df, df_column, choices, threshold, library):
+    """
+    Realiza fuzzy matching em paralelo, dividindo os dados em chunks.
+
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados a serem processados.
+        df_column (str): Nome da coluna no DataFrame a ser processada.
+        choices (list): Lista de escolhas para o fuzzy matching.
+        threshold (int): Pontuação mínima para considerar um match válido.
+        library (str): Biblioteca de fuzzy matching a ser usada.
+
+    Returns:
+        pd.Series: Resultados do fuzzy matching para todo o DataFrame.
+    """
+    # Detectar automaticamente o número de núcleos disponíveis
+    num_cores = multiprocessing.cpu_count()
+
+    # Dividir os dados em chunks
+    chunks = np.array_split(df[df_column], num_cores)
+
+    # Processar os chunks em paralelo
+    results = Parallel(n_jobs=num_cores)(
+        delayed(process_chunk)(chunk, choices, threshold, library) for chunk in chunks
+    )
+
+    # Concatenar os resultados
+    return pd.concat(results)
 
 
 def get_columns_from_best_match(
@@ -124,6 +172,7 @@ def process_fuzzy_comparison_dataframes(
     df_choices_column: str,
     threshold: int = 80,
     library: str = "rapidfuzz",
+    use_multiprocessing: bool = False,
     validator_export_data: bool = False,
     output_file: str = "fuzzy_comparison_output.xlsx",
     replace_column: bool = False,
@@ -165,16 +214,29 @@ def process_fuzzy_comparison_dataframes(
     # Extrair os choices da base de LPU
     choices = df_choices[df_choices_column].dropna().tolist()
 
-    # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
-    matches = df[df_column].apply(
-        lambda x: fuzzy_match(
-            value=str(x), choices=choices, top_matches=1, threshold=threshold, library=library
-        )
-    )
+    if use_multiprocessing:
+        matches = parallel_fuzzy_matching(df=df, 
+                                          df_column=df_column, 
+                                          choices=choices, 
+                                          threshold=threshold, 
+                                          library=library)
+        
+        # Atribuir os valores às colunas do DataFrame
+        df[col_best_match] = matches.apply(lambda x: x.choice if x else None)
+        df[col_score_match] = matches.apply(lambda x: x.score if x else None)
+        
+    else:
 
-    # Atribuir os valores às colunas do DataFrame
-    df[col_best_match] = matches.apply(lambda x: x.choice if x else None)
-    df[col_score_match] = matches.apply(lambda x: x.score if x else None)
+        # Aplicar fuzzy_match para cada valor na coluna de orçamentos em um único apply
+        matches = df[df_column].apply(
+            lambda x: fuzzy_match(
+                value=str(x), choices=choices, top_matches=1, threshold=threshold, library=library
+            )
+        )
+
+        # Atribuir os valores às colunas do DataFrame
+        df[col_best_match] = matches.apply(lambda x: x.choice if x else None)
+        df[col_score_match] = matches.apply(lambda x: x.score if x else None)
 
     # Substituir a coluna original pelo best_match, se solicitado
     if replace_column:
@@ -201,6 +263,8 @@ def apply_match_fuzzy_two_dataframes(
     df_left_column: str = None,
     df_choices_column: str = None,
     threshold: int = 80,
+    library: str = "rapidfuzz",
+    use_multiprocessing: bool = False,
     replace_column: bool = False,
     drop_columns_result: bool = False,
     list_columns_merge_fuzzy_df_left: Union[list, str] = None,
@@ -250,6 +314,8 @@ def apply_match_fuzzy_two_dataframes(
         df_column=df_left_column,
         df_choices_column=df_choices_column,
         threshold=threshold,
+        library=library,
+        use_multiprocessing=use_multiprocessing,
         replace_column=replace_column,
         drop_columns_result=drop_columns_result,
         col_best_match=col_best_match,

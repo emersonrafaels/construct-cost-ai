@@ -251,6 +251,9 @@ top_n_divergencias_extended = 20
 
 [default.module_validator_nlpu]
 
+# Tolerância de divergência para status de conciliação (%)
+tol_percentile = 0.0
+
 # Colunas padrão para cálculo de discrepâncias
 column_quantity = "QUANTIDADE"
 column_unit_price_paid = "PRECO PAGO"
@@ -283,6 +286,9 @@ column_unit_price = "PRECO PAGO"
 column_total_value = "VALOR TOTAL PAGO"
 
 [default.module_validator_nlpu.match_fuzzy_budget_lpu]
+
+library = "rapidfuzz"
+use_multiprocessing = true
 
 # Validador para uso do merge fuzzy
 validator_use_merge_fuzzy = true
@@ -322,7 +328,7 @@ validator_get_columns_from_best_match = false
 keep_original_columns_names_df_right = false # Nesse caso, ele irá incluir um suffixo no nome
 
 # Dictionário de colunas para filtro antes do merge fuzzy
-filter_cols_to_match = {"VALIDADOR_LPU" = ["ITEM NAO LPU"]}
+filter_cols_to_match = {"RESULTADO VALIDADOR LPU" = ["ITEM NAO LPU"]}
 
 # Validator para substituir a coluna original pelo melhor match
 replace_column = false
