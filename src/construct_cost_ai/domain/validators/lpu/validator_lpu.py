@@ -985,6 +985,7 @@ class LPUValidator:
                     "module_validator_lpu.merge_budget_metadata.validate", "many_to_one"
                 ),
                 indicator=indicator,
+                handle_duplicates=True,
                 validator_output_data=self.settings.get(
                     "module_validator_lpu.merge_budget_metadata.validator_save_sot", True
                 ),
@@ -1087,6 +1088,13 @@ class LPUValidator:
                     threshold=self.settings.get(
                         "module_validator_lpu.merge_budget_metadata_agencies_constructors.threshold", 70
                     ),
+                    library=self.settings.get(
+                        "module_validator_lpu.merge_budget_metadata_agencies_constructors.validator_use_merge_fuzzy_library",
+                        "rapidfuzz",
+                    ),
+                    use_multiprocessing=self.settings.get(
+                        "module_validator_lpu.merge_budget_metadata_agencies_constructors.use_multiprocessing", True
+                    ),  
                     replace_column=self.settings.get(
                         "module_validator_lpu.merge_budget_metadata_agencies_constructors.replace_column", True
                     ),

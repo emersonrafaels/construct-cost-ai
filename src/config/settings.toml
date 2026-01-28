@@ -169,9 +169,13 @@ validator_save_sot = true
 dir_path_file_sot = "data/outputs/sot/01_validador_lpu/02_MERGE_ORCA_META_AG.xlsx"
 
 [default.module_validator_lpu.merge_budget_metadata_agencies_constructors]
+
+library = "rapidfuzz"
+use_multiprocessing = true
+
 left_on = ["CONSTRUTORA", "REGIAO"]
 right_on = ["FORNECEDOR", "REGIAO"]
-how = "left"
+how = "inner"
 validate = "many_to_one"
 handle_duplicates = true
 indicator = "_merge_bud_met_age_constr"
