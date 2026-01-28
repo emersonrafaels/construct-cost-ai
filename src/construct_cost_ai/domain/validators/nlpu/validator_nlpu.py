@@ -568,7 +568,7 @@ class NLPUValidator:
             raise ValueError(f"A coluna '{column_status_lpu}' não foi encontrada no DataFrame.")
 
         df["TIPO ITEM - ORÇAMENTO CONSTRUTORA"] = df[column_status_lpu].apply(
-            lambda x: "NAO LPU" if x == "ITEM NAO LPU" else "ITEM LPU"
+            lambda x: "ITEM NAO LPU" if x == "ITEM NAO LPU" else "ITEM LPU"
         )
 
         # Criando a coluna "TIPO ITEM - VERIFICADOR INTELIGENTE"
@@ -877,8 +877,8 @@ class NLPUValidator:
             raise ValidatorNLPUError(f"Erro ao calcular discrepâncias: {e}")
 
         # Formatando o resultado final
-        df_result = self.create_column_result(generate_format_result(
-            df=df_result,
+        df_result = generate_format_result(
+            df=self.create_column_result(df_result),
             list_select_columns=self.settings.get(
                 "module_validator_nlpu.output_settings.list_columns_result", []
             ),
@@ -886,7 +886,7 @@ class NLPUValidator:
                 "module_validator_nlpu.output_settings.dict_rename_result", []
             ),
             vaLidator_remove_duplicate_columns=True,
-        ))
+        )
 
         # Salvar o resultado em um arquivo Excel
         export_data(
