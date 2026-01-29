@@ -233,3 +233,5 @@ rapidfuzz==3.14.3
 plotly==6.5.2
 joblib==1.5.3
 python-Levenshtein==0.27.3
+tinydb==4.8.2
+mlflow==3.8.1

@@ -486,6 +486,10 @@ class LPUValidator:
             FileNotFoundError: Se o arquivo não for encontrado
             MissingColumnsError: Se colunas obrigatórias estiverem ausentes
         """
+        
+        # Iniciando os dataframes de resultado
+        df_wide = pd.DataFrame()
+        df_long = pd.DataFrame()
 
         logger.info("Iniciando o carregamento da base LPU")
 
@@ -555,8 +559,12 @@ class LPUValidator:
             raise ValidatorLPUError(f"Erro ao converter tipos de colunas: {e}")
 
         # Realizando as transformações finais dos dataframes
-        df_wide = transform_case(df=df_wide, columns_to_upper=True)
-        df_long = transform_case(df=df_long, columns_to_upper=True)
+        df_wide = transform_case(df=df_wide, 
+                                 columns_to_upper=True, 
+                                 cells_to_strip=True)
+        df_long = transform_case(df=df_long, 
+                                 columns_to_upper=True, 
+                                 cells_to_strip=True)
 
         # Verificando se há colunas para renomear
         if self.settings.get("module_validator_lpu.lpu_data.columns_to_rename"):
@@ -693,6 +701,7 @@ class LPUValidator:
                 ),
                 columns_to_upper=True,
                 cells_to_upper=True,
+                cells_to_strip=True,
                 columns_to_remove_accents=self.settings.get(
                     "module_validator_lpu.constructors_data.columns_to_remove_accents", []
                 ),

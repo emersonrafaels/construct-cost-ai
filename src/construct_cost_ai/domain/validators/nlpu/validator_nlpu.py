@@ -577,7 +577,7 @@ class NLPUValidator:
             raise ValueError(f"A coluna '{column_status_nlpu}' não foi encontrada no DataFrame.")
 
         df["TIPO ITEM - VERIFICADOR INTELIGENTE"] = df.apply(
-            lambda row: "ITEM LPU - MATCH FUZZY"
+            lambda row: "ITEM NAO LPU - MATCH FUZZY"
             if pd.notna(row[column_status_nlpu]) and row[column_status_nlpu].strip()
             else row["TIPO ITEM - ORÇAMENTO CONSTRUTORA"],
             axis=1
